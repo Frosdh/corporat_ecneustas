@@ -16,7 +16,7 @@ class ApiService {
   }
 
   String get baseUrl => _baseUrl;
-  bool get isLoggedIn => _sessionId != null && _currentUser != null;
+  bool get isLoggedIn => _currentUser != null;
   Map<String, dynamic>? get currentUser => _currentUser;
   String? get sessionId => _sessionId;
 
@@ -41,20 +41,25 @@ class ApiService {
 
   // Guarda la sesión localmente
   Future<void> _saveSession(String? sessionId, Map<String, dynamic>? user) async {
-    _sessionId = sessionId;
     _currentUser = user;
 
-    if (sessionId != null) {
-      await prefs.setString('php_session_id', sessionId);
-    } else {
+    if (user == null) {
+      _sessionId = null;
       await prefs.remove('php_session_id');
+      await prefs.remove('current_user_json');
+      return;
     }
 
-    if (user != null) {
-      await prefs.setString('current_user_json', jsonEncode(user));
-    } else {
-      await prefs.remove('current_user_json');
+    // Preserva el ID de sesión existente si el nuevo parámetro es nulo,
+    // o genera un identificador local único y seguro como fallback.
+    if (sessionId != null) {
+      _sessionId = sessionId;
+    } else if (_sessionId == null) {
+      _sessionId = 'local_${DateTime.now().millisecondsSinceEpoch}';
     }
+
+    await prefs.setString('php_session_id', _sessionId!);
+    await prefs.setString('current_user_json', jsonEncode(user));
   }
 
   // Inyecta la Cookie de PHP en las cabeceras
