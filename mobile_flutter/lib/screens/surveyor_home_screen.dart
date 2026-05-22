@@ -19,6 +19,7 @@ class _SurveyorHomeScreenState extends State<SurveyorHomeScreen> with SingleTick
   bool _isSubmittingSurvey = false;
   bool _isFetchingMySurveys = false;
   bool _isCapturingGps = false;
+  bool _isSurveyActive = false;
   String? _syncError;
   String? _surveyError;
   String? _gpsStatus;
@@ -174,7 +175,6 @@ class _SurveyorHomeScreenState extends State<SurveyorHomeScreen> with SingleTick
     super.dispose();
   }
 
-  // Sincroniza la cuenta con el servidor en tiempo real
   Future<void> _syncUserProfile() async {
     setState(() {
       _isSyncingUser = true;
@@ -184,8 +184,22 @@ class _SurveyorHomeScreenState extends State<SurveyorHomeScreen> with SingleTick
     try {
       await widget.apiService.bootstrap();
     } catch (e) {
+      final errMsg = e.toString();
+      if (errMsg.contains('Sesion no autenticada') || errMsg.contains('unauthenticated') || !widget.apiService.isLoggedIn) {
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => LoginScreen(apiService: widget.apiService)),
+              );
+            }
+          });
+          return;
+        }
+      }
       setState(() {
-        _syncError = e.toString().replaceAll('Exception:', '').trim();
+        _syncError = errMsg.replaceAll('Exception:', '').trim();
       });
     } finally {
       if (mounted) {
@@ -440,6 +454,7 @@ class _SurveyorHomeScreenState extends State<SurveyorHomeScreen> with SingleTick
       if (mounted) {
         setState(() {
           _isSubmittingSurvey = false;
+          _isSurveyActive = false;
         });
         _clearForm();
       }
@@ -715,11 +730,295 @@ class _SurveyorHomeScreenState extends State<SurveyorHomeScreen> with SingleTick
     );
   }
 
+  Widget _buildDashboardPanel(Map<String, dynamic> user) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Tarjeta de Bienvenida
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFF334155), width: 1),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3B82F6).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFF3B82F6).withOpacity(0.3), width: 1.5),
+                  ),
+                  child: const Icon(Icons.waving_hand_outlined, color: Color(0xFF3B82F6), size: 28),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '¡Hola, ${user['display_name'] ?? 'Encuestador'}!',
+                        style: const TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Bienvenido a tu panel de control.',
+                        style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Tarjeta Principal de Acción: INICIAR ENCUESTA
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isSurveyActive = true;
+              });
+            },
+            borderRadius: BorderRadius.circular(20),
+            child: Ink(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF2563EB).withOpacity(0.35),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.assignment_add,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      const Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.white70,
+                        size: 16,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Iniciar Encuesta',
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Registra una nueva ficha territorial de campo. Se capturarán datos de vivienda, percepción social y coordenadas GPS.',
+                    style: TextStyle(
+                      color: const Color(0xFFE2E8F0),
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Fila de Estadísticas Rápidas
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF334155), width: 1),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.cloud_done, color: Color(0xFF10B981), size: 16),
+                      ),
+                      const SizedBox(height: 12),
+                      _isFetchingMySurveys
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 1.5, valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF3B82F6))),
+                            )
+                          : Text(
+                              '${_mySurveys.length}',
+                              style: const TextStyle(
+                                fontFamily: 'Outfit',
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Sincronizadas',
+                        style: TextStyle(color: const Color(0xFF94A3B8), fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF334155), width: 1),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B).withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.cloud_upload_outlined, color: Color(0xFFF59E0B), size: 16),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        '${_offlineSurveys.length}',
+                        style: const TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Cola Offline',
+                        style: TextStyle(color: const Color(0xFF94A3B8), fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Detalles de Operación
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F172A),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF334155), width: 1),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: const [
+                        Icon(Icons.location_on_outlined, color: Color(0xFF3B82F6), size: 18),
+                        SizedBox(width: 8),
+                        Text('Zona Asignada', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+                      ],
+                    ),
+                    Text(
+                      user['assigned_zone'] ?? 'San Bartolomé',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Divider(color: Color(0xFF334155), height: 1),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: const [
+                        Icon(Icons.badge_outlined, color: Color(0xFF3B82F6), size: 18),
+                        SizedBox(width: 8),
+                        Text('Rol Operativo', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+                      ],
+                    ),
+                    const Text(
+                      'Encuestador de Campo',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
   // --- PANTALLAS DE ACUERDO AL ESTADO ---
   @override
   Widget build(BuildContext context) {
     final user = widget.apiService.currentUser;
     if (user == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => LoginScreen(apiService: widget.apiService)),
+          );
+        }
+      });
       return _buildBlockedStateScreen(
         icon: Icons.error_outline,
         color: const Color(0xFFEF4444),
@@ -795,24 +1094,48 @@ class _SurveyorHomeScreenState extends State<SurveyorHomeScreen> with SingleTick
       body: TabBarView(
         controller: _tabController,
         children: [
-          // TAB 1: FORMULARIO DE ENCUESTA
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Text(
-                    'Nueva Ficha Territorial',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Realiza el levantamiento social. Recuerda capturar las coordenadas GPS obligatoriamente.',
-                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-                  ),
-                  const SizedBox(height: 24),
+          // TAB 1: DASHBOARD O FORMULARIO
+          !_isSurveyActive
+              ? _buildDashboardPanel(user)
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Botón para regresar al panel
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: () {
+                              setState(() {
+                                _isSurveyActive = false;
+                              });
+                            },
+                            icon: const Icon(Icons.arrow_back, color: Color(0xFF3B82F6), size: 20),
+                            label: const Text(
+                              'Regresar al Panel',
+                              style: TextStyle(color: Color(0xFF3B82F6), fontSize: 14, fontWeight: FontWeight.w600),
+                            ),
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: const Size(50, 30),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Nueva Ficha Territorial',
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Realiza el levantamiento social. Recuerda capturar las coordenadas GPS obligatoriamente.',
+                          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                        ),
+                        const SizedBox(height: 24),
 
                   // Sección 1: Identificación y Contexto
                   _buildSectionCard(
@@ -1206,18 +1529,18 @@ class _SurveyorHomeScreenState extends State<SurveyorHomeScreen> with SingleTick
                     ),
                   ],
 
-                  // Guardar
-                  ElevatedButton(
-                    onPressed: _isSubmittingSurvey ? null : _handleSaveSurvey,
-                    child: _isSubmittingSurvey
-                        ? const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white))
-                        : const Text('Guardar Encuesta'),
+                        // Guardar
+                        ElevatedButton(
+                          onPressed: _isSubmittingSurvey ? null : _handleSaveSurvey,
+                          child: _isSubmittingSurvey
+                              ? const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white))
+                              : const Text('Guardar Encuesta'),
+                        ),
+                        const SizedBox(height: 32),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 32),
-                ],
-              ),
-            ),
-          ),
+                ),
 
           // TAB 2: MI PERFIL Y COLA OFFLINE
           SingleChildScrollView(
