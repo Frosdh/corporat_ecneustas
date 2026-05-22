@@ -1,0 +1,9 @@
+{
+  "name": "San Bartolome Survey Cloud",
+  "short_name": "San Bartolome",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0d1b2f",
+  "theme_color": "#0e4eb0",
+  "description": "Levantamiento territorial y gestion profesional de encuestadores para San Bartolome."
+}

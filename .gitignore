@@ -1,0 +1,41 @@
+# Flutter/Dart related
+**/mobile_flutter/.dart_tool/
+**/mobile_flutter/.flutter-plugins
+**/mobile_flutter/.flutter-plugins-dependencies
+**/mobile_flutter/.pub-cache/
+**/mobile_flutter/build/
+**/mobile_flutter/ios/.symlinks/
+**/mobile_flutter/ios/Pods/
+**/mobile_flutter/ios/Flutter/flutter_export_environment.sh
+**/mobile_flutter/ios/Flutter/GeneratedPluginRegistrant.app
+**/mobile_flutter/ios/Flutter/GeneratedPluginRegistrant.h
+**/mobile_flutter/ios/Flutter/GeneratedPluginRegistrant.m
+**/mobile_flutter/android/app/src/main/res/values/strings.xml
+**/mobile_flutter/android/local.properties
+**/mobile_flutter/android/key.properties
+**/mobile_flutter/android/app/release/
+**/mobile_flutter/android/app/debug/
+**/mobile_flutter/android/app/profile/
+**/mobile_flutter/.packages
+**/mobile_flutter/*.release*.aar
+**/mobile_flutter/*.debug*.aar
+**/mobile_flutter/*.profile*.aar
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+*.db
+*.log
+
+# IDE & Editor Files
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Server/PHP local configs or logs
+error_log
+.env
+.env.local
+.env.*.local

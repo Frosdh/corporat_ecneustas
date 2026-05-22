@@ -1,0 +1,1644 @@
+<?php
+
+declare(strict_types=1);
+
+$config = require __DIR__ . '/config.php';
+
+session_name($config['app']['session_name']);
+session_start();
+
+function app_config(): array
+{
+    static $config = null;
+    if ($config === null) {
+        $config = require __DIR__ . '/config.php';
+    }
+    return $config;
+}
+
+function db(): PDO
+{
+    static $pdo = null;
+    if ($pdo instanceof PDO) {
+        return $pdo;
+    }
+
+    $db = app_config()['db'];
+    $dsn = sprintf(
+        'mysql:host=%s;port=%d;dbname=%s;charset=%s',
+        $db['host'],
+        $db['port'],
+        $db['database'],
+        $db['charset']
+    );
+
+    $pdo = new PDO($dsn, $db['username'], $db['password'], [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]);
+
+    return $pdo;
+}
+
+function ensure_method(string $expected, string $actual): void
+{
+    if (strtoupper($expected) !== strtoupper($actual)) {
+        respond(['ok' => false, 'message' => 'Metodo no permitido.'], 405);
+    }
+}
+
+function json_input(): array
+{
+    $raw = file_get_contents('php://input');
+    if (!$raw) {
+        return [];
+    }
+
+    $decoded = json_decode($raw, true);
+    return is_array($decoded) ? $decoded : [];
+}
+
+function respond(array $payload, int $status = 200): never
+{
+    http_response_code($status);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
+function current_user(): ?array
+{
+    return $_SESSION['user'] ?? null;
+}
+
+function require_auth(): void
+{
+    if (!current_user()) {
+        respond(['ok' => false, 'message' => 'Sesion no autenticada.'], 401);
+    }
+}
+
+function require_admin(): void
+{
+    require_auth();
+    if ((current_user()['role'] ?? '') !== 'admin') {
+        respond(['ok' => false, 'message' => 'Solo el administrador puede ejecutar esta accion.'], 403);
+    }
+}
+
+function user_can_access_dashboard(): bool
+{
+    $user = current_user();
+    if (!$user) {
+        return false;
+    }
+
+    if (($user['role'] ?? '') === 'admin') {
+        return true;
+    }
+
+    return ($user['role'] ?? '') === 'surveyor' && ($user['account_status'] ?? '') === 'approved';
+}
+
+function current_assigned_surveyor(): ?array
+{
+    $user = current_user();
+    if (!$user || empty($user['surveyor_id'])) {
+        return null;
+    }
+
+    return get_surveyor_by_id((int) $user['surveyor_id']);
+}
+
+function login_user(array $input): array
+{
+    $username = trim((string) ($input['username'] ?? ''));
+    $password = (string) ($input['password'] ?? '');
+
+    if ($username === '' || $password === '') {
+        throw new InvalidArgumentException('Usuario y clave son obligatorios.');
+    }
+
+    $stmt = db()->prepare('
+        SELECT id, username, display_name, password_hash, role, surveyor_id, account_status, application_id, is_active
+        FROM app_users
+        WHERE username = :username
+        LIMIT 1
+    ');
+    $stmt->execute([':username' => $username]);
+    $user = $stmt->fetch();
+
+    if (!$user || !password_verify($password, $user['password_hash'])) {
+        throw new InvalidArgumentException('Credenciales incorrectas.');
+    }
+
+    if ((int) $user['is_active'] !== 1) {
+        throw new InvalidArgumentException('Tu cuenta se encuentra desactivada. Contacta al administrador.');
+    }
+
+    $_SESSION['user'] = [
+        'id' => (int) $user['id'],
+        'username' => $user['username'],
+        'display_name' => $user['display_name'],
+        'role' => $user['role'],
+        'surveyor_id' => $user['surveyor_id'] ? (int) $user['surveyor_id'] : null,
+        'account_status' => $user['account_status'],
+        'application_id' => $user['application_id'] ? (int) $user['application_id'] : null,
+    ];
+
+    log_action((int) $user['id'], 'login', 'app_users', (int) $user['id'], [
+        'status' => $user['account_status'],
+    ]);
+
+    return current_user();
+}
+
+function log_action(?int $userId, string $action, string $entityType, ?int $entityId, array $details = []): void
+{
+    $stmt = db()->prepare('
+        INSERT INTO audit_logs (user_id, action_type, entity_type, entity_id, details_json)
+        VALUES (:user_id, :action_type, :entity_type, :entity_id, :details_json)
+    ');
+    $stmt->execute([
+        ':user_id' => $userId,
+        ':action_type' => $action,
+        ':entity_type' => $entityType,
+        ':entity_id' => $entityId,
+        ':details_json' => json_encode($details, JSON_UNESCAPED_UNICODE),
+    ]);
+}
+
+function sanitize_text(mixed $value): string
+{
+    return trim((string) $value);
+}
+
+function ensure_storage_dir(): string
+{
+    $dir = app_config()['app']['storage_dir'];
+    if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
+        throw new RuntimeException('No se pudo crear el directorio de almacenamiento.');
+    }
+    return $dir;
+}
+
+function register_application(array $input, array $files): array
+{
+    $required = [
+        'full_name' => 'Debes ingresar los nombres completos.',
+        'document_number' => 'Debes ingresar la cedula.',
+        'phone' => 'Debes ingresar el celular.',
+        'email' => 'Debes ingresar el correo.',
+        'address' => 'Debes ingresar la direccion.',
+        'parish' => 'Debes ingresar la parroquia.',
+        'canton' => 'Debes ingresar el canton.',
+        'requested_zone' => 'Debes ingresar la zona de trabajo.',
+        'experience' => 'Debes describir la experiencia previa.',
+        'username' => 'Debes elegir un usuario.',
+        'password' => 'Debes ingresar una clave.',
+    ];
+
+    foreach ($required as $field => $message) {
+        if (sanitize_text($input[$field] ?? '') === '') {
+            throw new InvalidArgumentException($message);
+        }
+    }
+
+    if (!filter_var($input['email'], FILTER_VALIDATE_EMAIL)) {
+        throw new InvalidArgumentException('El correo electronico no es valido.');
+    }
+
+    if (strlen((string) $input['password']) < 8) {
+        throw new InvalidArgumentException('La clave debe tener al menos 8 caracteres.');
+    }
+
+    if (empty($files['profile_photo']['name']) || empty($files['id_document']['name'])) {
+        throw new InvalidArgumentException('Debes adjuntar la foto personal y la foto de la cedula.');
+    }
+
+    $username = sanitize_text($input['username']);
+    $documentNumber = sanitize_text($input['document_number']);
+    $email = sanitize_text($input['email']);
+
+    if (record_exists('app_users', 'username', $username)) {
+        throw new InvalidArgumentException('Ese nombre de usuario ya esta registrado.');
+    }
+
+    if (record_exists('surveyor_applications', 'document_number', $documentNumber)) {
+        throw new InvalidArgumentException('Ya existe una postulacion con esa cedula.');
+    }
+
+    if (record_exists('surveyor_applications', 'email', $email)) {
+        throw new InvalidArgumentException('Ya existe una postulacion con ese correo.');
+    }
+
+    $pdo = db();
+    $pdo->beginTransaction();
+
+    try {
+        $stmt = $pdo->prepare('
+            INSERT INTO surveyor_applications (
+                full_name, document_number, phone, email, address, parish, canton,
+                requested_zone, prior_experience, review_status
+            ) VALUES (
+                :full_name, :document_number, :phone, :email, :address, :parish, :canton,
+                :requested_zone, :prior_experience, :review_status
+            )
+        ');
+        $stmt->execute([
+            ':full_name' => sanitize_text($input['full_name']),
+            ':document_number' => $documentNumber,
+            ':phone' => sanitize_text($input['phone']),
+            ':email' => $email,
+            ':address' => sanitize_text($input['address']),
+            ':parish' => sanitize_text($input['parish']),
+            ':canton' => sanitize_text($input['canton']),
+            ':requested_zone' => sanitize_text($input['requested_zone']),
+            ':prior_experience' => sanitize_text($input['experience']),
+            ':review_status' => 'pending',
+        ]);
+        $applicationId = (int) $pdo->lastInsertId();
+
+        $userStmt = $pdo->prepare('
+            INSERT INTO app_users (
+                username, display_name, password_hash, role, surveyor_id,
+                account_status, application_id, is_active
+            ) VALUES (
+                :username, :display_name, :password_hash, :role, NULL,
+                :account_status, :application_id, 1
+            )
+        ');
+        $userStmt->execute([
+            ':username' => $username,
+            ':display_name' => sanitize_text($input['full_name']),
+            ':password_hash' => password_hash((string) $input['password'], PASSWORD_DEFAULT),
+            ':role' => 'surveyor',
+            ':account_status' => 'pending',
+            ':application_id' => $applicationId,
+        ]);
+        $userId = (int) $pdo->lastInsertId();
+
+        store_application_document($applicationId, 'Foto personal', $files['profile_photo']);
+        store_application_document($applicationId, 'Cedula', $files['id_document']);
+        if (!empty($files['support_document']['name'])) {
+            store_application_document($applicationId, 'Respaldo adicional', $files['support_document']);
+        }
+
+        log_action($userId, 'register_application', 'surveyor_applications', $applicationId, [
+            'username' => $username,
+        ]);
+
+        $pdo->commit();
+    } catch (Throwable $exception) {
+        $pdo->rollBack();
+        throw $exception;
+    }
+
+    return get_application_by_id($applicationId);
+}
+
+function record_exists(string $table, string $column, string $value): bool
+{
+    $sql = sprintf('SELECT 1 FROM %s WHERE %s = :value LIMIT 1', $table, $column);
+    $stmt = db()->prepare($sql);
+    $stmt->execute([':value' => $value]);
+    return (bool) $stmt->fetchColumn();
+}
+
+function store_application_document(int $applicationId, string $docType, array $file): void
+{
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        throw new InvalidArgumentException("El archivo '{$docType}' no se pudo subir correctamente.");
+    }
+
+    $maxSize = app_config()['app']['max_upload_size'];
+    if (($file['size'] ?? 0) > $maxSize) {
+        throw new InvalidArgumentException("El archivo '{$docType}' supera el tamano permitido de 5 MB.");
+    }
+
+    $mimeType = null;
+    if (class_exists('finfo')) {
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($file['tmp_name']) ?: null;
+    }
+    if (!$mimeType && function_exists('mime_content_type')) {
+        $mimeType = mime_content_type($file['tmp_name']) ?: null;
+    }
+    if (!$mimeType) {
+        $extensionGuess = strtolower(pathinfo((string) $file['name'], PATHINFO_EXTENSION));
+        $mimeMap = [
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'pdf' => 'application/pdf',
+        ];
+        $mimeType = $mimeMap[$extensionGuess] ?? 'application/octet-stream';
+    }
+    $allowed = app_config()['app']['allowed_upload_mime_types'];
+    if (!in_array($mimeType, $allowed, true)) {
+        throw new InvalidArgumentException("El archivo '{$docType}' debe ser JPG, PNG o PDF.");
+    }
+
+    switch ($mimeType) {
+        case 'image/jpeg':
+            $extension = 'jpg';
+            break;
+        case 'image/png':
+            $extension = 'png';
+            break;
+        case 'application/pdf':
+            $extension = 'pdf';
+            break;
+        default:
+            $extension = 'bin';
+            break;
+    }
+
+    $storageDir = ensure_storage_dir() . '/applications/' . $applicationId;
+    if (!is_dir($storageDir) && !mkdir($storageDir, 0775, true) && !is_dir($storageDir)) {
+        throw new RuntimeException('No se pudo preparar el directorio de documentos.');
+    }
+
+    $storedName = strtolower(str_replace(' ', '_', $docType)) . '_' . bin2hex(random_bytes(6)) . '.' . $extension;
+    $targetPath = $storageDir . '/' . $storedName;
+
+    if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+        $tmpName = (string) ($file['tmp_name'] ?? '');
+        $uploadDirWritable = is_writable($storageDir) ? 'si' : 'no';
+        throw new RuntimeException("No se pudo guardar el archivo '{$docType}'. Tmp: {$tmpName}. Carpeta escribible: {$uploadDirWritable}. Destino: {$targetPath}");
+    }
+
+    $stmt = db()->prepare('
+        INSERT INTO application_documents (
+            application_id, doc_type, original_name, stored_name, stored_path, mime_type, file_size
+        ) VALUES (
+            :application_id, :doc_type, :original_name, :stored_name, :stored_path, :mime_type, :file_size
+        )
+    ');
+    $stmt->execute([
+        ':application_id' => $applicationId,
+        ':doc_type' => $docType,
+        ':original_name' => $file['name'],
+        ':stored_name' => $storedName,
+        ':stored_path' => str_replace('\\', '/', $targetPath),
+        ':mime_type' => $mimeType,
+        ':file_size' => (int) $file['size'],
+    ]);
+}
+
+function get_application_by_id(int $applicationId): ?array
+{
+    $stmt = db()->prepare('
+        SELECT sa.*, au.username, au.account_status
+        FROM surveyor_applications sa
+        LEFT JOIN app_users au ON au.application_id = sa.id
+        WHERE sa.id = :id
+        LIMIT 1
+    ');
+    $stmt->execute([':id' => $applicationId]);
+    $application = $stmt->fetch();
+    if (!$application) {
+        return null;
+    }
+    $application['documents'] = get_application_documents($applicationId);
+    return $application;
+}
+
+function get_application_documents(int $applicationId): array
+{
+    $stmt = db()->prepare('
+        SELECT id, doc_type, original_name, mime_type, file_size
+        FROM application_documents
+        WHERE application_id = :application_id
+        ORDER BY id
+    ');
+    $stmt->execute([':application_id' => $applicationId]);
+    return $stmt->fetchAll();
+}
+
+function get_applications(): array
+{
+    $rows = db()->query('
+        SELECT sa.*, au.username, au.account_status, reviewer.display_name AS reviewer_name
+        FROM surveyor_applications sa
+        LEFT JOIN app_users au ON au.application_id = sa.id
+        LEFT JOIN app_users reviewer ON reviewer.id = sa.reviewed_by_user_id
+        ORDER BY sa.created_at DESC
+    ')->fetchAll();
+
+    foreach ($rows as &$row) {
+        $row['documents'] = get_application_documents((int) $row['id']);
+    }
+
+    return $rows;
+}
+
+function review_application(array $input): array
+{
+    $applicationId = (int) ($input['application_id'] ?? 0);
+    $decision = sanitize_text($input['decision'] ?? '');
+    $notes = sanitize_text($input['notes'] ?? '');
+    $assignedZone = sanitize_text($input['assigned_zone'] ?? '');
+
+    if ($applicationId <= 0) {
+        throw new InvalidArgumentException('Solicitud invalida.');
+    }
+
+    if (!in_array($decision, ['in_review', 'approved', 'rejected'], true)) {
+        throw new InvalidArgumentException('Decision no valida.');
+    }
+
+    $application = get_application_by_id($applicationId);
+    if (!$application) {
+        throw new InvalidArgumentException('No se encontro la solicitud.');
+    }
+
+    $pdo = db();
+    $pdo->beginTransaction();
+
+    try {
+        $reviewerId = (int) current_user()['id'];
+        $surveyorId = $application['approved_surveyor_id'] ? (int) $application['approved_surveyor_id'] : null;
+
+        if ($decision === 'approved') {
+            $zone = $assignedZone !== '' ? $assignedZone : (string) $application['requested_zone'];
+
+            if (!$surveyorId) {
+                $existingSurveyor = get_surveyor_by_document((string) $application['document_number']);
+                if ($existingSurveyor) {
+                    $surveyorId = (int) $existingSurveyor['id'];
+                }
+            }
+
+            if ($surveyorId) {
+                $updateSurveyor = $pdo->prepare('
+                    UPDATE surveyors
+                    SET full_name = :full_name, document_number = :document_number, assigned_zone = :assigned_zone,
+                        status = :status, phone = :phone, email = :email, address = :address,
+                        parish = :parish, canton = :canton, prior_experience = :prior_experience,
+                        application_id = :application_id
+                    WHERE id = :id
+                ');
+                $updateSurveyor->execute([
+                    ':full_name' => $application['full_name'],
+                    ':document_number' => $application['document_number'],
+                    ':assigned_zone' => $zone,
+                    ':status' => 'Activo',
+                    ':phone' => $application['phone'],
+                    ':email' => $application['email'],
+                    ':address' => $application['address'],
+                    ':parish' => $application['parish'],
+                    ':canton' => $application['canton'],
+                    ':prior_experience' => $application['prior_experience'],
+                    ':application_id' => $applicationId,
+                    ':id' => $surveyorId,
+                ]);
+            } else {
+                $insertSurveyor = $pdo->prepare('
+                    INSERT INTO surveyors (
+                        full_name, document_number, assigned_zone, status, phone, email, address,
+                        parish, canton, prior_experience, application_id
+                    ) VALUES (
+                        :full_name, :document_number, :assigned_zone, :status, :phone, :email, :address,
+                        :parish, :canton, :prior_experience, :application_id
+                    )
+                ');
+                $insertSurveyor->execute([
+                    ':full_name' => $application['full_name'],
+                    ':document_number' => $application['document_number'],
+                    ':assigned_zone' => $zone,
+                    ':status' => 'Activo',
+                    ':phone' => $application['phone'],
+                    ':email' => $application['email'],
+                    ':address' => $application['address'],
+                    ':parish' => $application['parish'],
+                    ':canton' => $application['canton'],
+                    ':prior_experience' => $application['prior_experience'],
+                    ':application_id' => $applicationId,
+                ]);
+                $surveyorId = (int) $pdo->lastInsertId();
+            }
+
+            $userUpdate = $pdo->prepare('
+                UPDATE app_users
+                SET display_name = :display_name, surveyor_id = :surveyor_id,
+                    account_status = :account_status, role = :role, is_active = 1
+                WHERE application_id = :application_id
+            ');
+            $userUpdate->execute([
+                ':display_name' => $application['full_name'],
+                ':surveyor_id' => $surveyorId,
+                ':account_status' => 'approved',
+                ':role' => 'surveyor',
+                ':application_id' => $applicationId,
+            ]);
+        } else {
+            $accountStatus = $decision === 'rejected' ? 'rejected' : 'in_review';
+            $userUpdate = $pdo->prepare('
+                UPDATE app_users
+                SET account_status = :account_status, surveyor_id = NULL
+                WHERE application_id = :application_id
+            ');
+            $userUpdate->execute([
+                ':account_status' => $accountStatus,
+                ':application_id' => $applicationId,
+            ]);
+        }
+
+        $applicationUpdate = $pdo->prepare('
+            UPDATE surveyor_applications
+            SET review_status = :review_status,
+                review_notes = :review_notes,
+                reviewed_by_user_id = :reviewed_by_user_id,
+                reviewed_at = NOW(),
+                approved_surveyor_id = :approved_surveyor_id
+            WHERE id = :id
+        ');
+        $applicationUpdate->execute([
+            ':review_status' => $decision,
+            ':review_notes' => $notes !== '' ? $notes : null,
+            ':reviewed_by_user_id' => $reviewerId,
+            ':approved_surveyor_id' => $decision === 'approved' ? $surveyorId : null,
+            ':id' => $applicationId,
+        ]);
+
+        log_action($reviewerId, 'review_application', 'surveyor_applications', $applicationId, [
+            'decision' => $decision,
+            'assigned_zone' => $assignedZone,
+        ]);
+
+        $pdo->commit();
+    } catch (Throwable $exception) {
+        $pdo->rollBack();
+        throw $exception;
+    }
+
+    return get_application_by_id($applicationId) ?? [];
+}
+
+function get_surveyors(): array
+{
+    return db()->query('SELECT id, full_name, document_number, assigned_zone, status FROM surveyors ORDER BY full_name')->fetchAll();
+}
+
+function get_surveyor_by_id(int $id): ?array
+{
+    $stmt = db()->prepare('SELECT id, full_name, document_number, assigned_zone, status, phone, email, address, parish, canton, prior_experience FROM surveyors WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+    return $row ?: null;
+}
+
+function get_surveyor_by_document(string $documentNumber): ?array
+{
+    $stmt = db()->prepare('SELECT id, full_name, document_number, assigned_zone, status, phone, email, address, parish, canton, prior_experience, application_id FROM surveyors WHERE document_number = :document_number LIMIT 1');
+    $stmt->execute([':document_number' => $documentNumber]);
+    $row = $stmt->fetch();
+    return $row ?: null;
+}
+
+function get_surveyors_with_accounts(): array
+{
+    return db()->query('
+        SELECT s.*, au.id AS user_id, au.username, au.account_status, au.is_active
+        FROM surveyors s
+        LEFT JOIN app_users au ON au.surveyor_id = s.id
+        ORDER BY s.full_name
+    ')->fetchAll();
+}
+
+function update_surveyor_profile(array $input): array
+{
+    $userId = (int) ($input['user_id'] ?? 0);
+    $assignedZone = sanitize_text($input['assigned_zone'] ?? '');
+
+    if ($userId <= 0) {
+        throw new InvalidArgumentException('Usuario invalido.');
+    }
+    if ($assignedZone === '') {
+        throw new InvalidArgumentException('Debes indicar la zona asignada.');
+    }
+
+    $stmt = db()->prepare('
+        UPDATE surveyors s
+        INNER JOIN app_users au ON au.surveyor_id = s.id
+        SET s.assigned_zone = :assigned_zone
+        WHERE au.id = :user_id
+    ');
+    $stmt->execute([
+        ':assigned_zone' => $assignedZone,
+        ':user_id' => $userId,
+    ]);
+
+    log_action((int) current_user()['id'], 'update_surveyor_profile', 'app_users', $userId, [
+        'assigned_zone' => $assignedZone,
+    ]);
+
+    $detail = db()->prepare('
+        SELECT s.*, au.id AS user_id, au.username, au.account_status, au.is_active
+        FROM surveyors s
+        LEFT JOIN app_users au ON au.surveyor_id = s.id
+        WHERE au.id = :id
+        LIMIT 1
+    ');
+    $detail->execute([':id' => $userId]);
+    $row = $detail->fetch();
+    if (!$row) {
+        throw new InvalidArgumentException('No se encontro el encuestador.');
+    }
+    return $row;
+}
+
+function update_surveyor_status(array $input): array
+{
+    $userId = (int) ($input['user_id'] ?? 0);
+    $status = sanitize_text($input['status'] ?? '');
+
+    if ($userId <= 0) {
+        throw new InvalidArgumentException('Usuario invalido.');
+    }
+
+    if (!in_array($status, ['approved', 'suspended'], true)) {
+        throw new InvalidArgumentException('Estado no valido.');
+    }
+
+    $stmt = db()->prepare('UPDATE app_users SET account_status = :account_status, is_active = 1 WHERE id = :id');
+    $stmt->execute([
+        ':account_status' => $status,
+        ':id' => $userId,
+    ]);
+
+    log_action((int) current_user()['id'], 'update_surveyor_status', 'app_users', $userId, ['status' => $status]);
+
+    $detail = db()->prepare('
+        SELECT s.*, au.id AS user_id, au.username, au.account_status, au.is_active
+        FROM surveyors s
+        LEFT JOIN app_users au ON au.surveyor_id = s.id
+        WHERE au.id = :id
+        LIMIT 1
+    ');
+    $detail->execute([':id' => $userId]);
+    $row = $detail->fetch();
+    if (!$row) {
+        throw new InvalidArgumentException('No se encontro el encuestador.');
+    }
+    return $row;
+}
+
+function reset_account_password(array $input): void
+{
+    $userId = (int) ($input['user_id'] ?? 0);
+    $newPassword = (string) ($input['new_password'] ?? '');
+
+    if ($userId <= 0) {
+        throw new InvalidArgumentException('Usuario invalido.');
+    }
+
+    if (strlen($newPassword) < 8) {
+        throw new InvalidArgumentException('La nueva clave debe tener al menos 8 caracteres.');
+    }
+
+    $stmt = db()->prepare('UPDATE app_users SET password_hash = :password_hash WHERE id = :id');
+    $stmt->execute([
+        ':password_hash' => password_hash($newPassword, PASSWORD_DEFAULT),
+        ':id' => $userId,
+    ]);
+
+    log_action((int) current_user()['id'], 'reset_password', 'app_users', $userId);
+}
+
+function normalize_survey(array $survey): array
+{
+    $fields = [
+        'client_uuid', 'sector', 'community', 'survey_date', 'survey_status', 'surveyor_id', 'surveyor_name',
+        'respondent_gender', 'age_range', 'education_level', 'occupation',
+        'primary_problem', 'youth_path', 'women_roles', 'water_source', 'has_sewer',
+        'has_internet', 'road_status', 'household_income', 'political_climate',
+        'authority_trust', 'social_priority', 'investment_acceptance',
+        'mine_reopening_perception', 'mine_benefits', 'mine_risks', 'comments',
+        'latitude', 'longitude',
+    ];
+
+    $normalized = [];
+    foreach ($fields as $field) {
+        $value = $survey[$field] ?? null;
+        $normalized[$field] = is_string($value) ? trim($value) : $value;
+    }
+
+    $normalized['client_uuid'] = $normalized['client_uuid'] ?: bin2hex(random_bytes(16));
+    $normalized['survey_date'] = $normalized['survey_date'] ?: date('Y-m-d H:i:s');
+    $normalized['survey_status'] = $normalized['survey_status'] ?: 'sincronizada';
+    $normalized['women_roles'] = parse_multi_value($survey['women_roles'] ?? []);
+    $normalized['mine_benefits'] = parse_multi_value($survey['mine_benefits'] ?? []);
+    $normalized['mine_risks'] = parse_multi_value($survey['mine_risks'] ?? []);
+
+    return $normalized;
+}
+
+function parse_multi_value(mixed $value): array
+{
+    if (is_array($value)) {
+        return array_values(array_filter(array_map('trim', $value)));
+    }
+    if (is_string($value) && trim($value) !== '') {
+        return array_values(array_filter(array_map('trim', explode('|', $value))));
+    }
+    return [];
+}
+
+function get_survey_by_client_uuid(string $clientUuid): ?array
+{
+    $stmt = db()->prepare('
+        SELECT id, client_uuid, surveyor_id, survey_status
+        FROM surveys
+        WHERE client_uuid = :client_uuid
+        LIMIT 1
+    ');
+    $stmt->execute([':client_uuid' => $clientUuid]);
+    $row = $stmt->fetch();
+    return $row ?: null;
+}
+
+function save_survey(array $survey): array
+{
+    require_auth();
+    $user = current_user();
+
+    if (($user['role'] ?? '') === 'surveyor' && ($user['account_status'] ?? '') !== 'approved') {
+        throw new InvalidArgumentException('Tu cuenta aun no esta aprobada para levantar encuestas.');
+    }
+
+    $survey = normalize_survey($survey);
+    $required = [
+        'sector' => 'Debes seleccionar el sector.',
+        'community' => 'Debes ingresar la comunidad o barrio.',
+        'respondent_gender' => 'Debes seleccionar el genero.',
+        'age_range' => 'Debes seleccionar el rango de edad.',
+        'occupation' => 'Debes ingresar la ocupacion principal.',
+        'primary_problem' => 'Debes indicar la principal problematica.',
+        'youth_path' => 'Debes indicar el destino principal de los jovenes.',
+        'water_source' => 'Debes indicar la fuente de agua.',
+        'has_sewer' => 'Debes indicar la condicion de alcantarillado.',
+        'political_climate' => 'Debes indicar el clima politico.',
+        'social_priority' => 'Debes indicar la prioridad territorial.',
+        'investment_acceptance' => 'Debes indicar la aceptacion de inversion externa.',
+        'mine_reopening_perception' => 'Debes indicar la percepcion de reapertura.',
+    ];
+
+    if (($user['role'] ?? '') === 'surveyor') {
+        if (empty($user['surveyor_id'])) {
+            throw new InvalidArgumentException('Tu usuario no tiene un encuestador asignado.');
+        }
+        $survey['surveyor_id'] = (string) $user['surveyor_id'];
+        $survey['surveyor_name'] = $user['display_name'];
+    } else {
+        $required['surveyor_id'] = 'Debes seleccionar un encuestador.';
+    }
+
+    foreach ($required as $field => $message) {
+        if ($survey[$field] === null || $survey[$field] === '') {
+            throw new InvalidArgumentException($message);
+        }
+    }
+
+    $existingSurvey = null;
+    if (!empty($survey['client_uuid'])) {
+        $existingSurvey = get_survey_by_client_uuid((string) $survey['client_uuid']);
+    }
+
+    if (($user['role'] ?? '') === 'surveyor' && $existingSurvey) {
+        if ((int) $existingSurvey['surveyor_id'] !== (int) $user['surveyor_id']) {
+            throw new InvalidArgumentException('Solo puedes editar tus propias encuestas.');
+        }
+
+        if (($existingSurvey['survey_status'] ?? '') === 'revisada') {
+            throw new InvalidArgumentException('Esta encuesta ya fue revisada y no puede editarse desde campo.');
+        }
+    }
+
+    $stmt = db()->prepare('
+        INSERT INTO surveys (
+            client_uuid, sector, community, survey_date, survey_status, surveyor_id, surveyor_name,
+            respondent_gender, age_range, education_level, occupation,
+            primary_problem, youth_path, women_roles, water_source, has_sewer,
+            has_internet, road_status, household_income, political_climate,
+            authority_trust, social_priority, investment_acceptance,
+            mine_reopening_perception, mine_benefits, mine_risks, comments,
+            latitude, longitude, created_by_user_id
+        ) VALUES (
+            :client_uuid, :sector, :community, :survey_date, :survey_status, :surveyor_id, :surveyor_name,
+            :respondent_gender, :age_range, :education_level, :occupation,
+            :primary_problem, :youth_path, :women_roles, :water_source, :has_sewer,
+            :has_internet, :road_status, :household_income, :political_climate,
+            :authority_trust, :social_priority, :investment_acceptance,
+            :mine_reopening_perception, :mine_benefits, :mine_risks, :comments,
+            :latitude, :longitude, :created_by_user_id
+        )
+        ON DUPLICATE KEY UPDATE
+            sector = VALUES(sector),
+            community = VALUES(community),
+            survey_date = VALUES(survey_date),
+            survey_status = VALUES(survey_status),
+            surveyor_id = VALUES(surveyor_id),
+            surveyor_name = VALUES(surveyor_name),
+            respondent_gender = VALUES(respondent_gender),
+            age_range = VALUES(age_range),
+            education_level = VALUES(education_level),
+            occupation = VALUES(occupation),
+            primary_problem = VALUES(primary_problem),
+            youth_path = VALUES(youth_path),
+            women_roles = VALUES(women_roles),
+            water_source = VALUES(water_source),
+            has_sewer = VALUES(has_sewer),
+            has_internet = VALUES(has_internet),
+            road_status = VALUES(road_status),
+            household_income = VALUES(household_income),
+            political_climate = VALUES(political_climate),
+            authority_trust = VALUES(authority_trust),
+            social_priority = VALUES(social_priority),
+            investment_acceptance = VALUES(investment_acceptance),
+            mine_reopening_perception = VALUES(mine_reopening_perception),
+            mine_benefits = VALUES(mine_benefits),
+            mine_risks = VALUES(mine_risks),
+            comments = VALUES(comments),
+            latitude = VALUES(latitude),
+            longitude = VALUES(longitude)
+    ');
+    $stmt->execute([
+        ':client_uuid' => $survey['client_uuid'],
+        ':sector' => $survey['sector'],
+        ':community' => $survey['community'],
+        ':survey_date' => $survey['survey_date'],
+        ':survey_status' => $survey['survey_status'],
+        ':surveyor_id' => (int) $survey['surveyor_id'],
+        ':surveyor_name' => $survey['surveyor_name'] ?: null,
+        ':respondent_gender' => $survey['respondent_gender'],
+        ':age_range' => $survey['age_range'],
+        ':education_level' => $survey['education_level'] ?: null,
+        ':occupation' => $survey['occupation'],
+        ':primary_problem' => $survey['primary_problem'],
+        ':youth_path' => $survey['youth_path'],
+        ':women_roles' => json_encode($survey['women_roles'], JSON_UNESCAPED_UNICODE),
+        ':water_source' => $survey['water_source'],
+        ':has_sewer' => $survey['has_sewer'],
+        ':has_internet' => $survey['has_internet'] ?: null,
+        ':road_status' => $survey['road_status'] ?: null,
+        ':household_income' => $survey['household_income'] ?: null,
+        ':political_climate' => $survey['political_climate'],
+        ':authority_trust' => $survey['authority_trust'] ?: null,
+        ':social_priority' => $survey['social_priority'],
+        ':investment_acceptance' => $survey['investment_acceptance'],
+        ':mine_reopening_perception' => $survey['mine_reopening_perception'],
+        ':mine_benefits' => json_encode($survey['mine_benefits'], JSON_UNESCAPED_UNICODE),
+        ':mine_risks' => json_encode($survey['mine_risks'], JSON_UNESCAPED_UNICODE),
+        ':comments' => $survey['comments'] ?: null,
+        ':latitude' => $survey['latitude'] !== '' ? $survey['latitude'] : null,
+        ':longitude' => $survey['longitude'] !== '' ? $survey['longitude'] : null,
+        ':created_by_user_id' => (int) $user['id'],
+    ]);
+
+    log_action((int) $user['id'], 'save_survey', 'surveys', null, [
+        'client_uuid' => $survey['client_uuid'],
+        'sector' => $survey['sector'],
+    ]);
+
+    return $survey;
+}
+
+function get_my_surveys(): array
+{
+    require_auth();
+    $user = current_user();
+
+    if (($user['role'] ?? '') !== 'surveyor' || empty($user['surveyor_id'])) {
+        return [];
+    }
+
+    $stmt = db()->prepare("
+        SELECT
+            id,
+            client_uuid,
+            sector,
+            community,
+            survey_date,
+            survey_status,
+            respondent_gender,
+            age_range,
+            education_level,
+            occupation,
+            primary_problem,
+            youth_path,
+            women_roles,
+            water_source,
+            has_sewer,
+            has_internet,
+            road_status,
+            household_income,
+            political_climate,
+            authority_trust,
+            social_priority,
+            investment_acceptance,
+            mine_reopening_perception,
+            mine_benefits,
+            mine_risks,
+            comments,
+            latitude,
+            longitude
+        FROM surveys
+        WHERE surveyor_id = :surveyor_id
+        ORDER BY survey_date DESC, id DESC
+        LIMIT 200
+    ");
+    $stmt->execute([':surveyor_id' => (int) $user['surveyor_id']]);
+    $rows = $stmt->fetchAll();
+
+    foreach ($rows as &$row) {
+        $row['women_roles'] = $row['women_roles'] ? json_decode((string) $row['women_roles'], true) : [];
+        $row['mine_benefits'] = $row['mine_benefits'] ? json_decode((string) $row['mine_benefits'], true) : [];
+        $row['mine_risks'] = $row['mine_risks'] ? json_decode((string) $row['mine_risks'], true) : [];
+    }
+
+    return $rows;
+}
+
+function compute_json_option_counts(array $rows, string $field): array
+{
+    $counts = [];
+    foreach ($rows as $row) {
+        $values = $row[$field] ? json_decode((string) $row[$field], true) : [];
+        if (!is_array($values)) {
+            continue;
+        }
+        foreach ($values as $value) {
+            $label = trim((string) $value);
+            if ($label === '') {
+                continue;
+            }
+            $counts[$label] = ($counts[$label] ?? 0) + 1;
+        }
+    }
+    arsort($counts);
+    return $counts;
+}
+
+function normalize_sector_label(string $sector): string
+{
+    switch ($sector) {
+        case 'centro':
+            return 'Centro Parroquial';
+        case 'deleg':
+            return 'La Deleg';
+        case 'sallac':
+            return 'Sallac';
+        case 'pishio':
+            return 'Pishio';
+        default:
+            return ucfirst($sector);
+    }
+}
+
+function build_label_total_rows(array $counts, int $limit = 0): array
+{
+    $rows = [];
+    foreach ($counts as $label => $count) {
+        $rows[] = [
+            'label' => (string) $label,
+            'total' => (int) $count,
+        ];
+    }
+
+    if ($limit > 0) {
+        return array_slice($rows, 0, $limit);
+    }
+
+    return $rows;
+}
+
+function get_dashboard(string $sector = 'general'): array
+{
+    $params = [];
+    $where = '';
+    if ($sector !== 'general') {
+        $where = 'WHERE sector = :sector';
+        $params[':sector'] = $sector;
+    }
+
+    $summarySql = "
+        SELECT
+            COUNT(*) AS total_surveys,
+            ROUND(AVG(CASE WHEN has_sewer = 'No tiene' OR water_source LIKE '%sin%' OR water_source LIKE '%acequia%' OR water_source LIKE '%vertiente%' THEN 100 ELSE 0 END), 1) AS structural_poverty,
+            ROUND(AVG(CASE WHEN mine_reopening_perception IN ('Beneficiaria mucho', 'Beneficiaria algo') OR investment_acceptance IN ('Aceptacion condicionada', 'Aceptacion amplia') THEN 100 ELSE 0 END), 1) AS acceptance_rate
+        FROM surveys
+        $where
+    ";
+    $stmt = db()->prepare($summarySql);
+    $stmt->execute($params);
+    $summary = $stmt->fetch() ?: [];
+
+    $climateSql = "
+        SELECT political_climate
+        FROM surveys
+        $where
+        GROUP BY political_climate
+        ORDER BY COUNT(*) DESC, political_climate ASC
+        LIMIT 1
+    ";
+    $climateStmt = db()->prepare($climateSql);
+    $climateStmt->execute($params);
+    $climate = $climateStmt->fetchColumn() ?: 'Sin datos suficientes';
+
+    $serviceSql = "
+        SELECT
+            ROUND(AVG(CASE WHEN water_source LIKE '%sin%' OR water_source LIKE '%acequia%' OR water_source LIKE '%vertiente%' THEN 100 ELSE 0 END), 1) AS water_risk,
+            ROUND(AVG(CASE WHEN has_sewer = 'No tiene' THEN 100 ELSE 0 END), 1) AS sewer_gap,
+            ROUND(AVG(CASE WHEN household_income IN ('No cubre la canasta', 'Cubre apenas') THEN 100 ELSE 0 END), 1) AS income_pressure
+        FROM surveys
+        $where
+    ";
+    $serviceStmt = db()->prepare($serviceSql);
+    $serviceStmt->execute($params);
+    $services = $serviceStmt->fetch() ?: [];
+
+    $mapSql = "
+        SELECT
+            s.id,
+            s.sector,
+            s.community,
+            s.latitude,
+            s.longitude,
+            s.survey_date,
+            s.survey_status,
+            COALESCE(s.surveyor_name, sv.full_name) AS surveyor_name
+        FROM surveys s
+        LEFT JOIN surveyors sv ON sv.id = s.surveyor_id
+        " . ($sector !== 'general' ? 'WHERE sector = :sector AND latitude IS NOT NULL AND longitude IS NOT NULL' : 'WHERE latitude IS NOT NULL AND longitude IS NOT NULL') . "
+        ORDER BY survey_date DESC
+        LIMIT 30
+    ";
+    $mapStmt = db()->prepare($mapSql);
+    $mapStmt->execute($params);
+    $mapPoints = $mapStmt->fetchAll();
+
+    $target = (int) app_config()['app']['target_surveys'];
+    $total = (int) ($summary['total_surveys'] ?? 0);
+    $pct = $target > 0 ? min(100, round(($total / $target) * 100)) : 0;
+
+    $applicationCounts = db()->query("
+        SELECT review_status, COUNT(*) AS total
+        FROM surveyor_applications
+        GROUP BY review_status
+    ")->fetchAll();
+    $applications = ['pending' => 0, 'in_review' => 0, 'approved' => 0, 'rejected' => 0];
+    foreach ($applicationCounts as $countRow) {
+        $applications[$countRow['review_status']] = (int) $countRow['total'];
+    }
+
+    $dailySql = "
+        SELECT DATE(survey_date) AS survey_day, COUNT(*) AS total
+        FROM surveys
+        $where
+        GROUP BY DATE(survey_date)
+        ORDER BY survey_day DESC
+        LIMIT 7
+    ";
+    $dailyStmt = db()->prepare($dailySql);
+    $dailyStmt->execute($params);
+    $dailyRows = array_reverse($dailyStmt->fetchAll());
+
+    $sectorSql = "
+        SELECT sector, COUNT(*) AS total
+        FROM surveys
+        $where
+        GROUP BY sector
+        ORDER BY total DESC, sector ASC
+    ";
+    $sectorStmt = db()->prepare($sectorSql);
+    $sectorStmt->execute($params);
+    $sectorRows = $sectorStmt->fetchAll();
+
+    $surveyorSql = "
+        SELECT COALESCE(s.surveyor_name, sv.full_name, 'Sin nombre') AS surveyor_name, COUNT(*) AS total
+        FROM surveys s
+        LEFT JOIN surveyors sv ON sv.id = s.surveyor_id
+        " . ($where !== '' ? $where : '') . "
+        GROUP BY COALESCE(s.surveyor_name, sv.full_name, 'Sin nombre')
+        ORDER BY total DESC, surveyor_name ASC
+    ";
+    $surveyorStmt = db()->prepare($surveyorSql);
+    $surveyorStmt->execute($params);
+    $surveyorRows = $surveyorStmt->fetchAll();
+
+    $statusSql = "
+        SELECT survey_status, COUNT(*) AS total
+        FROM surveys
+        $where
+        GROUP BY survey_status
+    ";
+    $statusStmt = db()->prepare($statusSql);
+    $statusStmt->execute($params);
+    $surveyStatusRows = $statusStmt->fetchAll();
+    $surveyStatuses = ['sincronizada' => 0, 'revisada' => 0, 'observada' => 0];
+    foreach ($surveyStatusRows as $row) {
+        $surveyStatuses[$row['survey_status']] = (int) $row['total'];
+    }
+
+    $surveyorMgmtRows = db()->query("
+        SELECT account_status, COUNT(*) AS total
+        FROM app_users
+        WHERE role = 'surveyor'
+        GROUP BY account_status
+    ")->fetchAll();
+    $surveyorMgmt = ['approved' => 0, 'suspended' => 0, 'pending' => 0, 'in_review' => 0, 'rejected' => 0];
+    foreach ($surveyorMgmtRows as $row) {
+        $surveyorMgmt[$row['account_status']] = (int) $row['total'];
+    }
+
+    $approvalStats = db()->query("
+        SELECT
+            ROUND(AVG(CASE WHEN review_status = 'approved' AND reviewed_at IS NOT NULL THEN TIMESTAMPDIFF(HOUR, created_at, reviewed_at) END), 1) AS avg_approval_hours,
+            ROUND((SUM(CASE WHEN review_status = 'approved' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0)) * 100, 1) AS approval_rate
+        FROM surveyor_applications
+    ")->fetch() ?: [];
+
+    $socialSql = "
+        SELECT
+            primary_problem,
+            water_source,
+            has_sewer,
+            household_income,
+            authority_trust,
+            political_climate,
+            investment_acceptance,
+            mine_reopening_perception,
+            mine_benefits,
+            mine_risks,
+            sector
+        FROM surveys
+        $where
+    ";
+    $socialStmt = db()->prepare($socialSql);
+    $socialStmt->execute($params);
+    $socialRows = $socialStmt->fetchAll();
+
+    $primaryProblems = [];
+    $authorityTrust = [];
+    $investmentAcceptance = [];
+    $reopeningPerception = [];
+    foreach ($socialRows as $row) {
+        $primaryProblems[$row['primary_problem']] = ($primaryProblems[$row['primary_problem']] ?? 0) + 1;
+        if (!empty($row['authority_trust'])) {
+            $authorityTrust[$row['authority_trust']] = ($authorityTrust[$row['authority_trust']] ?? 0) + 1;
+        }
+        $investmentAcceptance[$row['investment_acceptance']] = ($investmentAcceptance[$row['investment_acceptance']] ?? 0) + 1;
+        $reopeningPerception[$row['mine_reopening_perception']] = ($reopeningPerception[$row['mine_reopening_perception']] ?? 0) + 1;
+    }
+    arsort($primaryProblems);
+    arsort($authorityTrust);
+    arsort($investmentAcceptance);
+    arsort($reopeningPerception);
+
+    $benefitCounts = compute_json_option_counts($socialRows, 'mine_benefits');
+    $riskCounts = compute_json_option_counts($socialRows, 'mine_risks');
+
+    $strategicSql = "
+        SELECT
+            sector,
+            household_income,
+            water_source,
+            has_sewer,
+            political_climate,
+            authority_trust,
+            investment_acceptance
+        FROM surveys
+        $where
+    ";
+    $strategicStmt = db()->prepare($strategicSql);
+    $strategicStmt->execute($params);
+    $strategicRows = $strategicStmt->fetchAll();
+
+    $stanceCounts = ['favorable' => 0, 'condicionada' => 0, 'contraria' => 0];
+    $sectorFavor = [];
+    $sectorOppose = [];
+    $unemploymentOpen = ['pressure_total' => 0, 'pressure_open' => 0];
+    $servicesOpen = ['services_risk_total' => 0, 'services_risk_open' => 0];
+    $conflictSector = [];
+    $lowTrustSector = [];
+
+    foreach ($strategicRows as $row) {
+        $sectorKey = normalize_sector_label((string) $row['sector']);
+        $acceptance = (string) $row['investment_acceptance'];
+
+        if ($acceptance === 'Aceptacion amplia') {
+            $stanceCounts['favorable']++;
+            $sectorFavor[$sectorKey] = ($sectorFavor[$sectorKey] ?? 0) + 1;
+        } elseif ($acceptance === 'Aceptacion condicionada') {
+            $stanceCounts['condicionada']++;
+        } else {
+            $stanceCounts['contraria']++;
+            $sectorOppose[$sectorKey] = ($sectorOppose[$sectorKey] ?? 0) + 1;
+        }
+
+        if (in_array((string) $row['household_income'], ['No cubre la canasta', 'Cubre apenas'], true)) {
+            $unemploymentOpen['pressure_total']++;
+            if ($acceptance !== 'Rechazo preventivo') {
+                $unemploymentOpen['pressure_open']++;
+            }
+        }
+
+        $hasServiceRisk = ((string) $row['has_sewer'] === 'No tiene')
+            || str_contains((string) $row['water_source'], 'sin')
+            || str_contains((string) $row['water_source'], 'acequia')
+            || str_contains((string) $row['water_source'], 'vertiente');
+        if ($hasServiceRisk) {
+            $servicesOpen['services_risk_total']++;
+            if ($acceptance !== 'Rechazo preventivo') {
+                $servicesOpen['services_risk_open']++;
+            }
+        }
+
+        if (in_array((string) $row['political_climate'], ['Division comunitaria', 'Conflicto abierto entre actores'], true)) {
+            $conflictSector[$sectorKey] = ($conflictSector[$sectorKey] ?? 0) + 1;
+        }
+
+        if ((string) $row['authority_trust'] === 'Baja') {
+            $lowTrustSector[$sectorKey] = ($lowTrustSector[$sectorKey] ?? 0) + 1;
+        }
+    }
+
+    arsort($sectorFavor);
+    arsort($sectorOppose);
+    arsort($conflictSector);
+    arsort($lowTrustSector);
+
+    $activeApprovedSurveyors = max(1, (int) ($surveyorMgmt['approved'] ?? 0));
+    $offlinePending = 0;
+
+    return [
+        'summary' => [
+            'total_surveys' => $total,
+            'target_surveys' => $target,
+            'coverage_pct' => $pct,
+            'structural_poverty' => (float) ($summary['structural_poverty'] ?? 0),
+            'acceptance_rate' => (float) ($summary['acceptance_rate'] ?? 0),
+            'political_climate' => $climate,
+        ],
+        'services' => [
+            'water_risk' => (float) ($services['water_risk'] ?? 0),
+            'sewer_gap' => (float) ($services['sewer_gap'] ?? 0),
+            'income_pressure' => (float) ($services['income_pressure'] ?? 0),
+        ],
+        'applications' => $applications,
+        'map_points' => $mapPoints,
+        'operations' => [
+            'total_surveys' => $total,
+            'coverage_pct' => $pct,
+            'surveys_per_day' => $dailyRows,
+            'surveys_by_sector' => array_map(function (array $row): array {
+                return [
+                    'label' => normalize_sector_label((string) $row['sector']),
+                    'total' => (int) $row['total'],
+                ];
+            }, $sectorRows),
+            'surveys_by_surveyor' => array_map(function (array $row): array {
+                return [
+                    'label' => (string) $row['surveyor_name'],
+                    'total' => (int) $row['total'],
+                ];
+            }, $surveyorRows),
+            'synchronized_count' => array_sum($surveyStatuses),
+            'offline_pending_count' => $offlinePending,
+            'offline_pending_note' => 'La cola offline vive en cada dispositivo; este valor no se centraliza todavia.',
+            'avg_productivity_per_surveyor' => round($total / $activeApprovedSurveyors, 1),
+        ],
+        'management' => [
+            'applications_pending' => (int) ($applications['pending'] ?? 0),
+            'applications_in_review' => (int) ($applications['in_review'] ?? 0),
+            'applications_approved' => (int) ($applications['approved'] ?? 0),
+            'applications_rejected' => (int) ($applications['rejected'] ?? 0),
+            'surveyors_active' => (int) ($surveyorMgmt['approved'] ?? 0),
+            'surveyors_suspended' => (int) ($surveyorMgmt['suspended'] ?? 0),
+            'avg_approval_hours' => (float) ($approvalStats['avg_approval_hours'] ?? 0),
+            'approval_rate' => (float) ($approvalStats['approval_rate'] ?? 0),
+        ],
+        'social' => [
+            'top_primary_problem' => array_key_first($primaryProblems) ?: 'Sin datos',
+            'authority_trust_top' => array_key_first($authorityTrust) ?: 'Sin datos',
+            'investment_acceptance_top' => array_key_first($investmentAcceptance) ?: 'Sin datos',
+            'reopening_perception_top' => array_key_first($reopeningPerception) ?: 'Sin datos',
+            'top_benefits' => build_label_total_rows($benefitCounts, 5),
+            'top_risks' => build_label_total_rows($riskCounts, 5),
+            'primary_problem_breakdown' => build_label_total_rows($primaryProblems, 5),
+            'authority_trust_breakdown' => build_label_total_rows($authorityTrust),
+            'investment_acceptance_breakdown' => build_label_total_rows($investmentAcceptance),
+            'reopening_perception_breakdown' => build_label_total_rows($reopeningPerception),
+        ],
+        'strategic' => [
+            'favorable_pct' => $total > 0 ? round(($stanceCounts['favorable'] / $total) * 100, 1) : 0.0,
+            'conditioned_pct' => $total > 0 ? round(($stanceCounts['condicionada'] / $total) * 100, 1) : 0.0,
+            'contrary_pct' => $total > 0 ? round(($stanceCounts['contraria'] / $total) * 100, 1) : 0.0,
+            'top_oppose_sector' => array_key_first($sectorOppose) ?: 'Sin datos',
+            'top_open_sector' => array_key_first($sectorFavor) ?: 'Sin datos',
+            'income_openness_pct' => $unemploymentOpen['pressure_total'] > 0 ? round(($unemploymentOpen['pressure_open'] / $unemploymentOpen['pressure_total']) * 100, 1) : 0.0,
+            'services_openness_pct' => $servicesOpen['services_risk_total'] > 0 ? round(($servicesOpen['services_risk_open'] / $servicesOpen['services_risk_total']) * 100, 1) : 0.0,
+            'top_conflict_sector' => array_key_first($conflictSector) ?: 'Sin datos',
+            'lowest_trust_sector' => array_key_first($lowTrustSector) ?: 'Sin datos',
+        ],
+    ];
+}
+
+function get_surveys(array $filters = []): array
+{
+    $conditions = [];
+    $params = [];
+
+    $sector = sanitize_text($filters['sector'] ?? '');
+    $dateFrom = sanitize_text($filters['date_from'] ?? '');
+    $dateTo = sanitize_text($filters['date_to'] ?? '');
+    $surveyorId = (int) ($filters['surveyor_id'] ?? 0);
+    $status = sanitize_text($filters['status'] ?? '');
+
+    if ($sector !== '' && $sector !== 'general') {
+        $conditions[] = 's.sector = :sector';
+        $params[':sector'] = $sector;
+    }
+    if ($dateFrom !== '') {
+        $conditions[] = 'DATE(s.survey_date) >= :date_from';
+        $params[':date_from'] = $dateFrom;
+    }
+    if ($dateTo !== '') {
+        $conditions[] = 'DATE(s.survey_date) <= :date_to';
+        $params[':date_to'] = $dateTo;
+    }
+    if ($surveyorId > 0) {
+        $conditions[] = 's.surveyor_id = :surveyor_id';
+        $params[':surveyor_id'] = $surveyorId;
+    }
+    if ($status !== '' && $status !== 'all') {
+        if (in_array($status, ['sincronizada', 'revisada', 'observada'], true)) {
+            $conditions[] = 's.survey_status = :survey_status';
+            $params[':survey_status'] = $status;
+        } elseif ($status === 'Con GPS') {
+            $conditions[] = 's.latitude IS NOT NULL AND s.longitude IS NOT NULL';
+        } elseif ($status === 'Sin GPS') {
+            $conditions[] = '(s.latitude IS NULL OR s.longitude IS NULL)';
+        }
+    }
+
+    $where = $conditions ? ('WHERE ' . implode(' AND ', $conditions)) : '';
+
+    $stmt = db()->prepare("
+        SELECT
+            s.id,
+            s.client_uuid,
+            s.sector,
+            s.community,
+            s.survey_date,
+            s.survey_status,
+            s.surveyor_id,
+            COALESCE(s.surveyor_name, sv.full_name) AS surveyor_name,
+            s.respondent_gender,
+            s.age_range,
+            s.occupation,
+            s.primary_problem,
+            s.political_climate,
+            s.investment_acceptance,
+            s.mine_reopening_perception,
+            s.latitude,
+            s.longitude,
+            CASE
+                WHEN s.latitude IS NOT NULL AND s.longitude IS NOT NULL THEN 'Con GPS'
+                ELSE 'Sin GPS'
+            END AS record_status
+        FROM surveys s
+        LEFT JOIN surveyors sv ON sv.id = s.surveyor_id
+        $where
+        ORDER BY s.survey_date DESC, s.id DESC
+        LIMIT 500
+    ");
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
+function update_survey_status(array $input): array
+{
+    $surveyId = (int) ($input['survey_id'] ?? 0);
+    $surveyStatus = sanitize_text($input['survey_status'] ?? '');
+
+    if ($surveyId <= 0) {
+        throw new InvalidArgumentException('Encuesta invalida.');
+    }
+    if (!in_array($surveyStatus, ['sincronizada', 'revisada', 'observada'], true)) {
+        throw new InvalidArgumentException('Estado de encuesta no valido.');
+    }
+
+    $stmt = db()->prepare('UPDATE surveys SET survey_status = :survey_status WHERE id = :id');
+    $stmt->execute([
+        ':survey_status' => $surveyStatus,
+        ':id' => $surveyId,
+    ]);
+
+    log_action((int) current_user()['id'], 'update_survey_status', 'surveys', $surveyId, [
+        'survey_status' => $surveyStatus,
+    ]);
+
+    $detail = db()->prepare("
+        SELECT
+            s.id,
+            s.client_uuid,
+            s.sector,
+            s.community,
+            s.survey_date,
+            s.survey_status,
+            s.surveyor_id,
+            COALESCE(s.surveyor_name, sv.full_name) AS surveyor_name,
+            s.respondent_gender,
+            s.age_range,
+            s.occupation,
+            s.primary_problem,
+            s.political_climate,
+            s.investment_acceptance,
+            s.mine_reopening_perception,
+            s.latitude,
+            s.longitude,
+            CASE
+                WHEN s.latitude IS NOT NULL AND s.longitude IS NOT NULL THEN 'Con GPS'
+                ELSE 'Sin GPS'
+            END AS record_status
+        FROM surveys s
+        LEFT JOIN surveyors sv ON sv.id = s.surveyor_id
+        WHERE s.id = :id
+        LIMIT 1
+    ");
+    $detail->execute([':id' => $surveyId]);
+    $row = $detail->fetch();
+    if (!$row) {
+        throw new InvalidArgumentException('No se encontro la encuesta.');
+    }
+    return $row;
+}
+
+function get_audit_logs(array $filters = []): array
+{
+    $conditions = [];
+    $params = [];
+
+    $action = sanitize_text($filters['action_type'] ?? '');
+    $dateFrom = sanitize_text($filters['date_from'] ?? '');
+    $dateTo = sanitize_text($filters['date_to'] ?? '');
+
+    if ($action !== '' && $action !== 'all') {
+        $conditions[] = 'al.action_type = :action_type';
+        $params[':action_type'] = $action;
+    }
+    if ($dateFrom !== '') {
+        $conditions[] = 'DATE(al.created_at) >= :date_from';
+        $params[':date_from'] = $dateFrom;
+    }
+    if ($dateTo !== '') {
+        $conditions[] = 'DATE(al.created_at) <= :date_to';
+        $params[':date_to'] = $dateTo;
+    }
+
+    $where = $conditions ? ('WHERE ' . implode(' AND ', $conditions)) : '';
+
+    $stmt = db()->prepare("
+        SELECT
+            al.id,
+            al.action_type,
+            al.entity_type,
+            al.entity_id,
+            al.details_json,
+            al.created_at,
+            COALESCE(u.display_name, 'Sistema') AS actor_name
+        FROM audit_logs al
+        LEFT JOIN app_users u ON u.id = al.user_id
+        $where
+        ORDER BY al.created_at DESC, al.id DESC
+        LIMIT 500
+    ");
+    $stmt->execute($params);
+    $rows = $stmt->fetchAll();
+
+    foreach ($rows as &$row) {
+        $row['details'] = $row['details_json'] ? json_decode((string) $row['details_json'], true) : [];
+    }
+
+    return $rows;
+}
+
+function stream_export(string $type, array $filters = []): never
+{
+    if (!in_array($type, ['surveys', 'applications', 'audit'], true)) {
+        http_response_code(404);
+        exit;
+    }
+
+    $filename = $type . '_' . date('Ymd_His') . '.csv';
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+
+    $output = fopen('php://output', 'wb');
+    if ($output === false) {
+        http_response_code(500);
+        exit;
+    }
+
+    if ($type === 'surveys') {
+        $rows = get_surveys($filters);
+        fputcsv($output, ['ID', 'Fecha', 'Sector', 'Comunidad', 'Encuestador', 'Genero', 'Edad', 'Ocupacion', 'Problematica', 'Clima politico', 'Aceptacion inversion', 'Percepcion reapertura', 'Estado']);
+        foreach ($rows as $row) {
+            fputcsv($output, [
+                $row['id'],
+                $row['survey_date'],
+                $row['sector'],
+                $row['community'],
+                $row['surveyor_name'],
+                $row['respondent_gender'],
+                $row['age_range'],
+                $row['occupation'],
+                $row['primary_problem'],
+                $row['political_climate'],
+                $row['investment_acceptance'],
+                $row['mine_reopening_perception'],
+                $row['record_status'],
+            ]);
+        }
+    } elseif ($type === 'applications') {
+        $rows = get_applications();
+        fputcsv($output, ['ID', 'Nombre', 'Cedula', 'Telefono', 'Correo', 'Parroquia', 'Canton', 'Zona solicitada', 'Estado', 'Usuario', 'Fecha']);
+        foreach ($rows as $row) {
+            fputcsv($output, [
+                $row['id'],
+                $row['full_name'],
+                $row['document_number'],
+                $row['phone'],
+                $row['email'],
+                $row['parish'],
+                $row['canton'],
+                $row['requested_zone'],
+                $row['review_status'],
+                $row['username'] ?? '',
+                $row['created_at'],
+            ]);
+        }
+    } else {
+        $rows = get_audit_logs($filters);
+        fputcsv($output, ['ID', 'Fecha', 'Actor', 'Accion', 'Entidad', 'ID entidad', 'Detalle']);
+        foreach ($rows as $row) {
+            fputcsv($output, [
+                $row['id'],
+                $row['created_at'],
+                $row['actor_name'],
+                $row['action_type'],
+                $row['entity_type'],
+                $row['entity_id'],
+                json_encode($row['details'], JSON_UNESCAPED_UNICODE),
+            ]);
+        }
+    }
+
+    fclose($output);
+    exit;
+}
+
+function stream_application_document(int $documentId): never
+{
+    if ($documentId <= 0) {
+        http_response_code(404);
+        exit;
+    }
+
+    $stmt = db()->prepare('
+        SELECT d.*, a.id AS application_id, a.full_name
+        FROM application_documents d
+        INNER JOIN surveyor_applications a ON a.id = d.application_id
+        WHERE d.id = :id
+        LIMIT 1
+    ');
+    $stmt->execute([':id' => $documentId]);
+    $document = $stmt->fetch();
+    if (!$document) {
+        http_response_code(404);
+        exit;
+    }
+
+    $user = current_user();
+    $isAdmin = ($user['role'] ?? '') === 'admin';
+    $ownsDocument = !empty($user['application_id']) && (int) $user['application_id'] === (int) $document['application_id'];
+    if (!$isAdmin && !$ownsDocument) {
+        http_response_code(403);
+        exit;
+    }
+
+    $path = $document['stored_path'];
+    if (!is_file($path)) {
+        http_response_code(404);
+        exit;
+    }
+
+    header('Content-Type: ' . $document['mime_type']);
+    header('Content-Length: ' . filesize($path));
+    header('Content-Disposition: inline; filename="' . basename($document['original_name']) . '"');
+    readfile($path);
+    exit;
+}
