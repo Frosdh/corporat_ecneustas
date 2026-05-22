@@ -1019,12 +1019,12 @@ class _SurveyorHomeScreenState extends State<SurveyorHomeScreen> with SingleTick
           );
         }
       });
-      return _buildBlockedStateScreen(
-        icon: Icons.error_outline,
-        color: const Color(0xFFEF4444),
-        title: 'Error de Sesión',
-        message: 'No se pudo cargar los datos de tu perfil localmente. Por favor, inicia sesión de nuevo.',
-        showRefresh: false,
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF3B82F6)),
+          ),
+        ),
       );
     }
 
