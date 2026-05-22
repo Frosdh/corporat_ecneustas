@@ -64,20 +64,39 @@ class ApiService {
       headers['Content-Type'] = 'application/json; charset=UTF-8';
     }
     if (_sessionId != null) {
-      headers['Cookie'] = 'PHPSESSID=$_sessionId';
+      // Enviamos el identificador tanto con el nombre de sesión personalizado (san_bartolome_app)
+      // como con el estándar (PHPSESSID) para garantizar máxima compatibilidad con el servidor.
+      headers['Cookie'] = 'san_bartolome_app=$_sessionId; PHPSESSID=$_sessionId';
     }
     return headers;
   }
 
-  // Extrae y guarda el PHPSESSID de la cabecera Set-Cookie
+  // Extrae y guarda el ID de sesión de la cabecera Set-Cookie de forma tolerante a mayúsculas/minúsculas
   void _extractCookie(http.Response response) {
-    final setCookie = response.headers['set-cookie'];
+    String? setCookie;
+    
+    // Búsqueda case-insensitive tolerante para la cabecera 'set-cookie'
+    response.headers.forEach((key, value) {
+      if (key.toLowerCase() == 'set-cookie') {
+        setCookie = value;
+      }
+    });
+
     if (setCookie != null) {
-      // Usamos expresión regular para capturar el valor de PHPSESSID
-      final regExp = RegExp(r'PHPSESSID=([^;]+)');
-      final match = regExp.firstMatch(setCookie);
-      if (match != null) {
-        _sessionId = match.group(1);
+      // Intentamos capturar el valor de 'san_bartolome_app' primero (definido en config.php)
+      final regExpApp = RegExp(r'san_bartolome_app=([^;]+)');
+      final matchApp = regExpApp.firstMatch(setCookie!);
+      if (matchApp != null) {
+        _sessionId = matchApp.group(1);
+        return;
+      }
+
+      // Si no existe, buscamos el valor del estándar 'PHPSESSID'
+      final regExpPhp = RegExp(r'PHPSESSID=([^;]+)');
+      final matchPhp = regExpPhp.firstMatch(setCookie!);
+      if (matchPhp != null) {
+        _sessionId = matchPhp.group(1);
+        return;
       }
     }
   }
