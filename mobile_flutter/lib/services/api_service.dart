@@ -186,10 +186,6 @@ class ApiService {
       await _saveSession(_sessionId, user);
       return responseData;
     } else {
-      if (response.statusCode == 401) {
-        // Sesión expirada
-        await _saveSession(null, null);
-      }
       throw Exception(responseData['message'] ?? 'Error de sincronización de sesión');
     }
   }

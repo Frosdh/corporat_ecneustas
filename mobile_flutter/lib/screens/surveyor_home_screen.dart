@@ -185,7 +185,7 @@ class _SurveyorHomeScreenState extends State<SurveyorHomeScreen> with SingleTick
       await widget.apiService.bootstrap();
     } catch (e) {
       final errMsg = e.toString();
-      if (errMsg.contains('Sesion no autenticada') || errMsg.contains('unauthenticated') || !widget.apiService.isLoggedIn) {
+      if (!widget.apiService.isLoggedIn) {
         if (mounted) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
