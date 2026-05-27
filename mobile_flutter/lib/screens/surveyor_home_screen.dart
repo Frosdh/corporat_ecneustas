@@ -1774,10 +1774,9 @@ class _SurveyorHomeScreenState extends State<SurveyorHomeScreen> with SingleTick
                         controller: _occupationController,
                         style: const TextStyle(color: CoffeePalette.dark),
                         decoration: const InputDecoration(
-                          labelText: 'Ocupación Principal',
+                          labelText: 'Ocupación Principal (opcional)',
                           hintText: 'Ej. Agricultor, Ama de casa...',
                         ),
-                        validator: (value) => value!.trim().isEmpty ? 'Ocupación es obligatoria.' : null,
                       ),
                     ],
                   ),
@@ -1858,16 +1857,10 @@ class _SurveyorHomeScreenState extends State<SurveyorHomeScreen> with SingleTick
                           style: const TextStyle(color: CoffeePalette.dark),
                           autofocus: true,
                           decoration: const InputDecoration(
-                            labelText: 'Especifica cuál',
+                            labelText: 'Especifica cuál (opcional)',
                             hintText: 'Escribe el destino de los jóvenes...',
                             prefixIcon: Icon(Icons.edit_outlined, color: CoffeePalette.medium, size: 18),
                           ),
-                          validator: (val) {
-                            if (_selectedYouthPath == 'Otro' && (val == null || val.trim().isEmpty)) {
-                              return 'Por favor especifica el destino de los jóvenes.';
-                            }
-                            return null;
-                          },
                         ),
                         const SizedBox(height: 4),
                       ],
