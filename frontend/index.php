@@ -137,6 +137,9 @@
                 <span id="user-badge" class="chip chip-dark">Usuario</span>
                 <span id="role-badge" class="chip chip-dark">Rol</span>
                 <button id="logout-button" class="secondary-button">Salir</button>
+                <button id="admin-dashboard-btn" class="primary-button hidden" type="button">Dashboard</button>
+                
+                
             </div>
         </header>
 

@@ -18,13 +18,19 @@ let formMapMarker = null;
 const STORAGE_KEY = 'san_bartolome_pending_surveys';
 const DRAFT_STORAGE_PREFIX = 'san_bartolome_survey_draft';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     bindEvents();
     setDefaultSurveyDate();
     refreshNetworkChip();
     renderOfflineQueue();
     initializeSurveyLocationMap();
     registerServiceWorker();
+    // Attempt to restore session if user is already logged in
+    try {
+        await bootstrapApp();
+    } catch (e) {
+        console.debug('No active session on load:', e.message);
+    }
 });
 
 function bindEvents() {
