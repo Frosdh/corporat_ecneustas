@@ -217,17 +217,13 @@ function ensure_storage_dir(): string
 function register_application(array $input, array $files): array
 {
     $required = [
-        'full_name' => 'Debes ingresar los nombres completos.',
+        'full_name'       => 'Debes ingresar los nombres completos.',
         'document_number' => 'Debes ingresar la cedula.',
-        'phone' => 'Debes ingresar el celular.',
-        'email' => 'Debes ingresar el correo.',
-        'address' => 'Debes ingresar la direccion.',
-        'parish' => 'Debes ingresar la parroquia.',
-        'canton' => 'Debes ingresar el canton.',
-        'requested_zone' => 'Debes ingresar la zona de trabajo.',
-        'experience' => 'Debes describir la experiencia previa.',
-        'username' => 'Debes elegir un usuario.',
-        'password' => 'Debes ingresar una clave.',
+        'phone'           => 'Debes ingresar el celular.',
+        'email'           => 'Debes ingresar el correo.',
+        'address'         => 'Debes ingresar la direccion.',
+        'username'        => 'Debes elegir un usuario.',
+        'password'        => 'Debes ingresar una clave.',
     ];
 
     foreach ($required as $field => $message) {
@@ -244,9 +240,7 @@ function register_application(array $input, array $files): array
         throw new InvalidArgumentException('La clave debe tener al menos 8 caracteres.');
     }
 
-    if (empty($files['profile_photo']['name']) || empty($files['id_document']['name'])) {
-        throw new InvalidArgumentException('Debes adjuntar la foto personal y la foto de la cedula.');
-    }
+    // Los documentos son opcionales: el administrador puede solicitarlos al revisar la postulacion
 
     $username = sanitize_text($input['username']);
     $documentNumber = sanitize_text($input['document_number']);
@@ -283,11 +277,11 @@ function register_application(array $input, array $files): array
             ':phone' => sanitize_text($input['phone']),
             ':email' => $email,
             ':address' => sanitize_text($input['address']),
-            ':parish' => sanitize_text($input['parish']),
-            ':canton' => sanitize_text($input['canton']),
-            ':requested_zone' => sanitize_text($input['requested_zone']),
-            ':prior_experience' => sanitize_text($input['experience']),
-            ':review_status' => 'pending',
+            ':parish'            => sanitize_text($input['parish'] ?? 'San Bartolome'),
+            ':canton'            => sanitize_text($input['canton'] ?? 'Sigsig'),
+            ':requested_zone'    => sanitize_text($input['requested_zone'] ?? 'Por asignar'),
+            ':prior_experience'  => sanitize_text($input['experience'] ?? 'Sin especificar'),
+            ':review_status'     => 'pending',
         ]);
         $applicationId = (int) $pdo->lastInsertId();
 
@@ -301,17 +295,22 @@ function register_application(array $input, array $files): array
             )
         ');
         $userStmt->execute([
-            ':username' => $username,
-            ':display_name' => sanitize_text($input['full_name']),
+            ':username'      => $username,
+            ':display_name'  => sanitize_text($input['full_name']),
             ':password_hash' => password_hash((string) $input['password'], PASSWORD_DEFAULT),
-            ':role' => 'surveyor',
-            ':account_status' => 'pending',
-            ':application_id' => $applicationId,
+            ':role'          => 'surveyor',
+            ':account_status'=> 'pending',
+            ':application_id'=> $applicationId,
         ]);
         $userId = (int) $pdo->lastInsertId();
 
-        store_application_document($applicationId, 'Foto personal', $files['profile_photo']);
-        store_application_document($applicationId, 'Cedula', $files['id_document']);
+        // Guardar documentos solo si fueron adjuntados
+        if (!empty($files['profile_photo']['name'])) {
+            store_application_document($applicationId, 'Foto personal', $files['profile_photo']);
+        }
+        if (!empty($files['id_document']['name'])) {
+            store_application_document($applicationId, 'Cedula', $files['id_document']);
+        }
         if (!empty($files['support_document']['name'])) {
             store_application_document($applicationId, 'Respaldo adicional', $files['support_document']);
         }

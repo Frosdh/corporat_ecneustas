@@ -327,7 +327,8 @@ async function loadSurveyorsField() {
 }
 
 async function loadDashboard() {
-    const sector = document.getElementById('sector-filter').value;
+    const sectorEl = document.getElementById('sector-filter');
+    const sector = sectorEl ? sectorEl.value : 'general';
     const payload = await requestJson('dashboard', { params: { sector } });
     state.dashboard = payload.dashboard;
     renderDashboard(payload.dashboard);
@@ -653,30 +654,73 @@ function renderApplications() {
                     </div>
                 </div>
                 <div class="inline-actions" style="margin-top:14px;">
-                    <button class="secondary-button" type="button" onclick="reviewApplication(${item.id}, 'in_review')">En revision</button>
-                    <button class="success-button" type="button" onclick="reviewApplication(${item.id}, 'approved')">Aprobar</button>
-                    <button class="danger-button" type="button" onclick="reviewApplication(${item.id}, 'rejected')">Rechazar</button>
+                    <button id="btn-review-${item.id}" class="secondary-button" type="button" onclick="reviewApplication(${item.id}, 'in_review', this.closest('.inline-actions'))">En revision</button>
+                    <button id="btn-approve-${item.id}" class="success-button" type="button" onclick="reviewApplication(${item.id}, 'approved', this.closest('.inline-actions'))">Aprobar</button>
+                    <button id="btn-reject-${item.id}" class="danger-button" type="button" onclick="reviewApplication(${item.id}, 'rejected', this.closest('.inline-actions'))">Rechazar</button>
                 </div>
+                <div id="review-feedback-${item.id}" class="review-feedback hidden"></div>
             </article>
         `;
     }).join('');
 }
 
-async function reviewApplication(applicationId, decision) {
+async function reviewApplication(applicationId, decision, actionsContainer) {
     const notes = document.getElementById(`notes-${applicationId}`)?.value || '';
     const assignedZone = document.getElementById(`zone-${applicationId}`)?.value || '';
+    const feedbackEl = document.getElementById(`review-feedback-${applicationId}`);
 
-    await requestJson('review-application', {
-        method: 'POST',
-        body: {
-            application_id: applicationId,
-            decision,
-            notes,
-            assigned_zone: assignedZone,
-        },
-    });
+    // Deshabilitar botones para evitar doble clic
+    if (actionsContainer) {
+        actionsContainer.querySelectorAll('button').forEach((btn) => {
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+        });
+    }
+    if (feedbackEl) {
+        feedbackEl.textContent = 'Procesando...';
+        feedbackEl.className = 'review-feedback review-feedback-loading';
+    }
 
-    await Promise.all([loadApplications(), loadSurveyors(), loadDashboard()]);
+    try {
+        await requestJson('review-application', {
+            method: 'POST',
+            body: {
+                application_id: applicationId,
+                decision,
+                notes,
+                assigned_zone: assignedZone,
+            },
+        });
+
+        if (feedbackEl) {
+            const decisionLabel = { approved: 'Aprobado', rejected: 'Rechazado', in_review: 'En revision' }[decision] || decision;
+            feedbackEl.textContent = `✓ ${decisionLabel} correctamente.`;
+            feedbackEl.className = 'review-feedback review-feedback-success';
+        }
+
+        // Recargar datos tras 600 ms para que el usuario vea el mensaje
+        setTimeout(async () => {
+            try {
+                await Promise.all([loadApplications(), loadSurveyors(), loadDashboard()]);
+            } catch (reloadError) {
+                console.warn('Error al recargar datos:', reloadError.message);
+            }
+        }, 600);
+    } catch (error) {
+        if (feedbackEl) {
+            feedbackEl.textContent = `✗ Error: ${error.message}`;
+            feedbackEl.className = 'review-feedback review-feedback-error';
+        } else {
+            alert(`Error al procesar la solicitud: ${error.message}`);
+        }
+        // Re-habilitar botones si hubo error
+        if (actionsContainer) {
+            actionsContainer.querySelectorAll('button').forEach((btn) => {
+                btn.disabled = false;
+                btn.style.opacity = '';
+            });
+        }
+    }
 }
 
 async function loadSurveyors() {

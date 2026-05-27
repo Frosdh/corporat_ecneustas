@@ -263,11 +263,73 @@ button {
 .success-button {
     background: #ddf6eb;
     color: #0d7d58;
+    transition: background 0.18s, transform 0.12s;
+}
+
+.success-button:hover:not(:disabled) {
+    background: #b8edda;
+    transform: translateY(-1px);
 }
 
 .danger-button {
     background: #ffe0e1;
     color: #9a1f28;
+    transition: background 0.18s, transform 0.12s;
+}
+
+.danger-button:hover:not(:disabled) {
+    background: #ffc5c7;
+    transform: translateY(-1px);
+}
+
+.secondary-button:hover:not(:disabled) {
+    background: #d9cbbf;
+    transform: translateY(-1px);
+}
+
+.primary-button:hover:not(:disabled) {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+button:disabled {
+    cursor: not-allowed;
+}
+
+/* Feedback de revisión de solicitudes */
+.review-feedback {
+    margin-top: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    display: none;
+    animation: fadeInFeedback 0.2s ease;
+}
+
+.review-feedback-loading {
+    display: block;
+    background: #EDE0D0;
+    color: #4E342E;
+}
+
+.review-feedback-success {
+    display: block;
+    background: #ddf6eb;
+    color: #0d7d58;
+    border: 1px solid #a7e8cc;
+}
+
+.review-feedback-error {
+    display: block;
+    background: #ffe0e1;
+    color: #9a1f28;
+    border: 1px solid #f4b0b3;
+}
+
+@keyframes fadeInFeedback {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
 .error {

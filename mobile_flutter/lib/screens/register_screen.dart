@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import '../services/api_service.dart';
 import '../theme/coffee_palette.dart';
 
@@ -14,7 +13,6 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _picker = ImagePicker();
 
   // Controladores de campos
   final _fullNameController = TextEditingController();
@@ -22,18 +20,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _addressController = TextEditingController();
-  final _parishController = TextEditingController();
-  final _cantonController = TextEditingController();
-  final _requestedZoneController = TextEditingController();
-  final _experienceController = TextEditingController();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _passwordConfirmController = TextEditingController();
-
-  // Archivos adjuntos
-  String _profilePhotoPath = '';
-  String _idDocumentPath = '';
-  String _supportDocumentPath = '';
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -45,80 +34,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _phoneController.dispose();
     _emailController.dispose();
     _addressController.dispose();
-    _parishController.dispose();
-    _cantonController.dispose();
-    _requestedZoneController.dispose();
-    _experienceController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
     _passwordConfirmController.dispose();
     super.dispose();
   }
 
-  // Método interactivo para capturar imágenes usando Cámara o Galería
-  Future<void> _pickImage(String type) async {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFFF5EFE6),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Wrap(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                child: Text(
-                  'Adjuntar archivo',
-                  style: const TextStyle(
-                    color: CoffeePalette.dark,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.camera_alt_outlined, color: CoffeePalette.medium),
-                title: const Text('Tomar foto con Cámara',
-                    style: TextStyle(color: CoffeePalette.dark, fontWeight: FontWeight.w500)),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final file = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
-                  if (file != null) {
-                    setState(() {
-                      if (type == 'profile') _profilePhotoPath = file.path;
-                      if (type == 'id') _idDocumentPath = file.path;
-                      if (type == 'support') _supportDocumentPath = file.path;
-                    });
-                  }
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library_outlined, color: CoffeePalette.medium),
-                title: const Text('Elegir de Galería',
-                    style: TextStyle(color: CoffeePalette.dark, fontWeight: FontWeight.w500)),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final file = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
-                  if (file != null) {
-                    setState(() {
-                      if (type == 'profile') _profilePhotoPath = file.path;
-                      if (type == 'id') _idDocumentPath = file.path;
-                      if (type == 'support') _supportDocumentPath = file.path;
-                    });
-                  }
-                },
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // Enviar formulario multipart
+  // Enviar formulario
   Future<void> _handleRegister() async {
     setState(() {
       _errorMessage = null;
@@ -138,13 +60,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    if (_profilePhotoPath.isEmpty || _idDocumentPath.isEmpty) {
-      setState(() {
-        _errorMessage = 'Debes adjuntar obligatoriamente la Foto Personal y la Foto de la Cédula.';
-      });
-      return;
-    }
-
     setState(() {
       _isLoading = true;
     });
@@ -156,24 +71,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'phone': _phoneController.text.trim(),
         'email': _emailController.text.trim(),
         'address': _addressController.text.trim(),
-        'parish': _parishController.text.trim(),
-        'canton': _cantonController.text.trim(),
-        'requested_zone': _requestedZoneController.text.trim(),
-        'experience': _experienceController.text.trim(),
+        // Valores por defecto — administrador los asigna al aprobar
+        'parish': 'San Bartolome',
+        'canton': 'Sigsig',
+        'requested_zone': 'Por asignar',
+        'experience': 'Sin especificar',
         'username': _usernameController.text.trim(),
         'password': _passwordController.text,
       };
 
-      final files = {
-        'profile_photo': _profilePhotoPath,
-        'id_document': _idDocumentPath,
-        'support_document': _supportDocumentPath,
-      };
-
-      await widget.apiService.registerApplication(fields, files);
+      // Sin archivos adjuntos — se envía sin documentos
+      await widget.apiService.registerApplication(fields, {});
 
       if (mounted) {
-        // Diálogo estético de éxito con paleta café
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -182,11 +92,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
               backgroundColor: const Color(0xFFF5EFE6),
               icon: const Icon(Icons.check_circle_outline, color: CoffeePalette.medium, size: 48),
               title: const Text(
-                '¡Postulación Registrada!',
+                '¡Solicitud Enviada!',
                 style: TextStyle(color: CoffeePalette.dark, fontWeight: FontWeight.bold),
               ),
               content: const Text(
-                'Tu postulación ha sido enviada con éxito. Queda en estado pendiente de revisión por la administración para habilitar tu cuenta.',
+                'Tu solicitud ha sido registrada con éxito. Queda pendiente de revisión y aprobación por la administración.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: CoffeePalette.medium),
               ),
@@ -216,7 +126,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // Genera un widget visual para cada sección del formulario — estilo café claro
+  // Tarjeta de sección
   Widget _buildSectionCard({required String title, required List<Widget> children}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
@@ -236,7 +146,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Encabezado de sección con línea decorativa café
           Row(
             children: [
               Container(
@@ -266,72 +175,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // Widget para botones de captura de adjuntos — estilo café
-  Widget _buildFilePickerTile({
-    required String label,
-    required String path,
-    required VoidCallback onTap,
-  }) {
-    final hasFile = path.isNotEmpty;
-    return Container(
-      margin: const EdgeInsets.only(top: 8, bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: hasFile
-            ? CoffeePalette.medium.withOpacity(0.08)
-            : const Color(0xFFFFF8E1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: hasFile ? CoffeePalette.medium : CoffeePalette.latte,
-          width: 1.2,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            hasFile ? Icons.check_circle : Icons.cloud_upload_outlined,
-            color: hasFile ? CoffeePalette.medium : CoffeePalette.accent,
-            size: 28,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                      color: CoffeePalette.dark,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14),
-                ),
-                Text(
-                  hasFile ? 'Archivo seleccionado ✓' : 'Sin archivo adjunto',
-                  style: TextStyle(
-                    color: hasFile ? CoffeePalette.medium : CoffeePalette.latte,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          ElevatedButton(
-            onPressed: onTap,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: hasFile ? CoffeePalette.latte : CoffeePalette.medium,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              minimumSize: Size.zero,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: Text(hasFile ? 'Cambiar' : 'Subir',
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
-    );
-  }
-
   // Campo de texto con estilo café uniforme
   InputDecoration _cafeInput(String label, {String? hint, bool multiline = false}) {
     return InputDecoration(
@@ -349,7 +192,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       backgroundColor: CoffeePalette.background,
       appBar: AppBar(
         title: const Text(
-          'Postulación de Encuestador',
+          'Registro de Encuestador',
           style: TextStyle(
             color: CoffeePalette.dark,
             fontWeight: FontWeight.bold,
@@ -374,7 +217,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Encabezado con insignia EG
+                // Encabezado
                 Row(
                   children: [
                     Container(
@@ -413,7 +256,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                           ),
                           Text(
-                            'Completa tu perfil para obtener credencial de campo',
+                            'Crea tu cuenta para solicitar acceso al sistema',
                             style: TextStyle(color: CoffeePalette.medium, fontSize: 12),
                           ),
                         ],
@@ -471,46 +314,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ],
                 ),
 
-                // Sección 2: Territorio y Experiencia
-                _buildSectionCard(
-                  title: 'Territorio y Experiencia',
-                  children: [
-                    TextFormField(
-                      controller: _parishController,
-                      style: const TextStyle(color: CoffeePalette.dark),
-                      decoration: _cafeInput('Parroquia de residencia'),
-                      validator: (v) => v!.trim().isEmpty ? 'Parroquia es obligatoria.' : null,
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _cantonController,
-                      style: const TextStyle(color: CoffeePalette.dark),
-                      decoration: _cafeInput('Cantón de residencia'),
-                      validator: (v) => v!.trim().isEmpty ? 'Cantón es obligatorio.' : null,
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _requestedZoneController,
-                      style: const TextStyle(color: CoffeePalette.dark),
-                      decoration: _cafeInput('Zona/Sector solicitado para encuestar'),
-                      validator: (v) => v!.trim().isEmpty ? 'Zona es obligatoria.' : null,
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _experienceController,
-                      style: const TextStyle(color: CoffeePalette.dark),
-                      maxLines: 3,
-                      decoration: _cafeInput(
-                        'Experiencia Previa',
-                        hint: 'Describe tu trabajo previo en encuestas o actividades sociales...',
-                        multiline: true,
-                      ),
-                      validator: (v) => v!.trim().isEmpty ? 'Describe tu experiencia.' : null,
-                    ),
-                  ],
-                ),
-
-                // Sección 3: Credenciales de Acceso
+                // Sección 2: Credenciales de Acceso
                 _buildSectionCard(
                   title: 'Credenciales del Sistema',
                   children: [
@@ -546,29 +350,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ],
                 ),
 
-                // Sección 4: Documentos de Respaldo
-                _buildSectionCard(
-                  title: 'Soportes y Documentación',
-                  children: [
-                    _buildFilePickerTile(
-                      label: 'Foto Personal (Perfil)',
-                      path: _profilePhotoPath,
-                      onTap: () => _pickImage('profile'),
-                    ),
-                    _buildFilePickerTile(
-                      label: 'Foto de la Cédula (Frente)',
-                      path: _idDocumentPath,
-                      onTap: () => _pickImage('id'),
-                    ),
-                    _buildFilePickerTile(
-                      label: 'Respaldo adicional / CV (Opcional)',
-                      path: _supportDocumentPath,
-                      onTap: () => _pickImage('support'),
-                    ),
-                  ],
-                ),
-
-                // Mostrar error si existe
+                // Error
                 if (_errorMessage != null) ...[
                   Container(
                     margin: const EdgeInsets.only(bottom: 16),
@@ -593,7 +375,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ],
 
-                // Botón de Enviar Postulación
+                // Botón Enviar
                 ElevatedButton(
                   onPressed: _isLoading ? null : _handleRegister,
                   child: _isLoading
@@ -605,7 +387,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                      : const Text('Enviar Ficha de Postulación'),
+                      : const Text('Enviar Solicitud de Registro'),
                 ),
                 const SizedBox(height: 20),
               ],
