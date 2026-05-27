@@ -191,6 +191,10 @@ class ApiService {
       await _saveSession(_sessionId, user);
       return responseData;
     } else {
+      // Si el servidor indica que la sesión no es válida, limpiamos el estado local para forzar re-login
+      if (response.statusCode == 401 || responseData['ok'] == false) {
+        await _saveSession(null, null);
+      }
       throw Exception(responseData['message'] ?? 'Error de sincronización de sesión');
     }
   }
@@ -208,7 +212,9 @@ class ApiService {
     if (response.statusCode == 200 && responseData['ok'] == true) {
       return responseData;
     } else {
-      throw Exception(responseData['message'] ?? 'Error al guardar la encuesta');
+      // 'error' contiene el mensaje técnico real del servidor (SQL, etc.)
+      // 'message' contiene el mensaje amigable. Mostramos el técnico si está disponible.
+      throw Exception(responseData['error'] ?? responseData['message'] ?? 'Error al guardar la encuesta');
     }
   }
 
@@ -235,6 +241,9 @@ class ApiService {
     // Mapeamos cada encuesta en la lista para que women_roles, etc. sean cadenas unidas por '|'
     final preparedSurveys = surveys.map((s) {
       final prepared = Map<String, dynamic>.from(s);
+      if (prepared['primary_problem'] is List) {
+        prepared['primary_problem'] = (prepared['primary_problem'] as List).join('|');
+      }
       if (prepared['women_roles'] is List) {
         prepared['women_roles'] = (prepared['women_roles'] as List).join('|');
       }
@@ -257,7 +266,78 @@ class ApiService {
     if (response.statusCode == 200 && responseData['ok'] == true) {
       return responseData;
     } else {
-      throw Exception(responseData['message'] ?? 'Error al sincronizar encuestas');
+      throw Exception(responseData['error'] ?? responseData['message'] ?? 'Error al sincronizar encuestas');
     }
   }
+
+  // ========== MÉTODOS DE GEOLOCALIZACIÓN ==========
+  
+  /// Guarda la ubicación capturada por GPS en el almacenamiento local
+  /// Se utiliza para rellenar automáticamente los campos de sector/barrio en las encuestas
+  Future<void> saveUserLocation({
+    required double latitude,
+    required double longitude,
+    required String barrio,
+    required String sectorValue,
+    required String sectorLabel,
+    required String zona,
+    required String canton,
+    required String provincia,
+  }) async {
+    await prefs.setDouble('user_location_lat', latitude);
+    await prefs.setDouble('user_location_lon', longitude);
+    await prefs.setString('user_location_barrio', barrio);
+    await prefs.setString('user_location_sector_value', sectorValue);
+    await prefs.setString('user_location_sector_label', sectorLabel);
+    await prefs.setString('user_location_zona', zona);
+    await prefs.setString('user_location_canton', canton);
+    await prefs.setString('user_location_provincia', provincia);
+    await prefs.setString('user_location_timestamp', DateTime.now().toIso8601String());
+  }
+
+  /// Recupera la ubicación guardada del almacenamiento local
+  /// Retorna null si no hay ubicación guardada
+  Map<String, dynamic>? getUserLocation() {
+    try {
+      final lat = prefs.getDouble('user_location_lat');
+      final lon = prefs.getDouble('user_location_lon');
+      final barrio = prefs.getString('user_location_barrio');
+      final sectorValue = prefs.getString('user_location_sector_value');
+      final sectorLabel = prefs.getString('user_location_sector_label');
+      final zona = prefs.getString('user_location_zona');
+      final canton = prefs.getString('user_location_canton');
+      final provincia = prefs.getString('user_location_provincia');
+      final timestamp = prefs.getString('user_location_timestamp');
+
+      if (lat == null || lon == null) return null;
+
+      return {
+        'latitude': lat,
+        'longitude': lon,
+        'barrio': barrio ?? 'Desconocido',
+        'sectorValue': sectorValue ?? '',
+        'sectorLabel': sectorLabel ?? '',
+        'zona': zona ?? 'Sierra',
+        'canton': canton ?? 'Sígsig',
+        'provincia': provincia ?? 'Azuay',
+        'timestamp': timestamp,
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Limpia la ubicación guardada (se llama cuando se hace logout)
+  Future<void> clearUserLocation() async {
+    await prefs.remove('user_location_lat');
+    await prefs.remove('user_location_lon');
+    await prefs.remove('user_location_barrio');
+    await prefs.remove('user_location_sector_value');
+    await prefs.remove('user_location_sector_label');
+    await prefs.remove('user_location_zona');
+    await prefs.remove('user_location_canton');
+    await prefs.remove('user_location_provincia');
+    await prefs.remove('user_location_timestamp');
+  }
 }
+

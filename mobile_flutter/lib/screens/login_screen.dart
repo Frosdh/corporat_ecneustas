@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../services/gps_service.dart';
+import '../theme/coffee_palette.dart';
 import 'register_screen.dart';
 import 'surveyor_home_screen.dart';
 
@@ -90,7 +92,53 @@ class _LoginScreenState extends State<LoginScreen> {
       final username = _usernameController.text.trim();
       final password = _passwordController.text;
 
+      // 1. Login en la API
       await widget.apiService.login(username, password);
+
+      // 2. Capturar ubicación GPS automáticamente después del login
+      GeoLocationResult? locationInfo;
+      try {
+        final position = await GpsService.determinePosition();
+        locationInfo = await GpsService.getFullLocationInfo(position.latitude, position.longitude);
+        
+        if (locationInfo != null) {
+          // Guardamos en preferencias compartidas para usar en el formulario de encuesta
+          await widget.apiService.saveUserLocation(
+
+            latitude: position.latitude,
+            longitude: position.longitude,
+            barrio: locationInfo.barrioName,
+            sectorValue: locationInfo.sectorValue,
+            sectorLabel: locationInfo.sectorLabel,
+            zona: locationInfo.zona,
+            canton: locationInfo.canton,
+            provincia: locationInfo.provincia,
+            
+          );
+          
+          // Mostrar confirmación de ubicación capturada
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('✓ Ubicación detectada: ${locationInfo.sectorLabel} - ${locationInfo.barrioName}\n${locationInfo.canton}, ${locationInfo.provincia}'),
+                duration: const Duration(seconds: 2),
+                backgroundColor: Color(0xFF10B981),
+              ),
+            );
+          }
+        }
+      } catch (gpsError) {
+        // Si falla GPS, continuamos sin ubicación (no es fatal)
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Advertencia GPS: ${gpsError.toString().replaceAll('Exception:', '').trim()}'),
+              duration: const Duration(seconds: 3),
+              backgroundColor: Color(0xFFF59E0B),
+            ),
+          );
+        }
+      }
 
       if (mounted) {
         // Navegación fluida y reemplazo de pantalla
@@ -140,20 +188,20 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 16),
-              // Brand Pill Badge
+              // Brand Pill Badge — gradiente café
               Container(
                 width: 72,
                 height: 72,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFF3B82F6), Color(0xFF1E3A8A)],
+                    colors: [Color(0xFFA67C52), Color(0xFF6F4E37)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF3B82F6).withOpacity(0.3),
+                      color: Color(0xFF6F4E37).withOpacity(0.35),
                       blurRadius: 16,
                       offset: const Offset(0, 8),
                     )
@@ -161,7 +209,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 alignment: Alignment.center,
                 child: const Text(
-                  'SB',
+                  'EG',
                   style: TextStyle(
                     fontFamily: 'Outfit',
                     fontSize: 32,
@@ -173,33 +221,34 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 28),
               
               Text(
-                'San Bartolomé',
+                'Encuestas-Geo',
                 style: theme.textTheme.headlineMedium?.copyWith(
-                  color: Colors.white,
+                  color: CoffeePalette.dark,
                   fontSize: 28,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 8),
               const Text(
                 'Mapeo Social Parroquial',
                 style: TextStyle(
-                  color: Color(0xFF94A3B8),
+                  color: CoffeePalette.medium,
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 48),
 
-              // Formulario en Tarjeta Premium Glassmorphic
+              // Formulario en Tarjeta café claro
               Container(
-                padding: const EdgeInsets.all(24.0),
+                padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 24.0),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B),
+                  color: const Color(0xFFF5EFE6),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFF334155), width: 1),
+                  border: Border.all(color: CoffeePalette.latte, width: 1.5),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
+                      color: Color(0xFF6F4E37).withOpacity(0.12),
                       blurRadius: 24,
                       offset: const Offset(0, 12),
                     )
@@ -215,7 +264,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: CoffeePalette.dark,
                           letterSpacing: -0.2,
                         ),
                       ),
@@ -224,10 +273,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Campo de Usuario
                       TextFormField(
                         controller: _usernameController,
-                        style: const TextStyle(color: Colors.white),
+                        style: const TextStyle(color: CoffeePalette.dark),
                         decoration: const InputDecoration(
                           labelText: 'Usuario',
-                          prefixIcon: Icon(Icons.person_outline, color: Color(0xFF94A3B8)),
+                          labelStyle: TextStyle(color: CoffeePalette.medium, fontWeight: FontWeight.w600),
+                          floatingLabelBehavior: FloatingLabelBehavior.always,
+                          prefixIcon: Icon(Icons.person_outline, color: CoffeePalette.medium),
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
@@ -241,15 +292,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Campo de Contraseña
                       TextFormField(
                         controller: _passwordController,
-                        style: const TextStyle(color: Colors.white),
+                        style: const TextStyle(color: CoffeePalette.dark),
                         obscureText: _isObscured,
                         decoration: InputDecoration(
                           labelText: 'Clave',
-                          prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF94A3B8)),
+                          labelStyle: const TextStyle(color: CoffeePalette.medium, fontWeight: FontWeight.w600),
+                          floatingLabelBehavior: FloatingLabelBehavior.always,
+                          prefixIcon: const Icon(Icons.lock_outline, color: CoffeePalette.medium),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _isObscured ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                              color: const Color(0xFF94A3B8),
+                              color: CoffeePalette.medium,
                             ),
                             onPressed: () {
                               setState(() {
@@ -273,9 +326,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFEF4444).withOpacity(0.1),
+                            color: Color(0xFFEF4444).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.3)),
+                            border: Border.all(color: Color(0xFFEF4444).withOpacity(0.3)),
                           ),
                           child: Row(
                             children: [

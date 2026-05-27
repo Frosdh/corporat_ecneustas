@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/api_service.dart';
+import '../theme/coffee_palette.dart';
 
 class RegisterScreen extends StatefulWidget {
   final ApiService apiService;
@@ -58,7 +59,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _pickImage(String type) async {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1E293B),
+      backgroundColor: const Color(0xFFF5EFE6),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -66,9 +67,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
         return SafeArea(
           child: Wrap(
             children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                child: Text(
+                  'Adjuntar archivo',
+                  style: const TextStyle(
+                    color: CoffeePalette.dark,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
               ListTile(
-                leading: const Icon(Icons.camera_alt_outlined, color: Color(0xFF3B82F6)),
-                title: const Text('Tomar foto con Cámara', style: TextStyle(color: Colors.white)),
+                leading: const Icon(Icons.camera_alt_outlined, color: CoffeePalette.medium),
+                title: const Text('Tomar foto con Cámara',
+                    style: TextStyle(color: CoffeePalette.dark, fontWeight: FontWeight.w500)),
                 onTap: () async {
                   Navigator.pop(context);
                   final file = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
@@ -82,8 +95,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library_outlined, color: Color(0xFF3B82F6)),
-                title: const Text('Elegir de Galería', style: TextStyle(color: Colors.white)),
+                leading: const Icon(Icons.photo_library_outlined, color: CoffeePalette.medium),
+                title: const Text('Elegir de Galería',
+                    style: TextStyle(color: CoffeePalette.dark, fontWeight: FontWeight.w500)),
                 onTap: () async {
                   Navigator.pop(context);
                   final file = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
@@ -96,6 +110,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   }
                 },
               ),
+              const SizedBox(height: 8),
             ],
           ),
         );
@@ -158,19 +173,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await widget.apiService.registerApplication(fields, files);
 
       if (mounted) {
-        // Diálogo estético de éxito
+        // Diálogo estético de éxito con paleta café
         showDialog(
           context: context,
           barrierDismissible: false,
           builder: (context) {
             return AlertDialog(
-              backgroundColor: const Color(0xFF1E293B),
-              icon: const Icon(Icons.check_circle_outline, color: Color(0xFF10B981), size: 48),
-              title: const Text('¡Postulación Registrada!'),
+              backgroundColor: const Color(0xFFF5EFE6),
+              icon: const Icon(Icons.check_circle_outline, color: CoffeePalette.medium, size: 48),
+              title: const Text(
+                '¡Postulación Registrada!',
+                style: TextStyle(color: CoffeePalette.dark, fontWeight: FontWeight.bold),
+              ),
               content: const Text(
                 'Tu postulación ha sido enviada con éxito. Queda en estado pendiente de revisión por la administración para habilitar tu cuenta.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Color(0xFF94A3B8)),
+                style: TextStyle(color: CoffeePalette.medium),
               ),
               actions: [
                 ElevatedButton(
@@ -198,27 +216,48 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // Genera un widget visual para cada sección del formulario
+  // Genera un widget visual para cada sección del formulario — estilo café claro
   Widget _buildSectionCard({required String title, required List<Widget> children}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: const Color(0xFFF5EFE6),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF334155), width: 1),
+        border: Border.all(color: CoffeePalette.latte, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF6F4E37).withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              letterSpacing: -0.2,
-            ),
+          // Encabezado de sección con línea decorativa café
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: CoffeePalette.medium,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: CoffeePalette.dark,
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           ...children,
@@ -227,7 +266,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // Widget para botones de captura de adjuntos
+  // Widget para botones de captura de adjuntos — estilo café
   Widget _buildFilePickerTile({
     required String label,
     required String path,
@@ -238,18 +277,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
       margin: const EdgeInsets.only(top: 8, bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
+        color: hasFile
+            ? CoffeePalette.medium.withOpacity(0.08)
+            : const Color(0xFFFFF8E1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: hasFile ? const Color(0xFF10B981).withOpacity(0.5) : const Color(0xFF334155),
-          width: 1,
+          color: hasFile ? CoffeePalette.medium : CoffeePalette.latte,
+          width: 1.2,
         ),
       ),
       child: Row(
         children: [
           Icon(
             hasFile ? Icons.check_circle : Icons.cloud_upload_outlined,
-            color: hasFile ? const Color(0xFF10B981) : const Color(0xFF3B82F6),
+            color: hasFile ? CoffeePalette.medium : CoffeePalette.accent,
             size: 28,
           ),
           const SizedBox(width: 12),
@@ -259,12 +300,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+                  style: const TextStyle(
+                      color: CoffeePalette.dark,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14),
                 ),
                 Text(
-                  hasFile ? 'Archivo seleccionado' : 'Sin archivo adjunto',
+                  hasFile ? 'Archivo seleccionado ✓' : 'Sin archivo adjunto',
                   style: TextStyle(
-                    color: hasFile ? const Color(0xFF10B981) : const Color(0xFF64748B),
+                    color: hasFile ? CoffeePalette.medium : CoffeePalette.latte,
                     fontSize: 12,
                   ),
                 ),
@@ -274,42 +318,108 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ElevatedButton(
             onPressed: onTap,
             style: ElevatedButton.styleFrom(
-              backgroundColor: hasFile ? const Color(0xFF334155) : const Color(0xFF3B82F6),
+              backgroundColor: hasFile ? CoffeePalette.latte : CoffeePalette.medium,
+              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               minimumSize: Size.zero,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: Text(hasFile ? 'Cambiar' : 'Subir'),
+            child: Text(hasFile ? 'Cambiar' : 'Subir',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
     );
   }
 
+  // Campo de texto con estilo café uniforme
+  InputDecoration _cafeInput(String label, {String? hint, bool multiline = false}) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      labelStyle: const TextStyle(color: CoffeePalette.medium, fontWeight: FontWeight.w600),
+      floatingLabelBehavior: FloatingLabelBehavior.always,
+      alignLabelWithHint: multiline,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: CoffeePalette.background,
       appBar: AppBar(
-        title: const Text('Crear Ficha de Postulación'),
-        backgroundColor: const Color(0xFF0F172A),
-        foregroundColor: Colors.white,
+        title: const Text(
+          'Postulación de Encuestador',
+          style: TextStyle(
+            color: CoffeePalette.dark,
+            fontWeight: FontWeight.bold,
+            fontSize: 17,
+          ),
+        ),
+        backgroundColor: const Color(0xFFF5EFE6),
+        foregroundColor: CoffeePalette.dark,
         elevation: 0,
+        shadowColor: CoffeePalette.latte,
+        surfaceTintColor: Colors.transparent,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: CoffeePalette.latte),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(20.0),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  'Postulación de Encuestador',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Completa tu perfil profesional para recibir tu credencial de campo.',
-                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+                // Encabezado con insignia EG
+                Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFA67C52), Color(0xFF6F4E37)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        'EG',
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Encuestas-Geo',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: CoffeePalette.dark,
+                            ),
+                          ),
+                          Text(
+                            'Completa tu perfil para obtener credencial de campo',
+                            style: TextStyle(color: CoffeePalette.medium, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 24),
 
@@ -319,44 +429,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   children: [
                     TextFormField(
                       controller: _fullNameController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(labelText: 'Nombres Completos'),
-                      validator: (value) => value!.trim().isEmpty ? 'Nombres son obligatorios.' : null,
+                      style: const TextStyle(color: CoffeePalette.dark),
+                      decoration: _cafeInput('Nombres Completos'),
+                      validator: (v) => v!.trim().isEmpty ? 'Nombres son obligatorios.' : null,
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
                       controller: _documentController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(labelText: 'Cédula de Identidad'),
+                      style: const TextStyle(color: CoffeePalette.dark),
+                      decoration: _cafeInput('Cédula de Identidad'),
                       keyboardType: TextInputType.number,
-                      validator: (value) => value!.trim().isEmpty ? 'Cédula es obligatoria.' : null,
+                      validator: (v) => v!.trim().isEmpty ? 'Cédula es obligatoria.' : null,
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
                       controller: _phoneController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(labelText: 'Celular / Teléfono'),
+                      style: const TextStyle(color: CoffeePalette.dark),
+                      decoration: _cafeInput('Celular / Teléfono'),
                       keyboardType: TextInputType.phone,
-                      validator: (value) => value!.trim().isEmpty ? 'Celular es obligatorio.' : null,
+                      validator: (v) => v!.trim().isEmpty ? 'Celular es obligatorio.' : null,
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
                       controller: _emailController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(labelText: 'Correo Electrónico'),
+                      style: const TextStyle(color: CoffeePalette.dark),
+                      decoration: _cafeInput('Correo Electrónico'),
                       keyboardType: TextInputType.emailAddress,
-                      validator: (value) {
-                        if (value!.trim().isEmpty) return 'Correo es obligatorio.';
-                        if (!value.contains('@')) return 'Correo no es válido.';
+                      validator: (v) {
+                        if (v!.trim().isEmpty) return 'Correo es obligatorio.';
+                        if (!v.contains('@')) return 'Correo no es válido.';
                         return null;
                       },
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
                       controller: _addressController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(labelText: 'Dirección Domiciliaria'),
-                      validator: (value) => value!.trim().isEmpty ? 'Dirección es obligatoria.' : null,
+                      style: const TextStyle(color: CoffeePalette.dark),
+                      decoration: _cafeInput('Dirección Domiciliaria'),
+                      validator: (v) => v!.trim().isEmpty ? 'Dirección es obligatoria.' : null,
                     ),
                   ],
                 ),
@@ -367,35 +477,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   children: [
                     TextFormField(
                       controller: _parishController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(labelText: 'Parroquia de residencia'),
-                      validator: (value) => value!.trim().isEmpty ? 'Parroquia es obligatoria.' : null,
+                      style: const TextStyle(color: CoffeePalette.dark),
+                      decoration: _cafeInput('Parroquia de residencia'),
+                      validator: (v) => v!.trim().isEmpty ? 'Parroquia es obligatoria.' : null,
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
                       controller: _cantonController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(labelText: 'Cantón de residencia'),
-                      validator: (value) => value!.trim().isEmpty ? 'Cantón es obligatorio.' : null,
+                      style: const TextStyle(color: CoffeePalette.dark),
+                      decoration: _cafeInput('Cantón de residencia'),
+                      validator: (v) => v!.trim().isEmpty ? 'Cantón es obligatorio.' : null,
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
                       controller: _requestedZoneController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(labelText: 'Zona/Sector solicitado para encuestar'),
-                      validator: (value) => value!.trim().isEmpty ? 'Zona es obligatoria.' : null,
+                      style: const TextStyle(color: CoffeePalette.dark),
+                      decoration: _cafeInput('Zona/Sector solicitado para encuestar'),
+                      validator: (v) => v!.trim().isEmpty ? 'Zona es obligatoria.' : null,
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
                       controller: _experienceController,
-                      style: const TextStyle(color: Colors.white),
+                      style: const TextStyle(color: CoffeePalette.dark),
                       maxLines: 3,
-                      decoration: const InputDecoration(
-                        labelText: 'Experiencia Previa',
-                        alignLabelWithHint: true,
-                        hintText: 'Describe tu trabajo previo en encuestas o actividades sociales...',
+                      decoration: _cafeInput(
+                        'Experiencia Previa',
+                        hint: 'Describe tu trabajo previo en encuestas o actividades sociales...',
+                        multiline: true,
                       ),
-                      validator: (value) => value!.trim().isEmpty ? 'Describe tu experiencia.' : null,
+                      validator: (v) => v!.trim().isEmpty ? 'Describe tu experiencia.' : null,
                     ),
                   ],
                 ),
@@ -406,30 +516,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   children: [
                     TextFormField(
                       controller: _usernameController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(labelText: 'Nombre de usuario deseado'),
-                      validator: (value) => value!.trim().isEmpty ? 'Usuario es obligatorio.' : null,
+                      style: const TextStyle(color: CoffeePalette.dark),
+                      decoration: _cafeInput('Nombre de usuario deseado'),
+                      validator: (v) => v!.trim().isEmpty ? 'Usuario es obligatorio.' : null,
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
                       controller: _passwordController,
-                      style: const TextStyle(color: Colors.white),
+                      style: const TextStyle(color: CoffeePalette.dark),
                       obscureText: true,
-                      decoration: const InputDecoration(labelText: 'Contraseña (mínimo 8 caracteres)'),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) return 'Clave es obligatoria.';
-                        if (value.length < 8) return 'Clave debe tener mínimo 8 caracteres.';
+                      decoration: _cafeInput('Contraseña (mínimo 8 caracteres)'),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Clave es obligatoria.';
+                        if (v.length < 8) return 'Clave debe tener mínimo 8 caracteres.';
                         return null;
                       },
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
                       controller: _passwordConfirmController,
-                      style: const TextStyle(color: Colors.white),
+                      style: const TextStyle(color: CoffeePalette.dark),
                       obscureText: true,
-                      decoration: const InputDecoration(labelText: 'Confirmar Contraseña'),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) return 'Confirma tu clave.';
+                      decoration: _cafeInput('Confirmar Contraseña'),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Confirma tu clave.';
                         return null;
                       },
                     ),
@@ -461,11 +571,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 // Mostrar error si existe
                 if (_errorMessage != null) ...[
                   Container(
-                    margin: const EdgeInsets.only(bottom: 20),
+                    margin: const EdgeInsets.only(bottom: 16),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEF4444).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      color: const Color(0xFFEF4444).withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.3)),
                     ),
                     child: Row(
@@ -475,7 +585,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         Expanded(
                           child: Text(
                             _errorMessage!,
-                            style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 13),
+                            style: const TextStyle(color: Color(0xFFDC2626), fontSize: 13),
                           ),
                         ),
                       ],

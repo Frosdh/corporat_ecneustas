@@ -1,5 +1,5 @@
-name: mobile_flutter
-description: Aplicación móvil en Flutter para el levantamiento de encuestas en San Bartolomé.
+name: encuesta_geo
+description: Encuesta Geo — Aplicación móvil para el levantamiento de encuestas parroquiales georeferenciadas.
 version: 1.0.0+1
 
 environment:
@@ -11,6 +11,7 @@ dependencies:
   cupertino_icons: ^1.0.6
   http: ^1.2.0
   geolocator: ^11.0.0
+  geocoding: ^4.0.0
   image_picker: ^1.0.7
   shared_preferences: ^2.2.2
 

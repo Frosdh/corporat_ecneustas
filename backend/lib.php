@@ -16,6 +16,36 @@ function app_config(): array
     return $config;
 }
 
+function ensure_schema_updates(PDO $pdo): void
+{
+    static $updated = false;
+    if ($updated) return;
+    $updated = true;
+
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM surveys");
+        $columns = array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'Field');
+
+        $newColumns = [
+            'has_septic'          => 'VARCHAR(60)  NULL DEFAULT NULL',
+            'road_who_fixes'      => 'VARCHAR(150) NULL DEFAULT NULL',
+            'knows_mining_types'  => 'VARCHAR(60)  NULL DEFAULT NULL',
+            'knows_mining_benefits'=> 'VARCHAR(60) NULL DEFAULT NULL',
+            'knows_modern_mining' => 'VARCHAR(80)  NULL DEFAULT NULL',
+            'knows_local_mines'   => 'VARCHAR(60)  NULL DEFAULT NULL',
+            'knows_env_guarantees'=> 'VARCHAR(60)  NULL DEFAULT NULL',
+        ];
+
+        foreach ($newColumns as $col => $definition) {
+            if (!in_array($col, $columns)) {
+                $pdo->exec("ALTER TABLE surveys ADD COLUMN `$col` $definition");
+            }
+        }
+    } catch (Exception $e) {
+        // Ignoramos si falla por falta de permisos o tabla inexistente
+    }
+}
+
 function db(): PDO
 {
     static $pdo = null;
@@ -36,6 +66,8 @@ function db(): PDO
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     ]);
+
+    ensure_schema_updates($pdo);
 
     return $pdo;
 }
@@ -711,12 +743,15 @@ function normalize_survey(array $survey): array
 {
     $fields = [
         'client_uuid', 'sector', 'community', 'survey_date', 'survey_status', 'surveyor_id', 'surveyor_name',
+        'respondent_name', 'respondent_last_name', 'respondent_id_document', 'respondent_email', 'respondent_phone',
         'respondent_gender', 'age_range', 'education_level', 'occupation',
         'primary_problem', 'youth_path', 'women_roles', 'water_source', 'has_sewer',
-        'has_internet', 'road_status', 'household_income', 'political_climate',
+        'has_internet', 'road_status', 'road_who_fixes', 'household_income', 'political_climate',
         'authority_trust', 'social_priority', 'investment_acceptance',
         'mine_reopening_perception', 'mine_benefits', 'mine_risks', 'comments',
         'latitude', 'longitude',
+        'has_septic',
+        'knows_mining_types', 'knows_mining_benefits', 'knows_modern_mining', 'knows_local_mines', 'knows_env_guarantees',
     ];
 
     $normalized = [];
@@ -816,86 +851,80 @@ function save_survey(array $survey): array
         }
     }
 
-    $stmt = db()->prepare('
-        INSERT INTO surveys (
-            client_uuid, sector, community, survey_date, survey_status, surveyor_id, surveyor_name,
-            respondent_gender, age_range, education_level, occupation,
-            primary_problem, youth_path, women_roles, water_source, has_sewer,
-            has_internet, road_status, household_income, political_climate,
-            authority_trust, social_priority, investment_acceptance,
-            mine_reopening_perception, mine_benefits, mine_risks, comments,
-            latitude, longitude, created_by_user_id
-        ) VALUES (
-            :client_uuid, :sector, :community, :survey_date, :survey_status, :surveyor_id, :surveyor_name,
-            :respondent_gender, :age_range, :education_level, :occupation,
-            :primary_problem, :youth_path, :women_roles, :water_source, :has_sewer,
-            :has_internet, :road_status, :household_income, :political_climate,
-            :authority_trust, :social_priority, :investment_acceptance,
-            :mine_reopening_perception, :mine_benefits, :mine_risks, :comments,
-            :latitude, :longitude, :created_by_user_id
-        )
-        ON DUPLICATE KEY UPDATE
-            sector = VALUES(sector),
-            community = VALUES(community),
-            survey_date = VALUES(survey_date),
-            survey_status = VALUES(survey_status),
-            surveyor_id = VALUES(surveyor_id),
-            surveyor_name = VALUES(surveyor_name),
-            respondent_gender = VALUES(respondent_gender),
-            age_range = VALUES(age_range),
-            education_level = VALUES(education_level),
-            occupation = VALUES(occupation),
-            primary_problem = VALUES(primary_problem),
-            youth_path = VALUES(youth_path),
-            women_roles = VALUES(women_roles),
-            water_source = VALUES(water_source),
-            has_sewer = VALUES(has_sewer),
-            has_internet = VALUES(has_internet),
-            road_status = VALUES(road_status),
-            household_income = VALUES(household_income),
-            political_climate = VALUES(political_climate),
-            authority_trust = VALUES(authority_trust),
-            social_priority = VALUES(social_priority),
-            investment_acceptance = VALUES(investment_acceptance),
-            mine_reopening_perception = VALUES(mine_reopening_perception),
-            mine_benefits = VALUES(mine_benefits),
-            mine_risks = VALUES(mine_risks),
-            comments = VALUES(comments),
-            latitude = VALUES(latitude),
-            longitude = VALUES(longitude)
-    ');
-    $stmt->execute([
-        ':client_uuid' => $survey['client_uuid'],
-        ':sector' => $survey['sector'],
-        ':community' => $survey['community'],
-        ':survey_date' => $survey['survey_date'],
-        ':survey_status' => $survey['survey_status'],
-        ':surveyor_id' => (int) $survey['surveyor_id'],
-        ':surveyor_name' => $survey['surveyor_name'] ?: null,
-        ':respondent_gender' => $survey['respondent_gender'],
-        ':age_range' => $survey['age_range'],
-        ':education_level' => $survey['education_level'] ?: null,
-        ':occupation' => $survey['occupation'],
-        ':primary_problem' => $survey['primary_problem'],
-        ':youth_path' => $survey['youth_path'],
-        ':women_roles' => json_encode($survey['women_roles'], JSON_UNESCAPED_UNICODE),
-        ':water_source' => $survey['water_source'],
-        ':has_sewer' => $survey['has_sewer'],
-        ':has_internet' => $survey['has_internet'] ?: null,
-        ':road_status' => $survey['road_status'] ?: null,
-        ':household_income' => $survey['household_income'] ?: null,
-        ':political_climate' => $survey['political_climate'],
-        ':authority_trust' => $survey['authority_trust'] ?: null,
-        ':social_priority' => $survey['social_priority'],
-        ':investment_acceptance' => $survey['investment_acceptance'],
-        ':mine_reopening_perception' => $survey['mine_reopening_perception'],
-        ':mine_benefits' => json_encode($survey['mine_benefits'], JSON_UNESCAPED_UNICODE),
-        ':mine_risks' => json_encode($survey['mine_risks'], JSON_UNESCAPED_UNICODE),
-        ':comments' => $survey['comments'] ?: null,
-        ':latitude' => $survey['latitude'] !== '' ? $survey['latitude'] : null,
-        ':longitude' => $survey['longitude'] !== '' ? $survey['longitude'] : null,
-        ':created_by_user_id' => (int) $user['id'],
-    ]);
+    // Mapa completo de todos los valores posibles.
+    // El INSERT se construye dinámicamente según las columnas que realmente existen
+    // en la tabla, por lo que funciona aunque ALTER TABLE haya fallado en el hosting.
+    $allData = [
+        'client_uuid'            => $survey['client_uuid'],
+        'sector'                 => $survey['sector'],
+        'community'              => $survey['community'],
+        'survey_date'            => $survey['survey_date'],
+        'survey_status'          => $survey['survey_status'],
+        'surveyor_id'            => (int) $survey['surveyor_id'],
+        'surveyor_name'          => $survey['surveyor_name'] ?: null,
+        'respondent_name'        => $survey['respondent_name'] ?: '',
+        'respondent_last_name'   => $survey['respondent_last_name'] ?: '',
+        'respondent_id_document' => $survey['respondent_id_document'] ?: null,
+        'respondent_email'       => $survey['respondent_email'] ?: null,
+        'respondent_phone'       => $survey['respondent_phone'] ?: null,
+        'respondent_gender'      => $survey['respondent_gender'],
+        'age_range'              => $survey['age_range'],
+        'education_level'        => $survey['education_level'] ?: null,
+        'occupation'             => $survey['occupation'],
+        'primary_problem'        => $survey['primary_problem'],
+        'youth_path'             => $survey['youth_path'],
+        'women_roles'            => json_encode($survey['women_roles'], JSON_UNESCAPED_UNICODE),
+        'water_source'           => $survey['water_source'],
+        'has_sewer'              => $survey['has_sewer'],
+        'has_septic'             => $survey['has_septic'] ?: null,
+        'has_internet'           => $survey['has_internet'] ?: null,
+        'road_status'            => $survey['road_status'] ?: null,
+        'road_who_fixes'         => $survey['road_who_fixes'] ?: null,
+        'household_income'       => $survey['household_income'] ?: null,
+        'political_climate'      => $survey['political_climate'],
+        'authority_trust'        => $survey['authority_trust'] ?: null,
+        'social_priority'        => $survey['social_priority'],
+        'investment_acceptance'  => $survey['investment_acceptance'],
+        'mine_reopening_perception' => $survey['mine_reopening_perception'],
+        'mine_benefits'          => json_encode($survey['mine_benefits'], JSON_UNESCAPED_UNICODE),
+        'mine_risks'             => json_encode($survey['mine_risks'], JSON_UNESCAPED_UNICODE),
+        'comments'               => $survey['comments'] ?: null,
+        'latitude'               => is_numeric($survey['latitude']  ?? '') ? (float) $survey['latitude']  : null,
+        'longitude'              => is_numeric($survey['longitude'] ?? '') ? (float) $survey['longitude'] : null,
+        'created_by_user_id'     => (int) $user['id'],
+        'knows_mining_types'     => $survey['knows_mining_types'] ?: null,
+        'knows_mining_benefits'  => $survey['knows_mining_benefits'] ?: null,
+        'knows_modern_mining'    => $survey['knows_modern_mining'] ?: null,
+        'knows_local_mines'      => $survey['knows_local_mines'] ?: null,
+        'knows_env_guarantees'   => $survey['knows_env_guarantees'] ?: null,
+    ];
+
+    // Obtenemos las columnas que realmente existen en la tabla.
+    // Usamos FETCH_ASSOC + array_column para mayor compatibilidad con PDO en hosting compartido.
+    $colRows = db()->query('SHOW COLUMNS FROM surveys')->fetchAll(PDO::FETCH_ASSOC);
+    $existingCols = array_column($colRows, 'Field');
+
+    // Filtramos el mapa de datos para incluir solo columnas existentes
+    $insertCols = array_filter(array_keys($allData), fn($k) => in_array($k, $existingCols));
+
+    $colSql    = implode(', ', array_map(fn($c) => "`$c`", $insertCols));
+    $paramSql  = implode(', ', array_map(fn($c) => ":$c", $insertCols));
+    $updateSql = implode(', ', array_map(
+        fn($c) => "`$c` = VALUES(`$c`)",
+        array_filter($insertCols, fn($c) => $c !== 'client_uuid')
+    ));
+
+    $stmt = db()->prepare("
+        INSERT INTO surveys ($colSql)
+        VALUES ($paramSql)
+        ON DUPLICATE KEY UPDATE $updateSql
+    ");
+
+    $params = [];
+    foreach ($insertCols as $col) {
+        $params[":$col"] = $allData[$col];
+    }
+    $stmt->execute($params);
 
     log_action((int) $user['id'], 'save_survey', 'surveys', null, [
         'client_uuid' => $survey['client_uuid'],
@@ -943,7 +972,13 @@ function get_my_surveys(): array
             mine_risks,
             comments,
             latitude,
-            longitude
+            longitude,
+            road_who_fixes,
+            knows_mining_types,
+            knows_mining_benefits,
+            knows_modern_mining,
+            knows_local_mines,
+            knows_env_guarantees
         FROM surveys
         WHERE surveyor_id = :surveyor_id
         ORDER BY survey_date DESC, id DESC
