@@ -131,6 +131,16 @@ try {
                 'message' => 'Clave actualizada correctamente.',
             ]);
 
+        case 'analisis':
+            require_auth();
+            if (!user_can_access_dashboard()) {
+                respond(['ok' => false, 'message' => 'No tienes acceso al análisis.'], 403);
+            }
+            respond([
+                'ok'      => true,
+                'analisis'=> get_analisis_experto($_GET['sector'] ?? 'general'),
+            ]);
+
         case 'surveys':
             require_admin();
             respond(['ok' => true, 'surveys' => get_surveys($_GET)]);

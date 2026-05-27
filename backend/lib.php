@@ -1677,3 +1677,375 @@ function stream_application_document(int $documentId): never
     readfile($path);
     exit;
 }
+
+// ============================================================
+//  MÓDULO DE ANÁLISIS EXPERTO DE ENCUESTAS
+//  Estadística descriptiva + sentimiento comunitario en tiempo real
+// ============================================================
+
+function freq_dist(array $rows, string $field, array $sentimentMap = []): array
+{
+    $counts = [];
+    $total  = 0;
+    foreach ($rows as $row) {
+        $val = trim((string) ($row[$field] ?? ''));
+        if ($val === '' || $val === 'null') continue;
+        $counts[$val] = ($counts[$val] ?? 0) + 1;
+        $total++;
+    }
+    arsort($counts);
+    $out = [];
+    foreach ($counts as $label => $count) {
+        $pct  = $total > 0 ? round(($count / $total) * 100, 1) : 0.0;
+        $sent = 'neutro';
+        foreach ($sentimentMap as $sentiment => $values) {
+            if (in_array($label, $values, true)) { $sent = $sentiment; break; }
+        }
+        $out[] = ['label' => $label, 'count' => $count, 'pct' => $pct, 'sentimiento' => $sent];
+    }
+    return ['items' => $out, 'total_respondentes' => $total];
+}
+
+function sentiment_index(array $dist): array
+{
+    $pos = 0; $neg = 0; $neu = 0; $total = 0;
+    foreach ($dist['items'] as $item) {
+        $total += $item['count'];
+        if ($item['sentimiento'] === 'positivo') $pos += $item['count'];
+        elseif ($item['sentimiento'] === 'negativo') $neg += $item['count'];
+        else $neu += $item['count'];
+    }
+    $posP = $total > 0 ? round(($pos / $total) * 100, 1) : 0.0;
+    $negP = $total > 0 ? round(($neg / $total) * 100, 1) : 0.0;
+    $neuP = $total > 0 ? round(($neu / $total) * 100, 1) : 0.0;
+    return [
+        'positivo_pct' => $posP,
+        'negativo_pct' => $negP,
+        'neutro_pct'   => $neuP,
+        'indice'       => round($posP - $negP, 1),
+        'total'        => $total,
+    ];
+}
+
+function expert_narrative(string $campo, array $dist, array $sent): string
+{
+    $items = $dist['items'];
+    if (empty($items)) return 'Sin datos suficientes para esta dimension.';
+    $top  = $items[0];
+    $idx  = $sent['indice'];
+    $n    = $dist['total_respondentes'];
+    $pct  = $top['pct'];
+    $lbl  = $top['label'];
+    $posP = $sent['positivo_pct'];
+    $negP = $sent['negativo_pct'];
+    $tono = $idx >= 30  ? 'claramente favorable'
+          : ($idx >= 10  ? 'moderadamente positivo'
+          : ($idx >= -10 ? 'ambivalente o dividido'
+          : ($idx >= -30 ? 'predominantemente critico'
+          : 'fuertemente negativo')));
+
+    $textos = [
+        'political_climate'          => "El clima politico del territorio es {$tono}. La percepcion dominante fue \"{$lbl}\" con el {$pct}% de {$n} encuestados. El {$posP}% exhibe senales de cohesion comunitaria, mientras el {$negP}% refleja tension o conflicto activo que puede dificultar procesos de negociacion.",
+        'authority_trust'            => "La confianza ciudadana en autoridades es {$tono}. \"{$lbl}\" concentra el {$pct}% de percepciones. Un {$negP}% de desconfianza indica terreno fertil para demandas de mayor transparencia y rendicion de cuentas — factor critico en procesos de licencia social.",
+        'investment_acceptance'      => "La apertura a inversion externa es {$tono}. El {$pct}% se identifica con \"{$lbl}\". La aceptacion amplia y condicionada en conjunto define el potencial real de negociacion disponible en el territorio para proyectos de inversion.",
+        'mine_reopening_perception'  => "La percepcion ciudadana sobre la reapertura minera es {$tono}. \"{$lbl}\" lidera con {$pct}% ({$n} encuestas). El indice neto de {$idx} puntos sintetiza el balance entre la esperanza de desarrollo economico y las preocupaciones socioambientales de la poblacion.",
+        'primary_problem'            => "La problematica que mas afecta a la comunidad es \"{$lbl}\" ({$pct}%). Este dato orienta las prioridades de intervencion social y las demandas ciudadanas que deben articularse en cualquier proceso de negociacion o proyecto de desarrollo.",
+        'household_income'           => "La situacion economica familiar es {$tono}. El {$negP}% de hogares reporta ingresos insuficientes o que apenas cubren la canasta basica. Esta vulnerabilidad economica constituye un factor de mayor disposicion a evaluar fuentes alternativas de empleo e ingresos.",
+        'water_source'               => "El acceso al agua muestra un perfil {$tono}. \"{$lbl}\" es la fuente predominante ({$pct}%). Las fuentes no formales o a cielo abierto representan riesgos sanitarios que deben considerarse en el analisis de bienestar territorial y en propuestas de mejora.",
+        'has_sewer'                  => "La cobertura de alcantarillado es {$tono}: \"{$lbl}\" concentra el {$pct}%. Las brechas de saneamiento basico son indicadores directos de pobreza estructural y demanda urgente de infraestructura publica que puede alinearse con beneficios comunitarios.",
+        'has_internet'               => "La conectividad digital es {$tono}: \"{$lbl}\" ({$pct}%). La brecha digital limita el acceso a servicios, informacion y mercados. Es un factor de rezago territorial que afecta la competitividad y la calidad de vida de la poblacion.",
+        'road_status'                => "El estado vial es {$tono}: \"{$lbl}\" ({$pct}%). Las condiciones de las vias impactan directamente la productividad agropecuaria, el acceso a servicios de salud y educacion, y la integracion economica del territorio.",
+        'age_range'                  => "La estructura etaria predominante es \"{$lbl}\" ({$pct}% de {$n} encuestados). Esta composicion demografica determina las necesidades prioritarias: oportunidades de empleo para adultos jovenes, servicios para adultos mayores y acceso a educacion para menores.",
+        'respondent_gender'          => "La muestra esta compuesta mayoritariamente por \"{$lbl}\" ({$pct}%). El enfoque de genero permite identificar diferencias en percepciones, prioridades y vulnerabilidades especificas que deben atenderse en las estrategias de intervencion territorial.",
+        'education_level'            => "El nivel educativo predominante es \"{$lbl}\" ({$pct}%). La formacion academica influye en la comprension de procesos tecnicos como los proyectos mineros y en la demanda de informacion clara, accesible y verificable por parte de la comunidad.",
+        'youth_path'                 => "El destino principal de los jovenes es \"{$lbl}\" ({$pct}%). La migracion juvenil o la falta de oportunidades locales son senales criticas de presion demografica y economica que deben abordarse con propuestas concretas de empleo y desarrollo.",
+        'social_priority'            => "La prioridad territorial mas valorada es \"{$lbl}\" ({$pct}%). Este dato es clave para alinear propuestas de valor, beneficios comunitarios y planes de desarrollo con las expectativas y necesidades reales de la poblacion encuestada.",
+        'occupation'                 => "La ocupacion predominante en la muestra es \"{$lbl}\" ({$pct}%). La estructura productiva del territorio define las relaciones economicas locales y las oportunidades de empleo que podrian articularse con proyectos de inversion o desarrollo.",
+    ];
+    return $textos[$campo]
+        ?? "En la dimension \"{$campo}\", la respuesta dominante es \"{$lbl}\" ({$pct}% de {$n} encuestados). El tono general es {$tono} con un indice de sentimiento de {$idx} puntos.";
+}
+
+function analizar_conocimiento_minero(array $rows): array
+{
+    $campos = [
+        'knows_mining_types'    => 'Conoce tipos de mineria',
+        'knows_mining_benefits' => 'Conoce beneficios mineros',
+        'knows_modern_mining'   => 'Conoce mineria moderna',
+        'knows_local_mines'     => 'Conoce minas locales',
+        'knows_env_guarantees'  => 'Conoce garantias ambientales',
+    ];
+    $mapC = ['positivo' => ['Si', 'Sí', 'Algo', 'Bastante', 'Mucho'], 'negativo' => ['No', 'Nada', 'Poco']];
+    $result = [];
+    foreach ($campos as $campo => $label) {
+        $d = freq_dist($rows, $campo, $mapC);
+        $s = sentiment_index($d);
+        $result[] = ['campo' => $campo, 'label' => $label, 'dist' => $d, 'sentimiento' => $s];
+    }
+    return $result;
+}
+
+function get_analisis_experto(string $sector = 'general'): array
+{
+    $params = [];
+    $where  = '';
+    if ($sector !== 'general') {
+        $where            = 'WHERE sector = :sector';
+        $params[':sector'] = $sector;
+    }
+
+    $sql = "
+        SELECT respondent_gender, age_range, education_level, occupation,
+               primary_problem, youth_path, water_source, has_sewer,
+               has_septic, has_internet, road_status, road_who_fixes,
+               household_income, political_climate, authority_trust,
+               social_priority, investment_acceptance,
+               mine_reopening_perception, mine_benefits, mine_risks,
+               women_roles, sector, survey_date,
+               knows_mining_types, knows_mining_benefits,
+               knows_modern_mining, knows_local_mines, knows_env_guarantees
+        FROM surveys $where
+        ORDER BY survey_date DESC
+    ";
+    $stmt = db()->prepare($sql);
+    $stmt->execute($params);
+    $rows = $stmt->fetchAll();
+    $n    = count($rows);
+
+    if ($n === 0) {
+        return [
+            'total'   => 0,
+            'mensaje' => 'Sin encuestas registradas. El analisis aparecera automaticamente cuando lleguen datos del campo.',
+        ];
+    }
+
+    // Mapas de sentimiento por dimension
+    $mapClima = [
+        'positivo' => ['Armonia','Armonía','Cohesion comunitaria','Cohesión comunitaria','Trabajo colaborativo','Calma','Union','Unión'],
+        'neutro'   => ['Calma relativa','Tension latente','Tensión latente'],
+        'negativo' => ['Division comunitaria','División comunitaria','Conflicto abierto entre actores','Conflicto','Polarizacion','Polarización'],
+    ];
+    $mapConfianza = [
+        'positivo' => ['Alta','Media-alta','Muy alta'],
+        'neutro'   => ['Media','Moderada'],
+        'negativo' => ['Baja','Muy baja','Nula'],
+    ];
+    $mapInversion = [
+        'positivo' => ['Aceptacion amplia','Aceptación amplia','Aceptacion condicionada','Aceptación condicionada'],
+        'neutro'   => ['Indiferente','No sabe'],
+        'negativo' => ['Rechazo preventivo','Rechazo firme','Rechazo total'],
+    ];
+    $mapReapertura = [
+        'positivo' => ['Beneficiaria mucho','Beneficiaría mucho','Beneficiaria algo','Beneficiaría algo'],
+        'neutro'   => ['Indiferente','No sabe','NS/NR'],
+        'negativo' => ['Perjudicaria algo','Perjudicaría algo','Perjudicaria mucho','Perjudicaría mucho'],
+    ];
+    $mapIngreso = [
+        'positivo' => ['Holgado','Cubre bien','Muy bien'],
+        'neutro'   => ['Cubre apenas','Regular'],
+        'negativo' => ['No cubre la canasta','Muy limitado','Insuficiente'],
+    ];
+    $mapAgua = [
+        'positivo' => ['Red pública','Red publica','Agua potable','Sistema comunitario'],
+        'neutro'   => ['Cisterna','Pozo propio'],
+        'negativo' => ['Vertiente','Acequia','Sin acceso','Rio','Río','Sin agua'],
+    ];
+    $mapAlcant = [
+        'positivo' => ['Red pública','Red publica','Alcantarillado municipal'],
+        'neutro'   => ['Pozo séptico','Pozo septico'],
+        'negativo' => ['No tiene','Campo abierto','Sin sistema'],
+    ];
+    $mapInternet = [
+        'positivo' => ['Sí tiene','Si tiene','Si','Sí','Fijo y móvil','Fijo'],
+        'neutro'   => ['Solo móvil','Solo movil','Parcial'],
+        'negativo' => ['No tiene','No','Sin acceso'],
+    ];
+    $mapVia = [
+        'positivo' => ['Pavimentada','Buen estado','Asfalto','Buena'],
+        'neutro'   => ['Adoquín','Adoquin','Regular','Tierra compactada'],
+        'negativo' => ['Tierra','Mal estado','Intransitable','Sin acceso','Deteriorada'],
+    ];
+
+    $dimsConfig = [
+        ['campo' => 'political_climate',         'titulo' => 'Clima Politico',                  'mapa' => $mapClima],
+        ['campo' => 'authority_trust',           'titulo' => 'Confianza en Autoridades',        'mapa' => $mapConfianza],
+        ['campo' => 'investment_acceptance',     'titulo' => 'Aceptacion de Inversion Externa', 'mapa' => $mapInversion],
+        ['campo' => 'mine_reopening_perception', 'titulo' => 'Percepcion Reapertura Minera',    'mapa' => $mapReapertura],
+        ['campo' => 'primary_problem',           'titulo' => 'Problematica Principal',          'mapa' => []],
+        ['campo' => 'household_income',          'titulo' => 'Situacion Economica Familiar',    'mapa' => $mapIngreso],
+        ['campo' => 'water_source',              'titulo' => 'Fuente de Agua',                  'mapa' => $mapAgua],
+        ['campo' => 'has_sewer',                 'titulo' => 'Cobertura de Alcantarillado',     'mapa' => $mapAlcant],
+        ['campo' => 'has_internet',              'titulo' => 'Acceso a Internet',               'mapa' => $mapInternet],
+        ['campo' => 'road_status',               'titulo' => 'Estado Vial',                     'mapa' => $mapVia],
+        ['campo' => 'age_range',                 'titulo' => 'Distribucion Etaria',             'mapa' => []],
+        ['campo' => 'respondent_gender',         'titulo' => 'Distribucion por Genero',         'mapa' => []],
+        ['campo' => 'education_level',           'titulo' => 'Nivel de Educacion',              'mapa' => []],
+        ['campo' => 'occupation',                'titulo' => 'Ocupacion Principal',             'mapa' => []],
+        ['campo' => 'youth_path',                'titulo' => 'Destino de la Juventud',          'mapa' => []],
+        ['campo' => 'social_priority',           'titulo' => 'Prioridad Social Territorial',    'mapa' => []],
+    ];
+
+    $dimensiones = [];
+    foreach ($dimsConfig as $cfg) {
+        $dist = freq_dist($rows, $cfg['campo'], $cfg['mapa']);
+        $sent = sentiment_index($dist);
+        $dimensiones[] = [
+            'campo'          => $cfg['campo'],
+            'titulo'         => $cfg['titulo'],
+            'distribucion'   => $dist,
+            'sentimiento'    => $sent,
+            'interpretacion' => expert_narrative($cfg['campo'], $dist, $sent),
+        ];
+    }
+
+    // Beneficios y riesgos (multivalor JSON)
+    $beneficioCounts = compute_json_option_counts($rows, 'mine_benefits');
+    $riesgoCounts    = compute_json_option_counts($rows, 'mine_risks');
+    $totalB = array_sum($beneficioCounts);
+    $totalR = array_sum($riesgoCounts);
+    $beneficiosItems = [];
+    foreach ($beneficioCounts as $l => $c) {
+        $beneficiosItems[] = ['label' => $l, 'count' => $c, 'pct' => $totalB > 0 ? round(($c / $totalB) * 100, 1) : 0.0];
+    }
+    $riesgosItems = [];
+    foreach ($riesgoCounts as $l => $c) {
+        $riesgosItems[] = ['label' => $l, 'count' => $c, 'pct' => $totalR > 0 ? round(($c / $totalR) * 100, 1) : 0.0];
+    }
+
+    // Sentimiento global compuesto (solo dimensiones con mapa de sentimiento)
+    $keyDims = ['political_climate','authority_trust','investment_acceptance','mine_reopening_perception','household_income'];
+    $sumIdx = 0; $cntIdx = 0; $tPos = 0; $tNeg = 0; $tNeu = 0; $tTot = 0;
+    foreach ($dimensiones as $d) {
+        if (!in_array($d['campo'], $keyDims, true)) continue;
+        $s = $d['sentimiento'];
+        if ($s['total'] > 0) {
+            $sumIdx += $s['indice'];
+            $cntIdx++;
+            $tPos += $s['positivo_pct'] * $s['total'];
+            $tNeg += $s['negativo_pct'] * $s['total'];
+            $tNeu += $s['neutro_pct']   * $s['total'];
+            $tTot += $s['total'];
+        }
+    }
+    $gIdx = $cntIdx > 0 ? round($sumIdx / $cntIdx, 1) : 0.0;
+    $gPos = $tTot > 0 ? round($tPos / $tTot, 1) : 0.0;
+    $gNeg = $tTot > 0 ? round($tNeg / $tTot, 1) : 0.0;
+    $gNeu = $tTot > 0 ? round($tNeu / $tTot, 1) : 0.0;
+
+    // Tendencia temporal
+    $tendSql = "
+        SELECT DATE(survey_date) AS dia, COUNT(*) AS total,
+               ROUND(AVG(CASE WHEN investment_acceptance IN
+                   ('Aceptacion amplia','Aceptación amplia','Aceptacion condicionada','Aceptación condicionada')
+                   THEN 100 ELSE 0 END), 1) AS apertura_pct
+        FROM surveys $where
+        GROUP BY DATE(survey_date)
+        ORDER BY dia DESC LIMIT 14
+    ";
+    $tendStmt = db()->prepare($tendSql);
+    $tendStmt->execute($params);
+    $tendencia = array_reverse($tendStmt->fetchAll());
+
+    // Correlación: ingreso bajo vs. apertura a inversión
+    $bajosAcep = 0; $bajosTotal = 0; $altosAcep = 0; $altosTotal = 0;
+    foreach ($rows as $r) {
+        $ing   = (string)($r['household_income']      ?? '');
+        $inv   = (string)($r['investment_acceptance'] ?? '');
+        $esPos = in_array($inv, array_merge($mapInversion['positivo']), true);
+        if (in_array($ing, ['No cubre la canasta','Muy limitado','Cubre apenas'], true)) {
+            $bajosTotal++;
+            if ($esPos) $bajosAcep++;
+        } elseif (in_array($ing, ['Holgado','Cubre bien'], true)) {
+            $altosTotal++;
+            if ($esPos) $altosAcep++;
+        }
+    }
+    $corrBajo = $bajosTotal > 0 ? round(($bajosAcep / $bajosTotal) * 100, 1) : 0.0;
+    $corrAlto = $altosTotal > 0 ? round(($altosAcep / $altosTotal) * 100, 1) : 0.0;
+
+    // Distribución por sector
+    $sectorDist = [];
+    foreach ($rows as $r) {
+        $sec = normalize_sector_label((string)($r['sector'] ?? 'Desconocido'));
+        $sectorDist[$sec] = ($sectorDist[$sec] ?? 0) + 1;
+    }
+    arsort($sectorDist);
+    $sectorItems = [];
+    foreach ($sectorDist as $sec => $cnt) {
+        $sectorItems[] = ['label' => $sec, 'count' => $cnt, 'pct' => round(($cnt / $n) * 100, 1)];
+    }
+
+    // Resumen ejecutivo
+    $nivel = $gIdx >= 20 ? 'POSITIVO' : ($gIdx >= -20 ? 'AMBIVALENTE' : 'CRITICO');
+    $color = $gIdx >= 20 ? 'verde'    : ($gIdx >= -20 ? 'naranja'    : 'rojo');
+
+    // Dimensión más positiva y más negativa
+    $dimsSorted = $dimensiones;
+    usort($dimsSorted, fn($a, $b) => $b['sentimiento']['indice'] <=> $a['sentimiento']['indice']);
+    $dimPos = $dimsSorted[0]  ?? null;
+    $dimNeg = end($dimsSorted) ?: null;
+
+    // Problema principal
+    $probTop = '';
+    foreach ($dimensiones as $d) {
+        if ($d['campo'] === 'primary_problem' && !empty($d['distribucion']['items'])) {
+            $probTop = $d['distribucion']['items'][0]['label'];
+            break;
+        }
+    }
+
+    $narrativa = sprintf(
+        'Con base en %d encuestas levantadas en San Bartolome, el indice de sentimiento comunitario compuesto es %s puntos (escala -100 a +100), clasificado como %s. El %s%% de las percepciones evaluadas son positivas y el %s%% son negativas. La problematica que mas preocupa a la ciudadania es "%s". La dimension con mejor indice es "%s" (%s pts) y la mas critica es "%s" (%s pts). Estos datos reflejan el pulso real del territorio al momento del analisis.',
+        $n,
+        ($gIdx > 0 ? '+' : '') . $gIdx,
+        $nivel,
+        $gPos,
+        $gNeg,
+        $probTop ?: 'Por determinar',
+        $dimPos ? $dimPos['titulo'] : 'N/A',
+        $dimPos ? (($dimPos['sentimiento']['indice'] > 0 ? '+' : '') . $dimPos['sentimiento']['indice']) : 'N/A',
+        $dimNeg ? $dimNeg['titulo'] : 'N/A',
+        $dimNeg ? (($dimNeg['sentimiento']['indice'] > 0 ? '+' : '') . $dimNeg['sentimiento']['indice']) : 'N/A'
+    );
+
+    return [
+        'total'               => $n,
+        'sector'              => $sector,
+        'generado_en'         => date('Y-m-d H:i:s'),
+        'resumen_ejecutivo'   => [
+            'total_encuestas'   => $n,
+            'nivel_sentimiento' => $nivel,
+            'color_sentimiento' => $color,
+            'indice_global'     => $gIdx,
+            'positivo_global'   => $gPos,
+            'negativo_global'   => $gNeg,
+            'neutro_global'     => $gNeu,
+            'problema_principal'=> $probTop,
+            'dim_mas_positiva'  => $dimPos ? ['titulo' => $dimPos['titulo'], 'indice' => $dimPos['sentimiento']['indice']] : null,
+            'dim_mas_negativa'  => $dimNeg ? ['titulo' => $dimNeg['titulo'], 'indice' => $dimNeg['sentimiento']['indice']] : null,
+            'narrativa'         => $narrativa,
+        ],
+        'sentimiento_global'  => [
+            'indice'       => $gIdx,
+            'positivo_pct' => $gPos,
+            'negativo_pct' => $gNeg,
+            'neutro_pct'   => $gNeu,
+        ],
+        'dimensiones'             => $dimensiones,
+        'beneficios_mineros'      => $beneficiosItems,
+        'riesgos_mineros'         => $riesgosItems,
+        'conocimiento_minero'     => analizar_conocimiento_minero($rows),
+        'tendencia_diaria'        => $tendencia,
+        'correlaciones'           => [[
+            'titulo'         => 'Ingreso familiar bajo vs. apertura a inversion externa',
+            'valor_a'        => $corrBajo,
+            'label_a'        => 'Hogares con ingreso bajo — apertura a inversion',
+            'valor_b'        => $corrAlto,
+            'label_b'        => 'Hogares con ingreso alto — apertura a inversion',
+            'interpretacion' => $corrBajo >= $corrAlto
+                ? "Los hogares con menor ingreso muestran igual o mayor apertura a la inversion externa ({$corrBajo}% vs {$corrAlto}%). Esto sugiere que la necesidad economica es un motor clave de aceptacion: las estrategias de comunicacion deben enfatizar impacto en empleo, ingresos familiares y calidad de vida."
+                : "Los hogares con mayores ingresos muestran mayor apertura ({$corrAlto}% vs {$corrBajo}%). La aceptacion parece estar ligada mas al nivel de informacion y confianza institucional que a la presion economica inmediata. Se recomienda reforzar la estrategia de informacion y transparencia hacia todos los segmentos.",
+        ]],
+        'distribucion_por_sector' => $sectorItems,
+    ];
+}

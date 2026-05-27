@@ -71,6 +71,9 @@ function bindEvents() {
             if (button.dataset.tab === 'audit' && state.currentUser?.role === 'admin') {
                 await loadAuditLogs();
             }
+            if (button.dataset.tab === 'analisis') {
+                await loadAnalisis();
+            }
             if (button.dataset.tab === 'my-surveys' && state.currentUser?.role === 'surveyor') {
                 await loadMySurveys();
             }
@@ -235,7 +238,9 @@ function humanRole(user) {
 }
 
 function applyRoleUi() {
-    const isAdmin = state.currentUser?.role === 'admin';
+    const isAdmin    = state.currentUser?.role === 'admin';
+    const isSurveyor = state.currentUser?.role === 'surveyor';
+
     document.getElementById('tab-button-dashboard').classList.toggle('hidden', !isAdmin);
     document.getElementById('tab-button-surveys').classList.toggle('hidden', !isAdmin);
     document.getElementById('tab-button-profile').classList.toggle('hidden', isAdmin);
@@ -247,6 +252,10 @@ function applyRoleUi() {
     document.getElementById('tab-button-offline').classList.add('hidden');
     document.getElementById('network-chip').classList.toggle('hidden', isAdmin);
     document.getElementById('network-card').classList.add('hidden');
+
+    // Análisis IA visible para admin Y encuestador aprobado
+    const analisisBtn = document.getElementById('tab-button-analisis');
+    if (analisisBtn) analisisBtn.classList.remove('hidden');
 
     document.getElementById('surveyor-select-wrapper').classList.toggle('hidden', !isAdmin);
     document.getElementById('assigned-surveyor-card').classList.toggle('hidden', isAdmin);
@@ -261,6 +270,7 @@ function applyRoleUi() {
         document.getElementById('tab-audit').classList.add('hidden');
         document.getElementById('tab-profile').classList.remove('hidden');
         document.getElementById('tab-my-surveys').classList.remove('hidden');
+        // Encuestadores arrancan en el formulario
         switchTab('survey');
         document.getElementById('assigned-surveyor-name').textContent = state.assignedSurveyor?.full_name || state.currentUser?.display_name || '';
         document.getElementById('assigned-surveyor-zone').textContent = state.assignedSurveyor?.assigned_zone || '';
@@ -1420,6 +1430,331 @@ async function registerServiceWorker() {
 window.reviewApplication = reviewApplication;
 window.changeSurveyorStatus = changeSurveyorStatus;
 window.resetPassword = resetPassword;
+
 window.updateSurveyorProfile = updateSurveyorProfile;
 window.updateSurveyStatus = updateSurveyStatus;
 window.editOwnSurvey = editOwnSurvey;
+
+// ============================================================
+//  MÓDULO DE ANÁLISIS EXPERTO DE ENCUESTAS
+//  Indicadores estadísticos + sentimiento comunitario en tiempo real
+// ============================================================
+
+const analisisState = {
+    data: null,
+    charts: {},
+    autoRefreshTimer: null,
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('analisis-refresh-btn');
+    if (btn) btn.addEventListener('click', () => loadAnalisis(true));
+    const sf = document.getElementById('analisis-sector-filter');
+    if (sf) sf.addEventListener('change', () => loadAnalisis(true));
+});
+
+async function loadAnalisis() {
+    const sector = document.getElementById('analisis-sector-filter')?.value ?? 'general';
+    setAnalisisUI('loading');
+    try {
+        const payload = await requestJson('analisis', { params: { sector } });
+        analisisState.data = payload.analisis;
+        if (!analisisState.data || analisisState.data.total === 0) {
+            setAnalisisUI('empty');
+            return;
+        }
+        renderAnalisis(analisisState.data);
+        setAnalisisUI('content');
+        const ts = document.getElementById('analisis-last-update');
+        if (ts) ts.textContent = '⏱ ' + new Date().toLocaleTimeString('es-EC');
+        clearTimeout(analisisState.autoRefreshTimer);
+        analisisState.autoRefreshTimer = setTimeout(() => loadAnalisis(), 90000);
+    } catch (err) {
+        setAnalisisUI('empty');
+        console.error('Error en analisis:', err);
+    }
+}
+
+function setAnalisisUI(state) {
+    document.getElementById('analisis-loading')?.classList.toggle('hidden', state !== 'loading');
+    document.getElementById('analisis-empty')?.classList.toggle('hidden', state !== 'empty');
+    document.getElementById('analisis-content')?.classList.toggle('hidden', state !== 'content');
+}
+
+function renderAnalisis(data) {
+    const r = data.resumen_ejecutivo;
+
+    // Resumen ejecutivo
+    const badge = document.getElementById('analisis-nivel-badge');
+    if (badge) {
+        badge.textContent = r.nivel_sentimiento;
+        badge.className = 'analisis-label-pill analisis-pill-' + r.color_sentimiento;
+    }
+    setText('analisis-narrativa', r.narrativa);
+    setText('analisis-indice-global', (r.indice_global > 0 ? '+' : '') + r.indice_global + ' pts');
+    setText('analisis-pos-global', r.positivo_global + '%');
+    setText('analisis-neg-global', r.negativo_global + '%');
+    setText('analisis-total-n', r.total_encuestas + ' encuestas');
+    setText('analisis-problema', r.problema_principal || '—');
+    setText('analisis-generado-en', 'Generado: ' + data.generado_en);
+
+    // Donut global de sentimiento
+    renderDonutGlobal(data.sentimiento_global);
+
+    // Dimensiones
+    renderDimensiones(data.dimensiones);
+
+    // Beneficios y riesgos mineros
+    renderBarList('analisis-beneficios-list', data.beneficios_mineros, '#0f9f6e', 6);
+    renderBarList('analisis-riesgos-list', data.riesgos_mineros, '#c43d45', 6);
+
+    // Conocimiento minero
+    renderConocimiento(data.conocimiento_minero);
+
+    // Correlaciones
+    renderCorrelaciones(data.correlaciones);
+
+    // Tendencia temporal
+    renderTendencia(data.tendencia_diaria);
+
+    // Distribución por sector
+    renderBarList('analisis-sector-dist', data.distribucion_por_sector, '#0e4eb0', 10);
+}
+
+function setText(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val ?? '—';
+}
+
+function destroyChart(key) {
+    if (analisisState.charts[key]) {
+        try { analisisState.charts[key].destroy(); } catch(e) {}
+        delete analisisState.charts[key];
+    }
+}
+
+function truncate(str, max) {
+    return str.length > max ? str.substring(0, max) + '…' : str;
+}
+
+function sentColor(sent) {
+    if (sent === 'positivo') return '#0f9f6e';
+    if (sent === 'negativo') return '#c43d45';
+    return '#d97706';
+}
+
+function renderDonutGlobal(sent) {
+    const ctx = document.getElementById('chart-sentimiento-global');
+    if (!ctx || typeof Chart === 'undefined') return;
+    destroyChart('global');
+    analisisState.charts['global'] = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Positivo', 'Neutro', 'Negativo'],
+            datasets: [{
+                data: [sent.positivo_pct, sent.neutro_pct, sent.negativo_pct],
+                backgroundColor: ['#0f9f6e', '#d97706', '#c43d45'],
+                borderWidth: 0,
+            }],
+        },
+        options: {
+            cutout: '68%',
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 10, color: 'rgba(255,255,255,0.8)' } },
+                tooltip: { callbacks: { label: (c) => ' ' + c.label + ': ' + c.parsed + '%' } },
+            },
+            animation: { duration: 700 },
+        },
+    });
+}
+
+function renderDimensiones(dimensiones) {
+    const grid = document.getElementById('analisis-dimensiones-grid');
+    if (!grid) return;
+
+    // Destruir charts anteriores de dimensiones
+    Object.keys(analisisState.charts).filter(k => k.startsWith('dim-')).forEach(k => destroyChart(k));
+    grid.innerHTML = '';
+
+    dimensiones.forEach((dim, idx) => {
+        const sent = dim.sentimiento;
+        const items = (dim.distribucion.items || []).slice(0, 7);
+        const sentClass = sent.indice >= 15 ? 'sent-positive' : sent.indice <= -15 ? 'sent-negative' : 'sent-neutral';
+        const sentIcon  = sent.indice >= 15 ? '▲' : sent.indice <= -15 ? '▼' : '●';
+        const sentLabel = sent.indice >= 15 ? 'Favorable' : sent.indice <= -15 ? 'Crítico' : 'Ambivalente';
+        const chartId   = 'chart-dim-' + idx;
+
+        const card = document.createElement('div');
+        card.className = 'card analisis-dim-card';
+        card.innerHTML = `
+            <div class="analisis-dim-header">
+                <h4 class="analisis-dim-titulo">${escapeHtml(dim.titulo)}</h4>
+                <span class="analisis-sent-badge ${sentClass}">
+                    ${sentIcon} ${sentLabel} (${sent.indice > 0 ? '+' : ''}${sent.indice} pts)
+                </span>
+            </div>
+            <div class="analisis-dim-meters">
+                <div class="analisis-sent-row">
+                    <span class="analisis-sent-label sent-pos-label">Positivo ${sent.positivo_pct}%</span>
+                    <div class="analisis-sent-track"><div class="analisis-sent-fill sent-pos-fill" style="width:${sent.positivo_pct}%"></div></div>
+                </div>
+                <div class="analisis-sent-row">
+                    <span class="analisis-sent-label sent-neu-label">Neutro ${sent.neutro_pct}%</span>
+                    <div class="analisis-sent-track"><div class="analisis-sent-fill sent-neu-fill" style="width:${sent.neutro_pct}%"></div></div>
+                </div>
+                <div class="analisis-sent-row">
+                    <span class="analisis-sent-label sent-neg-label">Negativo ${sent.negativo_pct}%</span>
+                    <div class="analisis-sent-track"><div class="analisis-sent-fill sent-neg-fill" style="width:${sent.negativo_pct}%"></div></div>
+                </div>
+            </div>
+            <canvas id="${chartId}" height="150"></canvas>
+            <p class="analisis-interpretacion">${escapeHtml(dim.interpretacion)}</p>
+        `;
+        grid.appendChild(card);
+
+        if (items.length > 0 && typeof Chart !== 'undefined') {
+            const chartCtx = document.getElementById(chartId);
+            if (chartCtx) {
+                analisisState.charts['dim-' + idx] = new Chart(chartCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: items.map(it => truncate(it.label, 30)),
+                        datasets: [{
+                            data: items.map(it => it.pct),
+                            backgroundColor: items.map(it => sentColor(it.sentimiento)),
+                            borderRadius: 4,
+                        }],
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { callbacks: { label: (c) => ' ' + c.parsed.x + '% (' + (dim.distribucion.total_respondentes) + ' encuestas)' } },
+                        },
+                        scales: {
+                            x: { max: 100, ticks: { callback: v => v + '%', font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                            y: { ticks: { font: { size: 10 } }, grid: { display: false } },
+                        },
+                        animation: { duration: 500 },
+                    },
+                });
+            }
+        }
+    });
+}
+
+function renderBarList(containerId, items, color, limit) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (!items || items.length === 0) {
+        el.innerHTML = '<p class="empty-state">Sin datos suficientes.</p>';
+        return;
+    }
+    el.innerHTML = items.slice(0, limit).map(item => `
+        <div class="analisis-bar-item">
+            <div class="analisis-bar-meta">
+                <span class="analisis-bar-label">${escapeHtml(item.label)}</span>
+                <span class="analisis-bar-pct">${item.pct}% (${item.count})</span>
+            </div>
+            <div class="analisis-bar-track">
+                <div class="analisis-bar-fill" style="width:${item.pct}%;background:${color}"></div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderConocimiento(conocimiento) {
+    const grid = document.getElementById('analisis-conocimiento-grid');
+    if (!grid || !conocimiento) return;
+    grid.innerHTML = conocimiento.map(item => {
+        const posItem = item.dist.items.find(i => i.sentimiento === 'positivo');
+        const pct = posItem ? posItem.pct : 0;
+        const col = pct >= 60 ? '#0f9f6e' : pct >= 30 ? '#d97706' : '#c43d45';
+        const lbl = pct >= 60 ? '✅ Buen nivel de conocimiento' : pct >= 30 ? '⚠️ Conocimiento parcial — requiere refuerzo' : '❌ Bajo conocimiento — socialización urgente';
+        return `
+            <div class="analisis-conoc-item">
+                <div class="analisis-conoc-header">
+                    <span class="analisis-conoc-label">${escapeHtml(item.label)}</span>
+                    <span class="analisis-conoc-pct" style="color:${col}">${pct}%</span>
+                </div>
+                <div class="analisis-bar-track">
+                    <div class="analisis-bar-fill" style="width:${pct}%;background:${col}"></div>
+                </div>
+                <small class="analisis-sent-label">${lbl}</small>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderCorrelaciones(correlaciones) {
+    const el = document.getElementById('analisis-correlaciones');
+    if (!el || !correlaciones) return;
+    el.innerHTML = correlaciones.map(corr => {
+        const diff = +(corr.valor_a - corr.valor_b).toFixed(1);
+        const col  = diff > 5 ? '#0f9f6e' : diff < -5 ? '#c43d45' : '#d97706';
+        return `
+            <div class="card analisis-corr-card">
+                <div class="analisis-corr-header">
+                    <h4>${escapeHtml(corr.titulo)}</h4>
+                    <span class="analisis-corr-diff" style="color:${col}">Δ ${Math.abs(diff).toFixed(1)}pp</span>
+                </div>
+                <div class="analisis-corr-bars">
+                    <div class="analisis-corr-item">
+                        <span>${escapeHtml(corr.label_a)}</span>
+                        <div class="analisis-bar-track"><div class="analisis-bar-fill" style="width:${corr.valor_a}%;background:#0e4eb0"></div></div>
+                        <span class="analisis-bar-pct">${corr.valor_a}%</span>
+                    </div>
+                    <div class="analisis-corr-item">
+                        <span>${escapeHtml(corr.label_b)}</span>
+                        <div class="analisis-bar-track"><div class="analisis-bar-fill" style="width:${corr.valor_b}%;background:#5c85d6"></div></div>
+                        <span class="analisis-bar-pct">${corr.valor_b}%</span>
+                    </div>
+                </div>
+                <p class="analisis-interpretacion">${escapeHtml(corr.interpretacion)}</p>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderTendencia(tendencia) {
+    const ctx = document.getElementById('chart-tendencia');
+    if (!ctx || !tendencia || tendencia.length === 0 || typeof Chart === 'undefined') return;
+    destroyChart('tendencia');
+    analisisState.charts['tendencia'] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: tendencia.map(t => t.dia),
+            datasets: [
+                {
+                    label: 'Encuestas por día',
+                    data: tendencia.map(t => t.total),
+                    backgroundColor: 'rgba(14,78,176,0.75)',
+                    borderRadius: 4,
+                    yAxisID: 'y',
+                },
+                {
+                    label: 'Apertura a inversión (%)',
+                    data: tendencia.map(t => t.apertura_pct),
+                    type: 'line',
+                    borderColor: '#0f9f6e',
+                    backgroundColor: 'rgba(15,159,110,0.1)',
+                    pointRadius: 4,
+                    fill: true,
+                    tension: 0.35,
+                    yAxisID: 'y2',
+                },
+            ],
+        },
+        options: {
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: { mode: 'index', intersect: false },
+            },
+            scales: {
+                y:  { position: 'left',  title: { display: true, text: 'Encuestas' }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                y2: { position: 'right', max: 100, title: { display: true, text: 'Apertura (%)' }, grid: { display: false }, ticks: { callback: v => v + '%' } },
+            },
+            animation: { duration: 700 },
+        },
+    });
+}

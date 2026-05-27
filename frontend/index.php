@@ -149,6 +149,7 @@
                 <button id="tab-button-my-surveys" class="tab hidden" data-tab="my-surveys">Mis encuestas</button>
                 <button id="tab-button-applications" class="tab" data-tab="applications">Postulaciones</button>
                 <button id="tab-button-surveyors" class="tab" data-tab="surveyors">Encuestadores</button>
+                <button id="tab-button-analisis" class="tab" data-tab="analisis">&#129302; Análisis IA</button>
                 <button id="tab-button-reports" class="tab" data-tab="reports">Reportes</button>
                 <button id="tab-button-audit" class="tab" data-tab="audit">Auditoria</button>
                 <button id="tab-button-offline" class="tab hidden" data-tab="offline">Cola Offline</button>
@@ -841,10 +842,217 @@
                     </article>
                 </div>
             </section>
+            <!-- =========================================================
+                 TAB: ANÁLISIS EXPERTO DE ENCUESTAS (IA / PIVOT-style)
+                 ========================================================= -->
+            <section id="tab-analisis" class="tab-panel hidden">
+
+                <!-- Barra de control -->
+                <div class="analisis-topbar">
+                    <div class="analisis-topbar-left">
+                        <h2 class="analisis-titulo">&#128300; Análisis Experto de Encuestas</h2>
+                        <p class="analisis-subtitulo">Estadística descriptiva &middot; Sentimiento comunitario &middot; Actualización automática cada 90 s</p>
+                    </div>
+                    <div class="analisis-topbar-right">
+                        <select id="analisis-sector-filter" class="analisis-select">
+                            <option value="general">Todo San Bartolomé</option>
+                            <option value="centro">Centro Parroquial</option>
+                            <option value="deleg">La Deleg</option>
+                            <option value="sallac">Sallac</option>
+                            <option value="pishio">Pishio</option>
+                        </select>
+                        <button id="analisis-refresh-btn" class="analisis-refresh-btn" type="button">&#8635; Actualizar</button>
+                        <span id="analisis-last-update" class="analisis-timestamp">Sin cargar</span>
+                    </div>
+                </div>
+
+                <!-- Estados -->
+                <div id="analisis-loading" class="analisis-loading hidden">
+                    <div class="analisis-spinner"></div>
+                    <p>Procesando datos del campo&hellip;</p>
+                </div>
+                <div id="analisis-empty" class="analisis-empty hidden">
+                    <div class="analisis-empty-icon">&#128202;</div>
+                    <p>Sin encuestas registradas aún.</p>
+                    <small>El análisis aparecerá automáticamente cuando lleguen datos de campo.</small>
+                </div>
+
+                <!-- Contenido principal -->
+                <div id="analisis-content" class="hidden">
+
+                    <!-- KPI Row -->
+                    <div class="analisis-kpi-row">
+                        <div class="analisis-kpi-card">
+                            <div class="kpi-icon-wrap kpi-blue">&#128203;</div>
+                            <div class="kpi-info">
+                                <span class="kpi-label">Total Encuestas</span>
+                                <strong id="kpi-total-n" class="kpi-value">—</strong>
+                            </div>
+                        </div>
+                        <div class="analisis-kpi-card">
+                            <div class="kpi-icon-wrap kpi-teal">&#128200;</div>
+                            <div class="kpi-info">
+                                <span class="kpi-label">Índice Neto Global</span>
+                                <strong id="kpi-indice-global" class="kpi-value">—</strong>
+                            </div>
+                        </div>
+                        <div class="analisis-kpi-card">
+                            <div class="kpi-icon-wrap kpi-green">&#9989;</div>
+                            <div class="kpi-info">
+                                <span class="kpi-label">Sentimiento Positivo</span>
+                                <strong id="kpi-pos-global" class="kpi-value kpi-green-val">—</strong>
+                            </div>
+                        </div>
+                        <div class="analisis-kpi-card">
+                            <div class="kpi-icon-wrap kpi-red">&#9888;</div>
+                            <div class="kpi-info">
+                                <span class="kpi-label">Sentimiento Negativo</span>
+                                <strong id="kpi-neg-global" class="kpi-value kpi-red-val">—</strong>
+                            </div>
+                        </div>
+                        <div class="analisis-kpi-card kpi-wide">
+                            <div class="kpi-icon-wrap kpi-orange">&#128680;</div>
+                            <div class="kpi-info">
+                                <span class="kpi-label">Problemática Principal</span>
+                                <strong id="kpi-problema" class="kpi-value kpi-problem-text">—</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resumen ejecutivo -->
+                    <div class="analisis-ejecutivo-card" id="analisis-ejecutivo">
+                        <div class="analisis-ejecutivo-left">
+                            <div class="analisis-label-pill" id="analisis-nivel-badge">ANALIZANDO&hellip;</div>
+                            <h3 id="analisis-narrativa" class="analisis-narrativa">Cargando análisis experto&hellip;</h3>
+                            <div class="analisis-gauge-wrap">
+                                <canvas id="chart-gauge" width="240" height="130"></canvas>
+                                <div class="analisis-gauge-labels">
+                                    <span>-100</span>
+                                    <span id="analisis-indice-global" class="gauge-center-val">—</span>
+                                    <span>+100</span>
+                                </div>
+                                <p class="analisis-gauge-label">Índice neto de sentimiento</p>
+                            </div>
+                        </div>
+                        <div class="analisis-ejecutivo-right">
+                            <canvas id="chart-sentimiento-global" width="230" height="230"></canvas>
+                            <div class="analisis-donut-legend">
+                                <div class="donut-leg-item">
+                                    <span class="legend-dot" style="background:#0f9f6e"></span>
+                                    <span>Positivo</span>
+                                    <strong id="leg-pos">—</strong>%
+                                </div>
+                                <div class="donut-leg-item">
+                                    <span class="legend-dot" style="background:#d97706"></span>
+                                    <span>Neutro</span>
+                                    <strong id="leg-neu">—</strong>%
+                                </div>
+                                <div class="donut-leg-item">
+                                    <span class="legend-dot" style="background:#c43d45"></span>
+                                    <span>Negativo</span>
+                                    <strong id="leg-neg">—</strong>%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Radar de dimensiones -->
+                    <div class="analisis-section-row">
+                        <div>
+                            <h3 class="analisis-section-header">&#128375; Vista Radar — Comparativa por Dimensión</h3>
+                            <p class="analisis-section-desc">Cada eje: índice de sentimiento. Verde = favorable, rojo = crítico.</p>
+                        </div>
+                    </div>
+                    <div class="card analisis-radar-card">
+                        <canvas id="chart-radar-dimensiones" height="110"></canvas>
+                    </div>
+
+                    <!-- Dimensiones -->
+                    <div class="analisis-section-row">
+                        <div>
+                            <h3 class="analisis-section-header">&#128208; Análisis Detallado por Dimensión</h3>
+                            <p class="analisis-section-desc">Distribución de respuestas y sentimiento por cada eje temático de la encuesta parroquial.</p>
+                        </div>
+                    </div>
+                    <div id="analisis-dimensiones-grid" class="analisis-dim-grid"></div>
+
+                    <!-- Percepciones mineras -->
+                    <div class="analisis-section-row">
+                        <div>
+                            <h3 class="analisis-section-header">&#9935; Percepciones sobre la Actividad Minera</h3>
+                            <p class="analisis-section-desc">Selección múltiple — un encuestado puede indicar varios ítems.</p>
+                        </div>
+                    </div>
+                    <div class="analisis-mining-grid">
+                        <div class="card analisis-mining-card">
+                            <h4 class="analisis-card-title analisis-title-green">&#127775; Beneficios percibidos</h4>
+                            <div id="analisis-beneficios-list" class="analisis-bar-list"></div>
+                        </div>
+                        <div class="card analisis-mining-card">
+                            <h4 class="analisis-card-title analisis-title-red">&#9888; Riesgos percibidos</h4>
+                            <div id="analisis-riesgos-list" class="analisis-bar-list"></div>
+                        </div>
+                    </div>
+
+                    <!-- Conocimiento minero -->
+                    <div class="analisis-section-row">
+                        <div>
+                            <h3 class="analisis-section-header">&#129504; Nivel de Conocimiento sobre Minería</h3>
+                            <p class="analisis-section-desc">Semáforo: &#128994; &ge;60% buen conocimiento &nbsp;&#128993; 30-59% parcial &nbsp;&#128308; &lt;30% socialización urgente</p>
+                        </div>
+                    </div>
+                    <div class="card analisis-conocimiento-card">
+                        <div id="analisis-conocimiento-grid" class="analisis-conocimiento-grid"></div>
+                    </div>
+
+                    <!-- Correlaciones -->
+                    <div class="analisis-section-row">
+                        <div>
+                            <h3 class="analisis-section-header">&#128279; Correlaciones y Cruces Estratégicos</h3>
+                            <p class="analisis-section-desc">Diferencia expresada en puntos porcentuales (pp) entre grupos comparados.</p>
+                        </div>
+                    </div>
+                    <div id="analisis-correlaciones" class="analisis-corr-list"></div>
+
+                    <!-- Tendencia temporal -->
+                    <div class="analisis-section-row">
+                        <div>
+                            <h3 class="analisis-section-header">&#128200; Tendencia del Levantamiento (últimos 14 días)</h3>
+                            <p class="analisis-section-desc">Barras: encuestas por día &nbsp;&middot;&nbsp; Línea: % de apertura a inversión minera.</p>
+                        </div>
+                    </div>
+                    <div class="card analisis-chart-card">
+                        <canvas id="chart-tendencia" height="90"></canvas>
+                    </div>
+
+                    <!-- Distribución territorial -->
+                    <div class="analisis-section-row">
+                        <div>
+                            <h3 class="analisis-section-header">&#128506; Distribución Territorial por Sector</h3>
+                        </div>
+                    </div>
+                    <div class="card analisis-chart-card">
+                        <div id="analisis-sector-dist" class="analisis-bar-list"></div>
+                    </div>
+
+                    <!-- Ficha técnica -->
+                    <div class="analisis-ficha">
+                        <strong>Ficha técnica:</strong>
+                        Análisis generado automáticamente con base en datos reales de campo &middot;
+                        San Bartolomé, Azuay, Ecuador &middot;
+                        Metodología: Estadística descriptiva + análisis de sentimiento por dimensión &middot;
+                        Escala neta: &minus;100 (totalmente negativo) a +100 (totalmente positivo) &middot;
+                        <span id="analisis-generado-en">—</span>
+                    </div>
+
+                </div><!-- #analisis-content -->
+            </section>
+
         </main>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="frontend/app.js"></script>
 </body>
 </html>
