@@ -50,13 +50,7 @@ function bindEvents() {
     document.getElementById('cancel-edit-button').addEventListener('click', cancelSurveyEdit);
     document.getElementById('profile-continue-draft-button').addEventListener('click', restoreSurveyDraft);
     document.getElementById('export-applications-button').addEventListener('click', exportApplications);
-    const adminDashBtn = document.getElementById('admin-dashboard-btn');
-    if (adminDashBtn) {
-        adminDashBtn.addEventListener('click', async () => {
-            switchTab('analisis');
-            await loadAnalisis();
-        });
-    }
+
     document.getElementById('apply-survey-filters-button').addEventListener('click', loadSurveys);
     document.getElementById('export-surveys-button').addEventListener('click', exportSurveys);
     document.getElementById('apply-audit-filters-button').addEventListener('click', loadAuditLogs);
@@ -251,7 +245,7 @@ function humanRole(user) {
 }
 
 function applyRoleUi() {
-    const isAdmin    = state.currentUser?.role === 'admin';
+    const isAdmin = state.currentUser?.role === 'admin';
     const isSurveyor = state.currentUser?.role === 'surveyor';
 
     // Dashboard: visible para admin Y encuestador aprobado
@@ -270,13 +264,6 @@ function applyRoleUi() {
     // Análisis IA visible para admin Y encuestador aprobado
     const analisisBtn = document.getElementById('tab-button-analisis');
     if (analisisBtn) analisisBtn.classList.remove('hidden');
-
-    // Botón "Dashboard Análisis IA" en la cabecera — solo admin
-    const adminDashBtn = document.getElementById('admin-dashboard-btn');
-    if (adminDashBtn) {
-        adminDashBtn.classList.toggle('hidden', !isAdmin);
-        adminDashBtn.textContent = '📊 Análisis IA';
-    }
 
     document.getElementById('surveyor-select-wrapper').classList.toggle('hidden', !isAdmin);
     document.getElementById('assigned-surveyor-card').classList.toggle('hidden', isAdmin);
@@ -628,35 +615,45 @@ function renderApplications() {
         return;
     }
 
+    const statusLabel = { pending: 'Pendiente', in_review: 'En revision', approved: 'Aprobada', rejected: 'Rechazada', suspended: 'Suspendida' };
+
     list.innerHTML = filtered.map((item) => {
         const documents = (item.documents || []).map((doc) => `
-            <a class="doc-link" href="${apiUrl('document', { id: doc.id })}" target="_blank" rel="noopener">${escapeHtml(doc.doc_type)} - ${escapeHtml(doc.original_name)}</a>
+            <a class="doc-link" href="${apiUrl('document', { id: doc.id })}" target="_blank" rel="noopener">&#128196; ${escapeHtml(doc.doc_type)} - ${escapeHtml(doc.original_name)}</a>
         `).join('');
+
+        const parts = [item.document_number, item.phone, item.email].filter(Boolean).map(escapeHtml);
 
         return `
             <article class="card application-card">
                 <div class="application-head">
                     <div>
-                        <h3>${escapeHtml(item.full_name)}</h3>
-                        <p>${escapeHtml(item.document_number)} · ${escapeHtml(item.phone)} · ${escapeHtml(item.email)}</p>
+                        <h3 style="margin-bottom:6px;">${escapeHtml(item.full_name)}</h3>
+                        <p style="color:var(--muted);font-size:13px;margin:0;">${parts.join(' &nbsp;|&nbsp; ')}</p>
                     </div>
-                    <span class="status-badge status-${escapeHtml(item.review_status)}">${escapeHtml(item.review_status)}</span>
+                    <span class="status-badge status-${escapeHtml(item.review_status)}">${statusLabel[item.review_status] || escapeHtml(item.review_status)}</span>
                 </div>
-                <div class="application-grid">
+                <div class="application-grid" style="margin-top:12px;">
                     <div><strong>Parroquia:</strong> ${escapeHtml(item.parish)}</div>
                     <div><strong>Canton:</strong> ${escapeHtml(item.canton)}</div>
                     <div><strong>Zona solicitada:</strong> ${escapeHtml(item.requested_zone)}</div>
                     <div><strong>Usuario:</strong> ${escapeHtml(item.username || '')}</div>
                 </div>
-                <p class="long-text"><strong>Direccion:</strong> ${escapeHtml(item.address)}</p>
-                <p class="long-text"><strong>Experiencia:</strong> ${escapeHtml(item.prior_experience)}</p>
-                <div class="doc-list">${documents || '<span class="helper-text">Sin documentos cargados.</span>'}</div>
-                <div class="review-grid">
-                    <input id="zone-${item.id}" type="text" placeholder="Zona final asignada" value="${escapeHtml(item.requested_zone || '')}">
-                    <textarea id="notes-${item.id}" rows="3" placeholder="Observaciones de revision">${escapeHtml(item.review_notes || '')}</textarea>
+                <p class="long-text" style="margin-top:8px;"><strong>Direccion:</strong> ${escapeHtml(item.address)}</p>
+                <p class="long-text" style="margin-top:4px;"><strong>Experiencia:</strong> ${escapeHtml(item.prior_experience)}</p>
+                <div class="doc-list" style="margin-top:10px;">${documents || '<span class="helper-text">Sin documentos cargados.</span>'}</div>
+                <div class="review-grid" style="margin-top:14px;">
+                    <div>
+                        <label class="field-label">Zona final asignada</label>
+                        <input id="zone-${item.id}" type="text" placeholder="Ej. Sallac, Centro Parroquial..." value="${escapeHtml(item.requested_zone || '')}">
+                    </div>
+                    <div>
+                        <label class="field-label">Observaciones de revision</label>
+                        <textarea id="notes-${item.id}" rows="3" placeholder="Escribe observaciones...">${escapeHtml(item.review_notes || '')}</textarea>
+                    </div>
                 </div>
-                <div class="inline-actions">
-                    <button class="secondary-button" type="button" onclick="reviewApplication(${item.id}, 'in_review')">Marcar en revision</button>
+                <div class="inline-actions" style="margin-top:14px;">
+                    <button class="secondary-button" type="button" onclick="reviewApplication(${item.id}, 'in_review')">En revision</button>
                     <button class="success-button" type="button" onclick="reviewApplication(${item.id}, 'approved')">Aprobar</button>
                     <button class="danger-button" type="button" onclick="reviewApplication(${item.id}, 'rejected')">Rechazar</button>
                 </div>
@@ -799,7 +796,7 @@ async function updateSurveyStatus(surveyId, surveyStatus) {
         method: 'POST',
         body: { survey_id: surveyId, survey_status: surveyStatus },
     });
-    await Promise.all([loadSurveys(), loadDashboard(), loadAuditLogs().catch(() => {})]);
+    await Promise.all([loadSurveys(), loadDashboard(), loadAuditLogs().catch(() => { })]);
 }
 
 function getAuditFilters() {
@@ -1562,7 +1559,7 @@ function setText(id, val) {
 
 function destroyChart(key) {
     if (analisisState.charts[key]) {
-        try { analisisState.charts[key].destroy(); } catch(e) {}
+        try { analisisState.charts[key].destroy(); } catch (e) { }
         delete analisisState.charts[key];
     }
 }
@@ -1614,9 +1611,9 @@ function renderDimensiones(dimensiones) {
         const sent = dim.sentimiento;
         const items = (dim.distribucion.items || []).slice(0, 7);
         const sentClass = sent.indice >= 15 ? 'sent-positive' : sent.indice <= -15 ? 'sent-negative' : 'sent-neutral';
-        const sentIcon  = sent.indice >= 15 ? '▲' : sent.indice <= -15 ? '▼' : '●';
+        const sentIcon = sent.indice >= 15 ? '▲' : sent.indice <= -15 ? '▼' : '●';
         const sentLabel = sent.indice >= 15 ? 'Favorable' : sent.indice <= -15 ? 'Crítico' : 'Ambivalente';
-        const chartId   = 'chart-dim-' + idx;
+        const chartId = 'chart-dim-' + idx;
 
         const card = document.createElement('div');
         card.className = 'card analisis-dim-card';
@@ -1725,7 +1722,7 @@ function renderCorrelaciones(correlaciones) {
     if (!el || !correlaciones) return;
     el.innerHTML = correlaciones.map(corr => {
         const diff = +(corr.valor_a - corr.valor_b).toFixed(1);
-        const col  = diff > 5 ? '#0f9f6e' : diff < -5 ? '#c43d45' : '#d97706';
+        const col = diff > 5 ? '#0f9f6e' : diff < -5 ? '#c43d45' : '#d97706';
         return `
             <div class="card analisis-corr-card">
                 <div class="analisis-corr-header">
@@ -1785,7 +1782,7 @@ function renderTendencia(tendencia) {
                 tooltip: { mode: 'index', intersect: false },
             },
             scales: {
-                y:  { position: 'left',  title: { display: true, text: 'Encuestas' }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                y: { position: 'left', title: { display: true, text: 'Encuestas' }, grid: { color: 'rgba(0,0,0,0.05)' } },
                 y2: { position: 'right', max: 100, title: { display: true, text: 'Apertura (%)' }, grid: { display: false }, ticks: { callback: v => v + '%' } },
             },
             animation: { duration: 700 },
@@ -1801,14 +1798,14 @@ function renderGauge(indice) {
     if (!ctx || typeof Chart === 'undefined') return;
     destroyChart('gauge');
 
-    const val   = Math.max(-100, Math.min(100, indice));
-    const pct   = (val + 100) / 200;
-    const fillAngle  = pct;
+    const val = Math.max(-100, Math.min(100, indice));
+    const pct = (val + 100) / 200;
+    const fillAngle = pct;
     const emptyAngle = 1 - pct;
 
-    const fillColor = val >= 15  ? '#0f9f6e'
-                    : val <= -15 ? '#c43d45'
-                    : '#d97706';
+    const fillColor = val >= 15 ? '#0f9f6e'
+        : val <= -15 ? '#c43d45'
+            : '#d97706';
 
     analisisState.charts['gauge'] = new Chart(ctx, {
         type: 'doughnut',
