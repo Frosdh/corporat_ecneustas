@@ -7,7 +7,7 @@
     <title>San Bartolome</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="frontend/style.css">
+    <link rel="stylesheet" href="frontend/style.css?v=<?= time() ?>">
 </head>
 <body>
     <div id="auth-screen" class="screen auth-screen">
@@ -889,7 +889,7 @@
                             <div class="kpi-icon-wrap kpi-blue">&#128203;</div>
                             <div class="kpi-info">
                                 <span class="kpi-label">Total Encuestas</span>
-                                <strong id="kpi-total-n" class="kpi-value">—</strong>
+                                <strong id="analisis-total-n" class="kpi-value">—</strong>
                             </div>
                         </div>
                         <div class="analisis-kpi-card">
@@ -903,21 +903,21 @@
                             <div class="kpi-icon-wrap kpi-green">&#9989;</div>
                             <div class="kpi-info">
                                 <span class="kpi-label">Sentimiento Positivo</span>
-                                <strong id="kpi-pos-global" class="kpi-value kpi-green-val">—</strong>
+                                <strong id="analisis-pos-global" class="kpi-value kpi-green-val">—</strong>
                             </div>
                         </div>
                         <div class="analisis-kpi-card">
                             <div class="kpi-icon-wrap kpi-red">&#9888;</div>
                             <div class="kpi-info">
                                 <span class="kpi-label">Sentimiento Negativo</span>
-                                <strong id="kpi-neg-global" class="kpi-value kpi-red-val">—</strong>
+                                <strong id="analisis-neg-global" class="kpi-value kpi-red-val">—</strong>
                             </div>
                         </div>
                         <div class="analisis-kpi-card kpi-wide">
                             <div class="kpi-icon-wrap kpi-orange">&#128680;</div>
                             <div class="kpi-info">
                                 <span class="kpi-label">Problemática Principal</span>
-                                <strong id="kpi-problema" class="kpi-value kpi-problem-text">—</strong>
+                                <strong id="analisis-problema" class="kpi-value kpi-problem-text">—</strong>
                             </div>
                         </div>
                     </div>
@@ -1056,6 +1056,6 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="frontend/app.js"></script>
+    <script src="frontend/app.js?v=<?= time() ?>"></script>
 </body>
 </html>

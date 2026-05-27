@@ -50,6 +50,13 @@ function bindEvents() {
     document.getElementById('cancel-edit-button').addEventListener('click', cancelSurveyEdit);
     document.getElementById('profile-continue-draft-button').addEventListener('click', restoreSurveyDraft);
     document.getElementById('export-applications-button').addEventListener('click', exportApplications);
+    const adminDashBtn = document.getElementById('admin-dashboard-btn');
+    if (adminDashBtn) {
+        adminDashBtn.addEventListener('click', async () => {
+            switchTab('analisis');
+            await loadAnalisis();
+        });
+    }
     document.getElementById('apply-survey-filters-button').addEventListener('click', loadSurveys);
     document.getElementById('export-surveys-button').addEventListener('click', exportSurveys);
     document.getElementById('apply-audit-filters-button').addEventListener('click', loadAuditLogs);
@@ -247,7 +254,8 @@ function applyRoleUi() {
     const isAdmin    = state.currentUser?.role === 'admin';
     const isSurveyor = state.currentUser?.role === 'surveyor';
 
-    document.getElementById('tab-button-dashboard').classList.toggle('hidden', !isAdmin);
+    // Dashboard: visible para admin Y encuestador aprobado
+    document.getElementById('tab-button-dashboard').classList.remove('hidden');
     document.getElementById('tab-button-surveys').classList.toggle('hidden', !isAdmin);
     document.getElementById('tab-button-profile').classList.toggle('hidden', isAdmin);
     document.getElementById('tab-button-my-surveys').classList.toggle('hidden', isAdmin);
@@ -263,12 +271,20 @@ function applyRoleUi() {
     const analisisBtn = document.getElementById('tab-button-analisis');
     if (analisisBtn) analisisBtn.classList.remove('hidden');
 
+    // Botón "Dashboard Análisis IA" en la cabecera — solo admin
+    const adminDashBtn = document.getElementById('admin-dashboard-btn');
+    if (adminDashBtn) {
+        adminDashBtn.classList.toggle('hidden', !isAdmin);
+        adminDashBtn.textContent = '📊 Análisis IA';
+    }
+
     document.getElementById('surveyor-select-wrapper').classList.toggle('hidden', !isAdmin);
     document.getElementById('assigned-surveyor-card').classList.toggle('hidden', isAdmin);
     document.getElementById('surveyor-workspace').classList.toggle('hidden', isAdmin);
 
     if (!isAdmin) {
-        document.getElementById('tab-dashboard').classList.add('hidden');
+        // Encuestador aprobado: puede ver Dashboard y sus propias secciones
+        document.getElementById('tab-dashboard').classList.remove('hidden');
         document.getElementById('tab-surveys').classList.add('hidden');
         document.getElementById('tab-applications').classList.add('hidden');
         document.getElementById('tab-surveyors').classList.add('hidden');
@@ -276,8 +292,8 @@ function applyRoleUi() {
         document.getElementById('tab-audit').classList.add('hidden');
         document.getElementById('tab-profile').classList.remove('hidden');
         document.getElementById('tab-my-surveys').classList.remove('hidden');
-        // Encuestadores arrancan en el formulario
-        switchTab('survey');
+        // Encuestadores arrancan en el Dashboard
+        switchTab('dashboard');
         document.getElementById('assigned-surveyor-name').textContent = state.assignedSurveyor?.full_name || state.currentUser?.display_name || '';
         document.getElementById('assigned-surveyor-zone').textContent = state.assignedSurveyor?.assigned_zone || '';
     } else {
@@ -1503,9 +1519,21 @@ function renderAnalisis(data) {
     setText('analisis-total-n', r.total_encuestas + ' encuestas');
     setText('analisis-problema', r.problema_principal || '—');
     setText('analisis-generado-en', 'Generado: ' + data.generado_en);
+    // KPI card de índice (fila superior)
+    setText('kpi-indice-global', (r.indice_global > 0 ? '+' : '') + r.indice_global + ' pts');
 
     // Donut global de sentimiento
     renderDonutGlobal(data.sentimiento_global);
+    // Leyenda manual del donut
+    setText('leg-pos', data.sentimiento_global.positivo_pct);
+    setText('leg-neu', data.sentimiento_global.neutro_pct);
+    setText('leg-neg', data.sentimiento_global.negativo_pct);
+
+    // Gauge de sentimiento
+    renderGauge(r.indice_global);
+
+    // Radar de dimensiones
+    renderRadarDimensiones(data.dimensiones);
 
     // Dimensiones
     renderDimensiones(data.dimensiones);
@@ -1759,6 +1787,93 @@ function renderTendencia(tendencia) {
             scales: {
                 y:  { position: 'left',  title: { display: true, text: 'Encuestas' }, grid: { color: 'rgba(0,0,0,0.05)' } },
                 y2: { position: 'right', max: 100, title: { display: true, text: 'Apertura (%)' }, grid: { display: false }, ticks: { callback: v => v + '%' } },
+            },
+            animation: { duration: 700 },
+        },
+    });
+}
+
+// ============================================================
+//  GAUGE — índice neto de sentimiento (semicírculo -100 a +100)
+// ============================================================
+function renderGauge(indice) {
+    const ctx = document.getElementById('chart-gauge');
+    if (!ctx || typeof Chart === 'undefined') return;
+    destroyChart('gauge');
+
+    const val   = Math.max(-100, Math.min(100, indice));
+    const pct   = (val + 100) / 200;
+    const fillAngle  = pct;
+    const emptyAngle = 1 - pct;
+
+    const fillColor = val >= 15  ? '#0f9f6e'
+                    : val <= -15 ? '#c43d45'
+                    : '#d97706';
+
+    analisisState.charts['gauge'] = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [fillAngle, emptyAngle, 1],
+                backgroundColor: [fillColor, 'rgba(200,200,200,0.15)', 'rgba(0,0,0,0)'],
+                borderWidth: 0,
+            }],
+        },
+        options: {
+            rotation: -90,
+            circumference: 180,
+            cutout: '72%',
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            animation: { duration: 600 },
+        },
+    });
+}
+
+// ============================================================
+//  RADAR — comparativa de dimensiones
+// ============================================================
+function renderRadarDimensiones(dimensiones) {
+    const ctx = document.getElementById('chart-radar-dimensiones');
+    if (!ctx || !dimensiones || dimensiones.length === 0 || typeof Chart === 'undefined') return;
+    destroyChart('radar');
+
+    const labels = dimensiones.map(d => d.titulo);
+    const values = dimensiones.map(d => d.sentimiento.indice);
+    const colors = dimensiones.map(d => {
+        const i = d.sentimiento.indice;
+        return i >= 15 ? 'rgba(15,159,110,0.85)' : i <= -15 ? 'rgba(196,61,69,0.85)' : 'rgba(217,119,6,0.85)';
+    });
+
+    analisisState.charts['radar'] = new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Índice de sentimiento',
+                data: values,
+                backgroundColor: 'rgba(14,78,176,0.12)',
+                borderColor: 'rgba(14,78,176,0.8)',
+                pointBackgroundColor: colors,
+                pointRadius: 5,
+                borderWidth: 2,
+            }],
+        },
+        options: {
+            scales: {
+                r: {
+                    min: -100,
+                    max: 100,
+                    ticks: { stepSize: 25, font: { size: 10 }, callback: v => v + ' pts' },
+                    pointLabels: { font: { size: 11 }, color: '#334155' },
+                    grid: { color: 'rgba(0,0,0,0.07)' },
+                    angleLines: { color: 'rgba(0,0,0,0.07)' },
+                },
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: { label: c => ' ' + c.label + ': ' + (c.raw > 0 ? '+' : '') + c.raw + ' pts' },
+                },
             },
             animation: { duration: 700 },
         },

@@ -1089,4 +1089,248 @@ fieldset {
     .analisis-topbar { flex-direction: column; }
     .analisis-conocimiento-grid { grid-template-columns: 1fr; }
     .analisis-corr-item span:first-child { width: 140px; }
+    .analisis-kpi-row { flex-direction: column; }
+    .analisis-kpi-card.kpi-wide { grid-column: span 1; }
 }
+
+/* ============================================================
+   ESTILOS FALTANTES — KPI ROW, GAUGE, RADAR, LEYENDA
+   ============================================================ */
+
+/* --- Fila de KPIs superior del módulo de análisis --- */
+.analisis-kpi-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 24px;
+}
+.analisis-kpi-card {
+    flex: 1 1 160px;
+    min-width: 150px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.analisis-kpi-card.kpi-wide {
+    flex: 2 1 260px;
+}
+.kpi-icon-wrap {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+.kpi-blue   { background: rgba(14,78,176,0.12);  }
+.kpi-teal   { background: rgba(6,148,162,0.12);  }
+.kpi-green  { background: rgba(15,159,110,0.12); }
+.kpi-red    { background: rgba(196,61,69,0.12);  }
+.kpi-orange { background: rgba(217,119,6,0.12);  }
+.kpi-info   { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.kpi-label  { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+.kpi-value  { font-size: 1.15rem; font-weight: 800; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi-green-val   { color: var(--success) !important; }
+.kpi-red-val     { color: var(--danger)  !important; }
+.kpi-problem-text { font-size: 0.95rem !important; font-weight: 700 !important; }
+
+/* --- Leyenda manual del donut --- */
+.analisis-donut-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+    width: 100%;
+}
+.donut-leg-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.8);
+}
+.donut-leg-item strong { margin-left: auto; font-weight: 700; }
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* --- Gauge de sentimiento --- */
+.analisis-gauge-wrap {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+.analisis-gauge-labels {
+    display: flex;
+    justify-content: space-between;
+    width: 240px;
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.5);
+    margin-top: -2px;
+}
+.gauge-center-val {
+    font-size: 1.4rem;
+    font-weight: 900;
+    color: #fff;
+    text-align: center;
+}
+.analisis-gauge-label {
+    font-size: 0.68rem;
+    color: rgba(255,255,255,0.45);
+    text-align: center;
+    margin-top: 2px;
+}
+
+/* --- Radar card --- */
+.analisis-radar-card {
+    padding: 20px;
+    margin-bottom: 8px;
+}
+
+/* --- Encabezados de sección con descripción --- */
+.analisis-section-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+.analisis-section-desc {
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin: 0 0 4px 16px;
+    line-height: 1.5;
+}
+
+/* --- Icono estado vacío --- */
+.analisis-empty-icon {
+    font-size: 3rem;
+    margin-bottom: 8px;
+    opacity: 0.5;
+}
+
+/* --- Títulos de cards de minería --- */
+.analisis-title-green { color: var(--success) !important; }
+.analisis-title-red   { color: var(--danger)  !important; }
+
+
+/* ============================================================
+   ESTILOS FALTANTES — KPI ROW, GAUGE, RADAR, LEYENDA
+   ============================================================ */
+
+/* Fila de KPIs superior del módulo de análisis */
+.analisis-kpi-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 24px;
+}
+.analisis-kpi-card {
+    flex: 1 1 160px;
+    min-width: 150px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.analisis-kpi-card.kpi-wide { flex: 2 1 260px; }
+.kpi-icon-wrap {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; flex-shrink: 0;
+}
+.kpi-blue   { background: rgba(14,78,176,0.12); }
+.kpi-teal   { background: rgba(6,148,162,0.12); }
+.kpi-green  { background: rgba(15,159,110,0.12); }
+.kpi-red    { background: rgba(196,61,69,0.12); }
+.kpi-orange { background: rgba(217,119,6,0.12); }
+.kpi-info   { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.kpi-label  { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+.kpi-value  { font-size: 1.15rem; font-weight: 800; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi-green-val   { color: var(--success) !important; }
+.kpi-red-val     { color: var(--danger) !important; }
+.kpi-problem-text { font-size: 0.95rem !important; font-weight: 700 !important; }
+
+/* Leyenda manual del donut */
+.analisis-donut-legend { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; width: 100%; }
+.donut-leg-item { display: flex; align-items: center; gap: 7px; font-size: 0.8rem; color: rgba(255,255,255,0.8); }
+.donut-leg-item strong { margin-left: auto; font-weight: 700; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+/* Gauge de sentimiento */
+.analisis-gauge-wrap { margin-top: 16px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.analisis-gauge-labels { display: flex; justify-content: space-between; width: 240px; font-size: 0.72rem; color: rgba(255,255,255,0.5); margin-top: -2px; }
+.gauge-center-val { font-size: 1.4rem; font-weight: 900; color: #fff; text-align: center; }
+.analisis-gauge-label { font-size: 0.68rem; color: rgba(255,255,255,0.45); text-align: center; margin-top: 2px; }
+
+/* Radar card */
+.analisis-radar-card { padding: 20px; margin-bottom: 8px; }
+
+/* Encabezados de sección con descripción */
+.analisis-section-row { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.analisis-section-desc { font-size: 0.82rem; color: var(--muted); margin: 0 0 4px 16px; line-height: 1.5; }
+
+/* Icono estado vacío */
+.analisis-empty-icon { font-size: 3rem; margin-bottom: 8px; opacity: 0.5; }
+
+/* Títulos de cards de minería */
+.analisis-title-green { color: var(--success) !important; }
+.analisis-title-red   { color: var(--danger) !important; }
+
+/* Responsive adicional */
+@media (max-width: 980px) {
+    .analisis-kpi-row { flex-direction: column; }
+    .analisis-kpi-card.kpi-wide { flex: 1 1 100%; }
+}
+
+/* ============================================================
+   KPI ROW, GAUGE, RADAR, LEYENDA — ESTILOS FALTANTES
+   ============================================================ */
+.analisis-kpi-row{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:24px;}
+.analisis-kpi-card{flex:1 1 160px;min-width:150px;display:flex;align-items:center;gap:14px;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px 20px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.analisis-kpi-card.kpi-wide{flex:2 1 260px;}
+.kpi-icon-wrap{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;}
+.kpi-blue{background:rgba(14,78,176,.12);}
+.kpi-teal{background:rgba(6,148,162,.12);}
+.kpi-green{background:rgba(15,159,110,.12);}
+.kpi-red{background:rgba(196,61,69,.12);}
+.kpi-orange{background:rgba(217,119,6,.12);}
+.kpi-info{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.kpi-label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;}
+.kpi-value{font-size:1.15rem;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.kpi-green-val{color:var(--success)!important;}
+.kpi-red-val{color:var(--danger)!important;}
+.kpi-problem-text{font-size:.95rem!important;font-weight:700!important;}
+.analisis-donut-legend{display:flex;flex-direction:column;gap:8px;margin-top:8px;width:100%;}
+.donut-leg-item{display:flex;align-items:center;gap:7px;font-size:.8rem;color:rgba(255,255,255,.8);}
+.donut-leg-item strong{margin-left:auto;font-weight:700;}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.analisis-gauge-wrap{margin-top:16px;display:flex;flex-direction:column;align-items:center;gap:2px;}
+.analisis-gauge-labels{display:flex;justify-content:space-between;width:240px;font-size:.72rem;color:rgba(255,255,255,.5);margin-top:-2px;}
+.gauge-center-val{font-size:1.4rem;font-weight:900;color:#fff;text-align:center;}
+.analisis-gauge-label{font-size:.68rem;color:rgba(255,255,255,.45);text-align:center;margin-top:2px;}
+.analisis-radar-card{padding:20px;margin-bottom:8px;}
+.analisis-section-row{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:4px;margin-bottom:8px;}
+.analisis-section-desc{font-size:.82rem;color:var(--muted);margin:0 0 4px 16px;line-height:1.5;}
+.analisis-empty-icon{font-size:3rem;margin-bottom:8px;opacity:.5;}
+.analisis-title-green{color:var(--success)!important;}
+.analisis-title-red{color:var(--danger)!important;}
+@media(max-width:980px){.analisis-kpi-row{flex-direction:column;}.analisis-kpi-card.kpi-wide{flex:1 1 100%;}}
