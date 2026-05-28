@@ -41,6 +41,54 @@ function ensure_schema_updates(PDO $pdo): void
                 $pdo->exec("ALTER TABLE surveys ADD COLUMN `$col` $definition");
             }
         }
+
+        // Aseguramos que todas las columnas de respuesta acepten NULL o string vacío
+        // Esto permite guardar encuestas con preguntas sin contestar
+        $nullableColumns = [
+            'sector'                 => "VARCHAR(120) NOT NULL DEFAULT ''",
+            'community'              => "VARCHAR(150) NOT NULL DEFAULT ''",
+            'surveyor_name'          => "VARCHAR(120) NOT NULL DEFAULT ''",
+            'respondent_name'        => "VARCHAR(120) NOT NULL DEFAULT ''",
+            'respondent_last_name'   => "VARCHAR(120) NOT NULL DEFAULT ''",
+            'respondent_id_document' => "VARCHAR(20)  NOT NULL DEFAULT ''",
+            'respondent_email'       => "VARCHAR(150) NOT NULL DEFAULT ''",
+            'respondent_phone'       => "VARCHAR(20)  NOT NULL DEFAULT ''",
+            'respondent_gender'      => "VARCHAR(30)  NOT NULL DEFAULT ''",
+            'age_range'              => "VARCHAR(30)  NOT NULL DEFAULT ''",
+            'education_level'        => "VARCHAR(60)  NOT NULL DEFAULT ''",
+            'occupation'             => "VARCHAR(120) NOT NULL DEFAULT ''",
+            'primary_problem'        => "TEXT         NOT NULL DEFAULT ''",
+            'youth_path'             => "VARCHAR(120) NOT NULL DEFAULT ''",
+            'water_source'           => "VARCHAR(80)  NOT NULL DEFAULT ''",
+            'has_sewer'              => "VARCHAR(30)  NOT NULL DEFAULT ''",
+            'has_septic'             => "VARCHAR(60)  NOT NULL DEFAULT ''",
+            'has_internet'           => "VARCHAR(60)  NOT NULL DEFAULT ''",
+            'road_status'            => "VARCHAR(80)  NOT NULL DEFAULT ''",
+            'road_who_fixes'         => "VARCHAR(150) NOT NULL DEFAULT ''",
+            'household_income'       => "VARCHAR(80)  NOT NULL DEFAULT ''",
+            'political_climate'      => "VARCHAR(80)  NOT NULL DEFAULT ''",
+            'authority_trust'        => "VARCHAR(80)  NOT NULL DEFAULT ''",
+            'social_priority'        => "TEXT         NOT NULL DEFAULT ''",
+            'investment_acceptance'  => "VARCHAR(30)  NOT NULL DEFAULT ''",
+            'mine_reopening_perception' => "VARCHAR(80) NOT NULL DEFAULT ''",
+            'comments'               => "TEXT         NOT NULL DEFAULT ''",
+            'knows_mining_types'     => "VARCHAR(60)  NOT NULL DEFAULT ''",
+            'knows_mining_benefits'  => "VARCHAR(60)  NOT NULL DEFAULT ''",
+            'knows_modern_mining'    => "VARCHAR(80)  NOT NULL DEFAULT ''",
+            'knows_local_mines'      => "VARCHAR(60)  NOT NULL DEFAULT ''",
+            'knows_env_guarantees'   => "VARCHAR(60)  NOT NULL DEFAULT ''",
+        ];
+
+        foreach ($nullableColumns as $col => $definition) {
+            if (in_array($col, $columns)) {
+                try {
+                    $pdo->exec("ALTER TABLE surveys MODIFY COLUMN `$col` $definition");
+                } catch (Exception $e) {
+                    // Continuar si una columna falla (permisos, tipo incompatible, etc.)
+                }
+            }
+        }
+
     } catch (Exception $e) {
         // Ignoramos si falla por falta de permisos o tabla inexistente
     }
@@ -761,12 +809,15 @@ function normalize_survey(array $survey): array
         $normalized[$field] = is_string($value) ? trim($value) : $value;
     }
 
-    $normalized['client_uuid'] = $normalized['client_uuid'] ?: bin2hex(random_bytes(16));
-    $normalized['survey_date'] = $normalized['survey_date'] ?: date('Y-m-d H:i:s');
-    $normalized['survey_status'] = $normalized['survey_status'] ?: 'sincronizada';
-    $normalized['women_roles'] = parse_multi_value($survey['women_roles'] ?? []);
-    $normalized['mine_benefits'] = parse_multi_value($survey['mine_benefits'] ?? []);
-    $normalized['mine_risks'] = parse_multi_value($survey['mine_risks'] ?? []);
+    $normalized['client_uuid']    = $normalized['client_uuid']    ?: bin2hex(random_bytes(16));
+    $normalized['survey_date']    = $normalized['survey_date']    ?: date('Y-m-d H:i:s');
+    $normalized['survey_status']  = $normalized['survey_status']  ?: 'sincronizada';
+    $normalized['sector']         = $normalized['sector']         ?? '';
+    $normalized['community']      = $normalized['community']      ?? '';
+    $normalized['surveyor_id']    = $normalized['surveyor_id']    ?? '';
+    $normalized['women_roles']    = parse_multi_value($survey['women_roles']    ?? []);
+    $normalized['mine_benefits']  = parse_multi_value($survey['mine_benefits']  ?? []);
+    $normalized['mine_risks']     = parse_multi_value($survey['mine_risks']     ?? []);
 
     return $normalized;
 }
@@ -805,36 +856,13 @@ function save_survey(array $survey): array
     }
 
     $survey = normalize_survey($survey);
-    $required = [
-        'sector' => 'Debes seleccionar el sector.',
-        'community' => 'Debes ingresar la comunidad o barrio.',
-        'respondent_gender' => 'Debes seleccionar el genero.',
-        'age_range' => 'Debes seleccionar el rango de edad.',
-        'occupation' => 'Debes ingresar la ocupacion principal.',
-        'primary_problem' => 'Debes indicar la principal problematica.',
-        'youth_path' => 'Debes indicar el destino principal de los jovenes.',
-        'water_source' => 'Debes indicar la fuente de agua.',
-        'has_sewer' => 'Debes indicar la condicion de alcantarillado.',
-        'political_climate' => 'Debes indicar el clima politico.',
-        'social_priority' => 'Debes indicar la prioridad territorial.',
-        'investment_acceptance' => 'Debes indicar la aceptacion de inversion externa.',
-        'mine_reopening_perception' => 'Debes indicar la percepcion de reapertura.',
-    ];
-
+    // Todas las preguntas son opcionales — no se valida ningún campo
     if (($user['role'] ?? '') === 'surveyor') {
         if (empty($user['surveyor_id'])) {
             throw new InvalidArgumentException('Tu usuario no tiene un encuestador asignado.');
         }
         $survey['surveyor_id'] = (string) $user['surveyor_id'];
         $survey['surveyor_name'] = $user['display_name'];
-    } else {
-        $required['surveyor_id'] = 'Debes seleccionar un encuestador.';
-    }
-
-    foreach ($required as $field => $message) {
-        if ($survey[$field] === null || $survey[$field] === '') {
-            throw new InvalidArgumentException($message);
-        }
     }
 
     $existingSurvey = null;
@@ -856,48 +884,48 @@ function save_survey(array $survey): array
     // El INSERT se construye dinámicamente según las columnas que realmente existen
     // en la tabla, por lo que funciona aunque ALTER TABLE haya fallado en el hosting.
     $allData = [
-        'client_uuid'            => $survey['client_uuid'],
-        'sector'                 => $survey['sector'],
-        'community'              => $survey['community'],
-        'survey_date'            => $survey['survey_date'],
-        'survey_status'          => $survey['survey_status'],
-        'surveyor_id'            => (int) $survey['surveyor_id'],
-        'surveyor_name'          => $survey['surveyor_name'] ?: null,
+        'client_uuid'            => $survey['client_uuid'] ?: bin2hex(random_bytes(8)),
+        'sector'                 => $survey['sector'] ?: '',
+        'community'              => $survey['community'] ?: '',
+        'survey_date'            => $survey['survey_date'] ?: date('Y-m-d H:i:s'),
+        'survey_status'          => $survey['survey_status'] ?: 'sincronizada',
+        'surveyor_id'            => (int) ($survey['surveyor_id'] ?? 0),
+        'surveyor_name'          => $survey['surveyor_name'] ?: '',
         'respondent_name'        => $survey['respondent_name'] ?: '',
         'respondent_last_name'   => $survey['respondent_last_name'] ?: '',
-        'respondent_id_document' => $survey['respondent_id_document'] ?: null,
-        'respondent_email'       => $survey['respondent_email'] ?: null,
-        'respondent_phone'       => $survey['respondent_phone'] ?: null,
-        'respondent_gender'      => $survey['respondent_gender'],
-        'age_range'              => $survey['age_range'],
-        'education_level'        => $survey['education_level'] ?: null,
-        'occupation'             => $survey['occupation'],
-        'primary_problem'        => $survey['primary_problem'],
-        'youth_path'             => $survey['youth_path'],
-        'women_roles'            => json_encode($survey['women_roles'], JSON_UNESCAPED_UNICODE),
-        'water_source'           => $survey['water_source'],
-        'has_sewer'              => $survey['has_sewer'],
-        'has_septic'             => $survey['has_septic'] ?: null,
-        'has_internet'           => $survey['has_internet'] ?: null,
-        'road_status'            => $survey['road_status'] ?: null,
-        'road_who_fixes'         => $survey['road_who_fixes'] ?: null,
-        'household_income'       => $survey['household_income'] ?: null,
-        'political_climate'      => $survey['political_climate'],
-        'authority_trust'        => $survey['authority_trust'] ?: null,
-        'social_priority'        => $survey['social_priority'],
-        'investment_acceptance'  => $survey['investment_acceptance'],
-        'mine_reopening_perception' => $survey['mine_reopening_perception'],
-        'mine_benefits'          => json_encode($survey['mine_benefits'], JSON_UNESCAPED_UNICODE),
-        'mine_risks'             => json_encode($survey['mine_risks'], JSON_UNESCAPED_UNICODE),
-        'comments'               => $survey['comments'] ?: null,
+        'respondent_id_document' => $survey['respondent_id_document'] ?: '',
+        'respondent_email'       => $survey['respondent_email'] ?: '',
+        'respondent_phone'       => $survey['respondent_phone'] ?: '',
+        'respondent_gender'      => $survey['respondent_gender'] ?: '',
+        'age_range'              => $survey['age_range'] ?: '',
+        'education_level'        => $survey['education_level'] ?: '',
+        'occupation'             => $survey['occupation'] ?: '',
+        'primary_problem'        => $survey['primary_problem'] ?: '',
+        'youth_path'             => $survey['youth_path'] ?: '',
+        'women_roles'            => json_encode($survey['women_roles'] ?? [], JSON_UNESCAPED_UNICODE),
+        'water_source'           => $survey['water_source'] ?: '',
+        'has_sewer'              => $survey['has_sewer'] ?: '',
+        'has_septic'             => $survey['has_septic'] ?: '',
+        'has_internet'           => $survey['has_internet'] ?: '',
+        'road_status'            => $survey['road_status'] ?: '',
+        'road_who_fixes'         => $survey['road_who_fixes'] ?: '',
+        'household_income'       => $survey['household_income'] ?: '',
+        'political_climate'      => $survey['political_climate'] ?: '',
+        'authority_trust'        => $survey['authority_trust'] ?: '',
+        'social_priority'        => $survey['social_priority'] ?: '',
+        'investment_acceptance'  => $survey['investment_acceptance'] ?: '',
+        'mine_reopening_perception' => $survey['mine_reopening_perception'] ?: '',
+        'mine_benefits'          => json_encode($survey['mine_benefits'] ?? [], JSON_UNESCAPED_UNICODE),
+        'mine_risks'             => json_encode($survey['mine_risks'] ?? [], JSON_UNESCAPED_UNICODE),
+        'comments'               => $survey['comments'] ?: '',
         'latitude'               => is_numeric($survey['latitude']  ?? '') ? (float) $survey['latitude']  : null,
         'longitude'              => is_numeric($survey['longitude'] ?? '') ? (float) $survey['longitude'] : null,
-        'created_by_user_id'     => (int) $user['id'],
-        'knows_mining_types'     => $survey['knows_mining_types'] ?: null,
-        'knows_mining_benefits'  => $survey['knows_mining_benefits'] ?: null,
-        'knows_modern_mining'    => $survey['knows_modern_mining'] ?: null,
-        'knows_local_mines'      => $survey['knows_local_mines'] ?: null,
-        'knows_env_guarantees'   => $survey['knows_env_guarantees'] ?: null,
+        'created_by_user_id'     => (int) ($user['id'] ?? 0),
+        'knows_mining_types'     => $survey['knows_mining_types'] ?: '',
+        'knows_mining_benefits'  => $survey['knows_mining_benefits'] ?: '',
+        'knows_modern_mining'    => $survey['knows_modern_mining'] ?: '',
+        'knows_local_mines'      => $survey['knows_local_mines'] ?: '',
+        'knows_env_guarantees'   => $survey['knows_env_guarantees'] ?: '',
     ];
 
     // Obtenemos las columnas que realmente existen en la tabla.

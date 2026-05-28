@@ -400,7 +400,7 @@ function populateSectorFilters(sectors) {
         el.innerHTML = '';
         const defaultOpt = document.createElement('option');
         defaultOpt.value = 'general';
-        defaultOpt.textContent = id === 'analisis-sector-filter' ? 'Todo San Bartolomé' : 'Todo San Bartolome';
+        defaultOpt.textContent = id === 'analisis-sector-filter' ? 'Todo San Bartolom\u00e9' : 'Todo San Bartolome';
         el.appendChild(defaultOpt);
         
         sectors.forEach(item => {
@@ -678,17 +678,15 @@ function renderApplications() {
                 <div class="doc-list" style="margin-top:10px;">${documents || '<span class="helper-text">Sin documentos cargados.</span>'}</div>
                 ${item.review_status === 'approved' ? `
                     <div class="review-final-block review-final-approved" style="margin-top:14px; padding:14px 16px; background:rgba(46,125,50,0.07); border:1.5px solid rgba(46,125,50,0.3); border-radius:8px;">
-                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-                            <span style="font-size:18px;">✅</span>
+                        <div style="margin-bottom:8px;">
                             <strong style="color:#2e7d32; font-size:15px;">Solicitud Aprobada</strong>
                         </div>
-                        <p style="margin:0 0 4px 0; font-size:14px;"><strong>Zona asignada:</strong> ${escapeHtml(item.requested_zone || 'No especificada')}</p>
+                        <p style="margin:0 0 4px 0; font-size:14px;"><strong>Zona asignada:</strong> ${escapeHtml(item.requested_zone?.trim() || 'Por asignar')}</p>
                         ${item.review_notes ? `<p style="margin:0; font-size:14px;"><strong>Observaciones:</strong> ${escapeHtml(item.review_notes)}</p>` : ''}
                     </div>
                 ` : item.review_status === 'rejected' ? `
                     <div class="review-final-block review-final-rejected" style="margin-top:14px; padding:14px 16px; background:rgba(198,40,40,0.06); border:1.5px solid rgba(198,40,40,0.25); border-radius:8px;">
-                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-                            <span style="font-size:18px;">❌</span>
+                        <div style="margin-bottom:8px;">
                             <strong style="color:#c62828; font-size:15px;">Solicitud Rechazada</strong>
                         </div>
                         ${item.review_notes ? `<p style="margin:0; font-size:14px;"><strong>Observaciones:</strong> ${escapeHtml(item.review_notes)}</p>` : '<p style="margin:0; font-size:14px; color:var(--muted);">Sin observaciones.</p>'}
@@ -791,7 +789,7 @@ async function loadSurveyors() {
             <div class="application-head">
                 <div>
                     <h3>${escapeHtml(item.full_name)}</h3>
-                    <p>${escapeHtml(item.document_number)} · ${escapeHtml(item.email || '')} · ${escapeHtml(item.phone || '')}</p>
+                    <p style="color:var(--muted);font-size:13px;margin:0;">${[item.document_number, item.email, item.phone].filter(Boolean).map(escapeHtml).join(' &nbsp;|&nbsp; ')}</p>
                 </div>
                 <span class="status-badge status-${escapeHtml(item.account_status || 'approved')}">${{ approved: 'Aprobado', suspended: 'Suspendido', pending: 'Pendiente', in_review: 'En revisión', rejected: 'Rechazado' }[item.account_status] || escapeHtml(item.account_status || 'approved')}</span>
             </div>
@@ -1589,7 +1587,7 @@ async function loadAnalisis() {
         renderAnalisis(analisisState.data);
         setAnalisisUI('content');
         const ts = document.getElementById('analisis-last-update');
-        if (ts) ts.textContent = '⏱ ' + new Date().toLocaleTimeString('es-EC');
+        if (ts) ts.textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-EC');
         clearTimeout(analisisState.autoRefreshTimer);
         analisisState.autoRefreshTimer = setTimeout(() => loadAnalisis(), 90000);
     } catch (err) {

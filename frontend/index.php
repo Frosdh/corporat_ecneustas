@@ -1,4 +1,9 @@
-<?php declare(strict_types=1); ?>
+<?php
+declare(strict_types=1);
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -846,7 +851,7 @@
                 <!-- Barra de control -->
                 <div class="analisis-topbar">
                     <div class="analisis-topbar-left">
-                        <h2 class="analisis-titulo">&#128300; Análisis Experto de Encuestas</h2>
+                        <h2 class="analisis-titulo">Análisis Experto de Encuestas</h2>
                         <p class="analisis-subtitulo">Estadística descriptiva &middot; Sentimiento comunitario &middot; Actualización automática cada 90 s</p>
                     </div>
                     <div class="analisis-topbar-right">
@@ -864,7 +869,7 @@
                     <p>Procesando datos del campo&hellip;</p>
                 </div>
                 <div id="analisis-empty" class="analisis-empty hidden">
-                    <div class="analisis-empty-icon">&#128202;</div>
+                    <div class="analisis-empty-icon" style="font-size:36px; color:var(--muted); line-height:1;">&#9998;</div>
                     <p>Sin encuestas registradas aún.</p>
                     <small>El análisis aparecerá automáticamente cuando lleguen datos de campo.</small>
                 </div>
@@ -875,35 +880,35 @@
                     <!-- KPI Row -->
                     <div class="analisis-kpi-row">
                         <div class="analisis-kpi-card">
-                            <div class="kpi-icon-wrap kpi-blue">&#128203;</div>
+                            <div class="kpi-icon-wrap kpi-blue">#</div>
                             <div class="kpi-info">
                                 <span class="kpi-label">Total Encuestas</span>
                                 <strong id="analisis-total-n" class="kpi-value">—</strong>
                             </div>
                         </div>
                         <div class="analisis-kpi-card">
-                            <div class="kpi-icon-wrap kpi-teal">&#128200;</div>
+                            <div class="kpi-icon-wrap kpi-teal">~</div>
                             <div class="kpi-info">
                                 <span class="kpi-label">Índice Neto Global</span>
                                 <strong id="kpi-indice-global" class="kpi-value">—</strong>
                             </div>
                         </div>
                         <div class="analisis-kpi-card">
-                            <div class="kpi-icon-wrap kpi-green">&#9989;</div>
+                            <div class="kpi-icon-wrap kpi-green">+</div>
                             <div class="kpi-info">
                                 <span class="kpi-label">Sentimiento Positivo</span>
                                 <strong id="analisis-pos-global" class="kpi-value kpi-green-val">—</strong>
                             </div>
                         </div>
                         <div class="analisis-kpi-card">
-                            <div class="kpi-icon-wrap kpi-red">&#9888;</div>
+                            <div class="kpi-icon-wrap kpi-red">-</div>
                             <div class="kpi-info">
                                 <span class="kpi-label">Sentimiento Negativo</span>
                                 <strong id="analisis-neg-global" class="kpi-value kpi-red-val">—</strong>
                             </div>
                         </div>
                         <div class="analisis-kpi-card kpi-wide">
-                            <div class="kpi-icon-wrap kpi-orange">&#128680;</div>
+                            <div class="kpi-icon-wrap kpi-orange">!</div>
                             <div class="kpi-info">
                                 <span class="kpi-label">Problemática Principal</span>
                                 <strong id="analisis-problema" class="kpi-value kpi-problem-text">—</strong>
@@ -951,7 +956,7 @@
                     <!-- Radar de dimensiones -->
                     <div class="analisis-section-row">
                         <div>
-                            <h3 class="analisis-section-header">&#128375; Vista Radar — Comparativa por Dimensión</h3>
+                            <h3 class="analisis-section-header">Vista Radar — Comparativa por Dimensión</h3>
                             <p class="analisis-section-desc">Cada eje: índice de sentimiento. Verde = favorable, rojo = crítico.</p>
                         </div>
                     </div>
@@ -962,7 +967,7 @@
                     <!-- Dimensiones -->
                     <div class="analisis-section-row">
                         <div>
-                            <h3 class="analisis-section-header">&#128208; Análisis Detallado por Dimensión</h3>
+                            <h3 class="analisis-section-header">Análisis Detallado por Dimensión</h3>
                             <p class="analisis-section-desc">Distribución de respuestas y sentimiento por cada eje temático de la encuesta parroquial.</p>
                         </div>
                     </div>
@@ -971,17 +976,17 @@
                     <!-- Percepciones mineras -->
                     <div class="analisis-section-row">
                         <div>
-                            <h3 class="analisis-section-header">&#9935; Percepciones sobre la Actividad Minera</h3>
+                            <h3 class="analisis-section-header">Percepciones sobre la Actividad Minera</h3>
                             <p class="analisis-section-desc">Selección múltiple — un encuestado puede indicar varios ítems.</p>
                         </div>
                     </div>
                     <div class="analisis-mining-grid">
                         <div class="card analisis-mining-card">
-                            <h4 class="analisis-card-title analisis-title-green">&#127775; Beneficios percibidos</h4>
+                            <h4 class="analisis-card-title analisis-title-green">Beneficios percibidos</h4>
                             <div id="analisis-beneficios-list" class="analisis-bar-list"></div>
                         </div>
                         <div class="card analisis-mining-card">
-                            <h4 class="analisis-card-title analisis-title-red">&#9888; Riesgos percibidos</h4>
+                            <h4 class="analisis-card-title analisis-title-red">Riesgos percibidos</h4>
                             <div id="analisis-riesgos-list" class="analisis-bar-list"></div>
                         </div>
                     </div>
@@ -989,8 +994,8 @@
                     <!-- Conocimiento minero -->
                     <div class="analisis-section-row">
                         <div>
-                            <h3 class="analisis-section-header">&#129504; Nivel de Conocimiento sobre Minería</h3>
-                            <p class="analisis-section-desc">Semáforo: &#128994; &ge;60% buen conocimiento &nbsp;&#128993; 30-59% parcial &nbsp;&#128308; &lt;30% socialización urgente</p>
+                            <h3 class="analisis-section-header">Nivel de Conocimiento sobre Minería</h3>
+                            <p class="analisis-section-desc">Semáforo: <span style="color:#4caf50; font-weight:600;">&#9679;</span> &ge;60% buen conocimiento &nbsp;<span style="color:#ff9800; font-weight:600;">&#9679;</span> 30-59% parcial &nbsp;<span style="color:#e53935; font-weight:600;">&#9679;</span> &lt;30% socializaci&oacute;n urgente</p>
                         </div>
                     </div>
                     <div class="card analisis-conocimiento-card">
@@ -1000,7 +1005,7 @@
                     <!-- Correlaciones -->
                     <div class="analisis-section-row">
                         <div>
-                            <h3 class="analisis-section-header">&#128279; Correlaciones y Cruces Estratégicos</h3>
+                            <h3 class="analisis-section-header">Correlaciones y Cruces Estratégicos</h3>
                             <p class="analisis-section-desc">Diferencia expresada en puntos porcentuales (pp) entre grupos comparados.</p>
                         </div>
                     </div>
@@ -1009,7 +1014,7 @@
                     <!-- Tendencia temporal -->
                     <div class="analisis-section-row">
                         <div>
-                            <h3 class="analisis-section-header">&#128200; Tendencia del Levantamiento (últimos 14 días)</h3>
+                            <h3 class="analisis-section-header">Tendencia del Levantamiento (últimos 14 días)</h3>
                             <p class="analisis-section-desc">Barras: encuestas por día &nbsp;&middot;&nbsp; Línea: % de apertura a inversión minera.</p>
                         </div>
                     </div>
@@ -1020,7 +1025,7 @@
                     <!-- Distribución territorial -->
                     <div class="analisis-section-row">
                         <div>
-                            <h3 class="analisis-section-header">&#128506; Distribución Territorial por Sector</h3>
+                            <h3 class="analisis-section-header">Distribución Territorial por Sector</h3>
                         </div>
                     </div>
                     <div class="card analisis-chart-card">

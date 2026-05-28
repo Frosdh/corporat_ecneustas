@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../services/api_service.dart';
 import '../services/gps_service.dart';
 import '../theme/coffee_palette.dart';
@@ -33,6 +34,7 @@ class _SurveyorHomeScreenState extends State<SurveyorHomeScreen> with SingleTick
 
   // GPS en segundo plano y detección geográfica
   StreamSubscription<Position>? _gpsSubscription;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   Position? _latestPosition;
   String? _inferredLocationDetails;
 
@@ -201,11 +203,13 @@ class _SurveyorHomeScreenState extends State<SurveyorHomeScreen> with SingleTick
     _loadOfflineSurveys();
     _fetchMySurveys();
     _startBackgroundGpsListener();
+    _startConnectivityListener();
   }
 
   @override
   void dispose() {
     _gpsSubscription?.cancel();
+    _connectivitySubscription?.cancel();
     _tabController.dispose();
     _communityController.dispose();
     _namesController.dispose();
@@ -483,6 +487,22 @@ class _SurveyorHomeScreenState extends State<SurveyorHomeScreen> with SingleTick
     return (now + rand).padRight(32, 'f').substring(0, 32);
   }
 
+  // Escucha cambios de conectividad y auto-sincroniza la cola offline al recuperar internet
+  void _startConnectivityListener() {
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((results) {
+      final hasInternet = results.any((r) =>
+          r == ConnectivityResult.mobile ||
+          r == ConnectivityResult.wifi ||
+          r == ConnectivityResult.ethernet);
+      if (hasInternet && _offlineSurveys.isNotEmpty) {
+        // Pequeña pausa para dar tiempo a que la conexión esté estable
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) _syncOfflineSurveys();
+        });
+      }
+    });
+  }
+
   // Módulo de envío directo simplificado vía ApiService
 
   // Guarda y envía la encuesta actual
@@ -491,125 +511,7 @@ class _SurveyorHomeScreenState extends State<SurveyorHomeScreen> with SingleTick
       _surveyError = null;
     });
 
-    if (!_formKey.currentState!.validate()) {
-      setState(() {
-        _surveyError = 'Por favor revisa los campos requeridos en el formulario.';
-      });
-      return;
-    }
-
-    if (_selectedSector == null) {
-      setState(() {
-        _surveyError = 'Debes seleccionar el sector en monitoreo.';
-      });
-      return;
-    }
-
-    if (_selectedGender == null) {
-      setState(() {
-        _surveyError = 'Debes seleccionar el género.';
-      });
-      return;
-    }
-
-    if (_selectedAgeRange == null) {
-      setState(() {
-        _surveyError = 'Debes seleccionar el rango de edad.';
-      });
-      return;
-    }
-
-    if (_selectedProblems.isEmpty) {
-      setState(() {
-        _surveyError = 'Debes indicar al menos una problemática principal.';
-      });
-      return;
-    }
-
-    if (_selectedYouthPath == null) {
-      setState(() {
-        _surveyError = 'Debes indicar el destino de los jóvenes.';
-      });
-      return;
-    }
-
-    if (_selectedWaterSource == null) {
-      setState(() {
-        _surveyError = 'Debes indicar la fuente de agua.';
-      });
-      return;
-    }
-
-    if (_selectedSewer == null) {
-      setState(() {
-        _surveyError = 'Debes indicar la condición de alcantarillado.';
-      });
-      return;
-    }
-
-    if (_selectedPoliticalClimate == null) {
-      setState(() {
-        _surveyError = 'Debes indicar el clima político.';
-      });
-      return;
-    }
-
-    if (_selectedSocialPriorities.isEmpty) {
-      setState(() {
-        _surveyError = 'Debes indicar al menos una prioridad territorial.';
-      });
-      return;
-    }
-
-    if (_selectedInvestmentAcceptance == null) {
-      setState(() {
-        _surveyError = 'Debes indicar la aceptación de inversión externa.';
-      });
-      return;
-    }
-
-    if (_selectedMineReopening == null) {
-      setState(() {
-        _surveyError = 'Debes indicar la percepción de reapertura.';
-      });
-      return;
-    }
-
-    if (_selectedMiningTypes == null) {
-      setState(() {
-        _surveyError = 'Debes responder si conoce de minería subterránea, a cielo abierto o combinada.';
-      });
-      return;
-    }
-
-    if (_selectedMiningBenefits == null) {
-      setState(() {
-        _surveyError = 'Debes responder si conoce los beneficios de la minería.';
-      });
-      return;
-    }
-
-    if (_selectedModernMining == null) {
-      setState(() {
-        _surveyError = 'Debes responder si conoce sobre la minería moderna de bajo impacto.';
-      });
-      return;
-    }
-
-    if (_selectedLocalMines == null) {
-      setState(() {
-        _surveyError = 'Debes responder si su localidad tiene minas que se pueden aprovechar.';
-      });
-      return;
-    }
-
-    if (_selectedEnvGuarantees == null) {
-      setState(() {
-        _surveyError = 'Debes responder si sabía de las garantías del Ministerio del Ambiente.';
-      });
-      return;
-    }
-
+    // Todas las preguntas son opcionales — se guarda sin importar qué campos estén vacíos
     setState(() {
       _isSubmittingSurvey = true;
     });
@@ -697,7 +599,7 @@ class _SurveyorHomeScreenState extends State<SurveyorHomeScreen> with SingleTick
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Guardado en la cola local. Se subirá automáticamente al recuperar internet.'),
+            content: Text('Sin conexión — encuesta guardada localmente. Se subirá sola cuando regrese el internet.'),
             backgroundColor: Color(0xFFF59E0B),
           ),
         );
@@ -1735,7 +1637,7 @@ class _SurveyorHomeScreenState extends State<SurveyorHomeScreen> with SingleTick
                         decoration: const InputDecoration(labelText: 'Género'),
                         value: _selectedGender,
                         items: _genders.map((gen) => DropdownMenuItem<String>(value: gen, child: Text(gen))).toList(),
-                        validator: (value) => value == null ? 'Seleccione género' : null,
+                        validator: (value) => null,
                         onChanged: (val) => setState(() => _selectedGender = val),
                       ),
                       const SizedBox(height: 14),
@@ -1745,7 +1647,7 @@ class _SurveyorHomeScreenState extends State<SurveyorHomeScreen> with SingleTick
                         decoration: const InputDecoration(labelText: 'Rango de Edad'),
                         value: _selectedAgeRange,
                         items: _ageRanges.map((age) => DropdownMenuItem<String>(value: age, child: Text(age))).toList(),
-                        validator: (value) => value == null ? 'Seleccione rango de edad' : null,
+                        validator: (value) => null,
                         onChanged: (val) => setState(() => _selectedAgeRange = val),
                       ),
                       const SizedBox(height: 14),
