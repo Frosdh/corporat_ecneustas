@@ -1132,27 +1132,46 @@ fieldset {
 
 /* Badge de sentimiento en dimensiones */
 .analisis-sent-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     font-size: 0.72rem;
     font-weight: 700;
-    padding: 3px 10px;
+    padding: 4px 11px;
     border-radius: 999px;
     white-space: nowrap;
+    letter-spacing: 0.02em;
+}
+
+.analisis-sent-badge::before {
+    content: '';
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
 }
 
 .sent-positive {
-    background: rgba(15, 159, 110, 0.12);
-    color: var(--success);
+    background: rgba(15, 159, 110, 0.13);
+    color: #0a7a56;
+    border: 1px solid rgba(15, 159, 110, 0.25);
 }
+.sent-positive::before { background: #0f9f6e; }
 
 .sent-negative {
-    background: rgba(196, 61, 69, 0.12);
-    color: var(--danger);
+    background: rgba(196, 61, 69, 0.11);
+    color: #a52b31;
+    border: 1px solid rgba(196, 61, 69, 0.25);
 }
+.sent-negative::before { background: #c43d45; }
 
 .sent-neutral {
-    background: rgba(217, 119, 6, 0.12);
-    color: var(--warning);
+    background: rgba(217, 119, 6, 0.11);
+    color: #a05f03;
+    border: 1px solid rgba(217, 119, 6, 0.25);
 }
+.sent-neutral::before { background: #d97706; }
 
 /* Barras de sentimiento por dimensión */
 .analisis-dim-meters {
@@ -1420,6 +1439,145 @@ fieldset {
 
     .analisis-conocimiento-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+/* =====================================================
+   VELOCÍMETROS DE SENTIMIENTO EN DASHBOARD
+   ===================================================== */
+
+.dash-gauge-card {
+    margin-bottom: 0;
+}
+
+/* Grid de tarjetas */
+.dash-gauge-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+    gap: 16px;
+    padding: 6px 0 2px;
+}
+
+/* Cada tarjeta individual */
+.dash-gauge-card-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 16px 12px 14px;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    cursor: default;
+}
+
+.dash-gauge-card-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(62,39,35,0.10);
+}
+
+/* Cabecera: icono + título */
+.dg-top {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+}
+
+.dg-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+}
+
+.dg-icon svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+.dg-titulo {
+    font-size: 0.63rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    line-height: 1.2;
+    flex: 1;
+}
+
+/* Contenedor del canvas */
+.dg-circle-wrap {
+    position: relative;
+    width: 160px;
+    height: 160px;
+    flex-shrink: 0;
+}
+
+.dg-circle-wrap canvas {
+    display: block;
+}
+
+/* Valor centrado sobre el gauge */
+.dg-center-val {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    pointer-events: none;
+}
+
+.dg-center-val strong {
+    font-size: 1.55rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.dg-center-val span {
+    font-size: 0.65rem;
+    color: var(--muted);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+/* Pie de tarjeta: badge + respondentes */
+.dg-bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.dg-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 12px;
+    border-radius: 999px;
+    letter-spacing: 0.02em;
+}
+
+.dg-n {
+    font-size: 0.62rem;
+    color: var(--muted);
+    font-weight: 500;
+}
+
+@media (max-width: 640px) {
+    .dash-gauge-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .dg-circle-wrap {
+        width: 130px;
+        height: 130px;
+    }
+    .dg-circle-wrap canvas {
+        width: 130px !important;
+        height: 130px !important;
     }
 }
 

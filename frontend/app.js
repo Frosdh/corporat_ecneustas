@@ -9,6 +9,7 @@ const state = {
     mySurveys: [],
     applicationFilter: 'all',
     editingSurvey: null,
+    dimGaugeCharts: {},
 };
 let mapInstance = null;
 let mapLayerGroup = null;
@@ -382,12 +383,96 @@ function renderDashboard(dashboard) {
     setText('strategy-contrary', `${strategic.contrary_pct ?? 0}%`);
     setText('strategy-open-sector', strategic.top_open_sector || 'Sin datos');
 
+    renderDimGauges(dashboard.dimensiones_sentimiento || []);
     renderMap(dashboard.map_points || []);
     renderReports(dashboard);
 
     if (dashboard.operations && dashboard.operations.surveys_by_sector) {
         populateSectorFilters(dashboard.operations.surveys_by_sector);
     }
+}
+
+function renderDimGauges(dims) {
+    const grid = document.getElementById('dash-gauge-grid');
+    if (!grid) return;
+
+    Object.values(state.dimGaugeCharts).forEach(ch => { try { ch.destroy(); } catch (e) {} });
+    state.dimGaugeCharts = {};
+
+    if (!dims || dims.length === 0) {
+        grid.innerHTML = '<p style="color:var(--muted);font-size:0.82rem">Sin datos suficientes aun.</p>';
+        return;
+    }
+
+    // Iconos SVG por dimensión (mismo orden que lib.php)
+    const icons = [
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 8v4l3 3"/></svg>',
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
+    ];
+
+    grid.innerHTML = dims.map((d, i) => {
+        const color  = d.indice >= 15 ? '#0f9f6e' : d.indice <= -15 ? '#c43d45' : '#d97706';
+        const bgColor = d.indice >= 15 ? 'rgba(15,159,110,0.12)' : d.indice <= -15 ? 'rgba(196,61,69,0.11)' : 'rgba(217,119,6,0.11)';
+        const label  = d.indice >= 15 ? 'Favorable' : d.indice <= -15 ? 'Cr&iacute;tico' : 'Ambivalente';
+        const sign   = d.indice > 0 ? '+' : '';
+        const icon   = icons[i] || icons[0];
+        return `
+            <div class="dash-gauge-card-item">
+                <div class="dg-top">
+                    <span class="dg-icon" style="color:${color}">${icon}</span>
+                    <span class="dg-titulo">${escapeHtml(d.titulo).toUpperCase()}</span>
+                </div>
+                <div class="dg-circle-wrap">
+                    <canvas id="dg-${i}" width="160" height="160"></canvas>
+                    <div class="dg-center-val" style="color:${color}">
+                        <strong>${sign}${d.indice}</strong>
+                        <span>pts</span>
+                    </div>
+                </div>
+                <div class="dg-bottom">
+                    <span class="dg-badge" style="background:${bgColor};color:${color}">${label}</span>
+                    <span class="dg-n">${d.n > 0 ? d.n + ' resp.' : 'Sin datos'}</span>
+                </div>
+            </div>`;
+    }).join('');
+
+    dims.forEach((d, i) => {
+        const canvas = document.getElementById('dg-' + i);
+        if (!canvas || typeof Chart === 'undefined') return;
+
+        // 270° speedometer: start bottom-left (135°), sweep 270°, gap 90° at bottom
+        // index -100..+100 mapped to 0..270 degrees
+        const sweep    = 270;
+        const gap      = 90;
+        const filled   = Math.max(2, Math.min(sweep - 2, (d.indice + 100) / 200 * sweep));
+        const emptyArc = sweep - filled;
+        const color    = d.indice >= 15 ? '#0f9f6e' : d.indice <= -15 ? '#c43d45' : '#d97706';
+
+        state.dimGaugeCharts['g' + i] = new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    // filled arc | empty arc | transparent gap
+                    data: [filled, emptyArc, gap],
+                    backgroundColor: [color, '#ede0d0', 'transparent'],
+                    borderWidth: 0,
+                    hoverOffset: 0,
+                }],
+            },
+            options: {
+                rotation: 135,       // start at bottom-left
+                circumference: 360,  // full circle so gap renders as transparent
+                cutout: '72%',
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                animation: { duration: 800, easing: 'easeOutQuart' },
+            },
+        });
+    });
 }
 
 function populateSectorFilters(sectors) {
@@ -1667,7 +1752,7 @@ function destroyChart(key) {
 }
 
 function truncate(str, max) {
-    return str.length > max ? str.substring(0, max) + '…' : str;
+    return str.length > max ? str.substring(0, max) + '...' : str;
 }
 
 function sentColor(sent) {
@@ -1713,8 +1798,7 @@ function renderDimensiones(dimensiones) {
         const sent = dim.sentimiento;
         const items = (dim.distribucion.items || []).slice(0, 7);
         const sentClass = sent.indice >= 15 ? 'sent-positive' : sent.indice <= -15 ? 'sent-negative' : 'sent-neutral';
-        const sentIcon = sent.indice >= 15 ? '▲' : sent.indice <= -15 ? '▼' : '●';
-        const sentLabel = sent.indice >= 15 ? 'Favorable' : sent.indice <= -15 ? 'Crítico' : 'Ambivalente';
+        const sentLabel = sent.indice >= 15 ? 'Favorable' : sent.indice <= -15 ? 'Cr&iacute;tico' : 'Ambivalente';
         const chartId = 'chart-dim-' + idx;
 
         const card = document.createElement('div');
@@ -1723,7 +1807,7 @@ function renderDimensiones(dimensiones) {
             <div class="analisis-dim-header">
                 <h4 class="analisis-dim-titulo">${escapeHtml(dim.titulo)}</h4>
                 <span class="analisis-sent-badge ${sentClass}">
-                    ${sentIcon} ${sentLabel} (${sent.indice > 0 ? '+' : ''}${sent.indice} pts)
+                    ${sentLabel} (${sent.indice > 0 ? '+' : ''}${sent.indice} pts)
                 </span>
             </div>
             <div class="analisis-dim-meters">
@@ -1933,48 +2017,5 @@ function renderGauge(indice) {
 // ============================================================
 function renderRadarDimensiones(dimensiones) {
     const ctx = document.getElementById('chart-radar-dimensiones');
-    if (!ctx || !dimensiones || dimensiones.length === 0 || typeof Chart === 'undefined') return;
-    destroyChart('radar');
 
-    const labels = dimensiones.map(d => d.titulo);
-    const values = dimensiones.map(d => d.sentimiento.indice);
-    const colors = dimensiones.map(d => {
-        const i = d.sentimiento.indice;
-        return i >= 15 ? 'rgba(15,159,110,0.85)' : i <= -15 ? 'rgba(196,61,69,0.85)' : 'rgba(217,119,6,0.85)';
-    });
-
-    analisisState.charts['radar'] = new Chart(ctx, {
-        type: 'radar',
-        data: {
-            labels,
-            datasets: [{
-                label: 'Índice de sentimiento',
-                data: values,
-                backgroundColor: 'rgba(14,78,176,0.12)',
-                borderColor: 'rgba(14,78,176,0.8)',
-                pointBackgroundColor: colors,
-                pointRadius: 5,
-                borderWidth: 2,
-            }],
-        },
-        options: {
-            scales: {
-                r: {
-                    min: -100,
-                    max: 100,
-                    ticks: { stepSize: 25, font: { size: 10 }, callback: v => v + ' pts' },
-                    pointLabels: { font: { size: 11 }, color: '#334155' },
-                    grid: { color: 'rgba(0,0,0,0.07)' },
-                    angleLines: { color: 'rgba(0,0,0,0.07)' },
-                },
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: { label: c => ' ' + c.label + ': ' + (c.raw > 0 ? '+' : '') + c.raw + ' pts' },
-                },
-            },
-            animation: { duration: 700 },
-        },
-    });
 }

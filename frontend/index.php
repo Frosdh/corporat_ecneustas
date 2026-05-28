@@ -184,7 +184,7 @@ header('Expires: 0');
                         <div class="progress"><div id="kpi-total-bar" class="progress-bar"></div></div>
                     </article>
                     <article class="card kpi-card">
-                        <span class="eyebrow">Pobreza estructural estimada</span>
+                        <span class="eyebrow">Pobreza estructural</span>
                         <h3 id="kpi-poverty">0%</h3>
                     </article>
                     <article class="card kpi-card">
@@ -192,31 +192,37 @@ header('Expires: 0');
                         <h3 id="kpi-acceptance">0%</h3>
                     </article>
                     <article class="card kpi-card">
-                        <span class="eyebrow">Clima politico predominante</span>
+                        <span class="eyebrow">Clima politico</span>
                         <h3 id="kpi-climate">Sin datos</h3>
                     </article>
                 </div>
 
+                <!-- Tacómetros de sentimiento por dimensión -->
+                <article class="card dash-gauge-card">
+                    <div class="section-title">
+                        <h3>Sentimiento por Dimensi&oacute;n</h3>
+                    </div>
+                    <div id="dash-gauge-grid" class="dash-gauge-grid"></div>
+                </article>
+
                 <div class="dashboard-grid">
                     <article class="card">
                         <div class="section-title">
-                            <h3>Mapa de encuestas georreferenciadas</h3>
-                            <p>Ultimos puntos levantados por sector.</p>
+                            <h3>Mapa georreferenciado</h3>
                         </div>
                         <div id="map-canvas" class="map-canvas"></div>
                     </article>
                     <article class="card">
                         <div class="section-title">
-                            <h3>Indicadores de contraste territorial</h3>
-                            <p>Lectura social del levantamiento y del proceso de postulaciones.</p>
+                            <h3>Riesgos territoriales</h3>
                         </div>
                         <div class="meter-list">
                             <div>
-                                <div class="meter-head"><span>Riesgo de agua y saneamiento</span><strong id="metric-water">0%</strong></div>
+                                <div class="meter-head"><span>Riesgo agua y saneamiento</span><strong id="metric-water">0%</strong></div>
                                 <div class="progress"><div id="metric-water-bar" class="progress-bar alt-red"></div></div>
                             </div>
                             <div>
-                                <div class="meter-head"><span>Brecha de alcantarillado</span><strong id="metric-sewer">0%</strong></div>
+                                <div class="meter-head"><span>Brecha alcantarillado</span><strong id="metric-sewer">0%</strong></div>
                                 <div class="progress"><div id="metric-sewer-bar" class="progress-bar alt-amber"></div></div>
                             </div>
                             <div>
@@ -235,58 +241,42 @@ header('Expires: 0');
 
                 <div class="report-block-grid">
                     <article class="card">
-                        <div class="section-title">
-                            <h3>Operacion de campo</h3>
-                            <p>Ritmo del levantamiento y productividad del equipo.</p>
-                        </div>
+                        <div class="section-title"><h3>Operacion de campo</h3></div>
                         <div class="application-kpis">
-                            <div class="mini-kpi"><span>Encuestas sincronizadas</span><strong id="ops-synced">0</strong></div>
+                            <div class="mini-kpi"><span>Sincronizadas</span><strong id="ops-synced">0</strong></div>
                             <div class="mini-kpi"><span>Pendientes offline</span><strong id="ops-offline-pending">0</strong></div>
-                            <div class="mini-kpi"><span>Productividad promedio</span><strong id="ops-productivity">0</strong></div>
-                            <div class="mini-kpi"><span>Ultimo dia reportado</span><strong id="ops-last-day">-</strong></div>
-                        </div>
-                        <div class="helper-card">
-                            <strong>Detalle:</strong>
-                            <span id="ops-offline-note" class="helper-text">Sin observaciones.</span>
+                            <div class="mini-kpi"><span>Productividad</span><strong id="ops-productivity">0</strong></div>
+                            <div class="mini-kpi"><span>Ultimo dia</span><strong id="ops-last-day">-</strong></div>
                         </div>
                     </article>
 
                     <article class="card">
-                        <div class="section-title">
-                            <h3>Gestion de encuestadores</h3>
-                            <p>Estado del embudo de postulaciones y del personal aprobado.</p>
-                        </div>
+                        <div class="section-title"><h3>Encuestadores</h3></div>
                         <div class="application-kpis">
                             <div class="mini-kpi"><span>Activos</span><strong id="mgmt-active">0</strong></div>
                             <div class="mini-kpi"><span>Suspendidos</span><strong id="mgmt-suspended">0</strong></div>
-                            <div class="mini-kpi"><span>Tiempo prom. aprobacion</span><strong id="mgmt-approval-hours">0 h</strong></div>
-                            <div class="mini-kpi"><span>Tasa de aprobacion</span><strong id="mgmt-approval-rate">0%</strong></div>
+                            <div class="mini-kpi"><span>Aprob. promedio</span><strong id="mgmt-approval-hours">0 h</strong></div>
+                            <div class="mini-kpi"><span>Tasa aprobacion</span><strong id="mgmt-approval-rate">0%</strong></div>
                         </div>
                     </article>
 
                     <article class="card">
-                        <div class="section-title">
-                            <h3>Lectura social y territorial</h3>
-                            <p>Senales predominantes del territorio levantado.</p>
-                        </div>
+                        <div class="section-title"><h3>Lectura social</h3></div>
                         <div class="info-list">
                             <div><span>Problematica principal</span><strong id="social-top-problem">Sin datos</strong></div>
                             <div><span>Confianza predominante</span><strong id="social-top-trust">Sin datos</strong></div>
                             <div><span>Inversion externa</span><strong id="social-top-investment">Sin datos</strong></div>
-                            <div><span>Reapertura Silver 1</span><strong id="social-top-reopening">Sin datos</strong></div>
+                            <div><span>Reapertura minera</span><strong id="social-top-reopening">Sin datos</strong></div>
                         </div>
                     </article>
 
                     <article class="card">
-                        <div class="section-title">
-                            <h3>KPIs estrategicos</h3>
-                            <p>Lectura ejecutiva para apoyar decisiones y negociacion.</p>
-                        </div>
+                        <div class="section-title"><h3>KPIs estrategicos</h3></div>
                         <div class="application-kpis">
                             <div class="mini-kpi"><span>Favorable</span><strong id="strategy-favorable">0%</strong></div>
                             <div class="mini-kpi"><span>Condicionada</span><strong id="strategy-conditioned">0%</strong></div>
                             <div class="mini-kpi"><span>Contraria</span><strong id="strategy-contrary">0%</strong></div>
-                            <div class="mini-kpi"><span>Sector mas abierto</span><strong id="strategy-open-sector">Sin datos</strong></div>
+                            <div class="mini-kpi"><span>Sector abierto</span><strong id="strategy-open-sector">Sin datos</strong></div>
                         </div>
                     </article>
                 </div>
