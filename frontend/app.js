@@ -384,6 +384,7 @@ function renderDashboard(dashboard) {
     setText('strategy-open-sector', strategic.top_open_sector || 'Sin datos');
 
     renderDimGauges(dashboard.dimensiones_sentimiento || []);
+    renderDimGauges(dashboard.dimensiones_sentimiento || []);
     renderMap(dashboard.map_points || []);
     renderReports(dashboard);
 
@@ -404,7 +405,7 @@ function renderDimGauges(dims) {
         return;
     }
 
-    // Iconos SVG por dimensión (mismo orden que lib.php)
+    // Iconos SVG por dimension (mismo orden que lib.php)
     const icons = [
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
@@ -467,6 +468,83 @@ function renderDimGauges(dims) {
             options: {
                 rotation: 135,       // start at bottom-left
                 circumference: 360,  // full circle so gap renders as transparent
+                cutout: '72%',
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                animation: { duration: 800, easing: 'easeOutQuart' },
+            },
+        });
+    });
+}
+
+
+function renderDimGauges(dims) {
+    const grid = document.getElementById('dash-gauge-grid');
+    if (!grid) return;
+
+    Object.values(state.dimGaugeCharts).forEach(ch => { try { ch.destroy(); } catch (e) {} });
+    state.dimGaugeCharts = {};
+
+    if (!dims || dims.length === 0) {
+        grid.innerHTML = '<p style="color:var(--muted);font-size:0.82rem">Sin datos suficientes aun.</p>';
+        return;
+    }
+
+    const icons = [
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
+    ];
+
+    grid.innerHTML = dims.map((d, i) => {
+        const color    = d.indice >= 15 ? '#0f9f6e' : d.indice <= -15 ? '#c43d45' : '#d97706';
+        const bgColor  = d.indice >= 15 ? 'rgba(15,159,110,0.10)' : d.indice <= -15 ? 'rgba(196,61,69,0.09)' : 'rgba(217,119,6,0.09)';
+        const label    = d.indice >= 15 ? 'Favorable' : d.indice <= -15 ? 'Cr&iacute;tico' : 'Ambivalente';
+        const sign     = d.indice > 0 ? '+' : '';
+        const icon     = icons[i] || icons[0];
+        return `
+            <div class="dash-gauge-card-item">
+                <div class="dg-top">
+                    <span class="dg-icon" style="color:${color}">${icon}</span>
+                    <span class="dg-titulo">${escapeHtml(d.titulo).toUpperCase()}</span>
+                </div>
+                <div class="dg-circle-wrap">
+                    <canvas id="dg-${i}" width="160" height="160"></canvas>
+                    <div class="dg-center-val" style="color:${color}">
+                        <strong>${sign}${d.indice}</strong>
+                        <span>pts</span>
+                    </div>
+                </div>
+                <div class="dg-bottom">
+                    <span class="dg-badge" style="background:${bgColor};color:${color}">${label}</span>
+                    <span class="dg-n">${d.n > 0 ? d.n + ' resp.' : 'Sin datos'}</span>
+                </div>
+            </div>`;
+    }).join('');
+
+    dims.forEach((d, i) => {
+        const canvas = document.getElementById('dg-' + i);
+        if (!canvas || typeof Chart === 'undefined') return;
+        const sweep  = 270;
+        const filled = Math.max(2, Math.min(sweep - 2, (d.indice + 100) / 200 * sweep));
+        const empty  = sweep - filled;
+        const color  = d.indice >= 15 ? '#0f9f6e' : d.indice <= -15 ? '#c43d45' : '#d97706';
+        state.dimGaugeCharts['g' + i] = new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [filled, empty, 90],
+                    backgroundColor: [color, '#ede0d0', 'transparent'],
+                    borderWidth: 0,
+                    hoverOffset: 0,
+                }],
+            },
+            options: {
+                rotation: 135,
+                circumference: 360,
                 cutout: '72%',
                 plugins: { legend: { display: false }, tooltip: { enabled: false } },
                 animation: { duration: 800, easing: 'easeOutQuart' },
@@ -1887,7 +1965,9 @@ function renderConocimiento(conocimiento) {
         const posItem = item.dist.items.find(i => i.sentimiento === 'positivo');
         const pct = posItem ? posItem.pct : 0;
         const col = pct >= 60 ? '#0f9f6e' : pct >= 30 ? '#d97706' : '#c43d45';
-        const lbl = pct >= 60 ? 'Buen nivel de conocimiento' : pct >= 30 ? 'Conocimiento parcial — requiere refuerzo' : 'Bajo conocimiento — socialización urgente';
+        const lbl = pct >= 60 ? 'Buen nivel de conocimiento'
+                  : pct >= 30 ? 'Conocimiento parcial &mdash; requiere refuerzo'
+                  : 'Bajo conocimiento &mdash; socializaci&oacute;n urgente';
         return `
             <div class="analisis-conoc-item">
                 <div class="analisis-conoc-header">
@@ -1943,14 +2023,14 @@ function renderTendencia(tendencia) {
             labels: tendencia.map(t => t.dia),
             datasets: [
                 {
-                    label: 'Encuestas por día',
+                    label: 'Encuestas por dia',
                     data: tendencia.map(t => t.total),
                     backgroundColor: 'rgba(14,78,176,0.75)',
                     borderRadius: 4,
                     yAxisID: 'y',
                 },
                 {
-                    label: 'Apertura a inversión (%)',
+                    label: 'Apertura a inversion (%)',
                     data: tendencia.map(t => t.apertura_pct),
                     type: 'line',
                     borderColor: '#0f9f6e',

@@ -1342,6 +1342,41 @@ function get_dashboard(string $sector = 'general'): array
     $activeApprovedSurveyors = max(1, (int) ($surveyorMgmt['approved'] ?? 0));
     $offlinePending = 0;
 
+    // Calcular indices de sentimiento por dimension para tacometros del dashboard
+    $dimsMaps = [
+        ['campo' => 'political_climate',         'titulo' => 'Clima Politico',
+         'mapa'  => ['positivo' => ['Armonia','Armon&iacute;a','Cohesion comunitaria','Cohesin comunitaria','Trabajo colaborativo','Union','Uni&oacute;n'],
+                     'negativo' => ['Division comunitaria','Divisi&oacute;n comunitaria','Conflicto abierto entre actores','Conflicto','Polarizacion']]],
+        ['campo' => 'authority_trust',           'titulo' => 'Confianza Autoridades',
+         'mapa'  => ['positivo' => ['Alta','Media-alta','Muy alta'],
+                     'negativo' => ['Baja','Muy baja','Nula']]],
+        ['campo' => 'investment_acceptance',     'titulo' => 'Inversion Externa',
+         'mapa'  => ['positivo' => ['Aceptacion amplia','Aceptacion condicionada'],
+                     'negativo' => ['Rechazo preventivo','Rechazo firme','Rechazo total']]],
+        ['campo' => 'mine_reopening_perception', 'titulo' => 'Reapertura Minera',
+         'mapa'  => ['positivo' => ['Beneficiaria mucho','Beneficiaria algo'],
+                     'negativo' => ['Perjudicaria algo','Perjudicaria mucho']]],
+        ['campo' => 'household_income',          'titulo' => 'Economia Familiar',
+         'mapa'  => ['positivo' => ['Holgado','Cubre bien','Muy bien'],
+                     'negativo' => ['No cubre la canasta','Muy limitado','Insuficiente']]],
+        ['campo' => 'water_source',              'titulo' => 'Acceso al Agua',
+         'mapa'  => ['positivo' => ['Red publica','Agua potable','Sistema comunitario'],
+                     'negativo' => ['Vertiente','Acequia','Sin acceso','Rio','Sin agua']]],
+        ['campo' => 'has_sewer',                 'titulo' => 'Alcantarillado',
+         'mapa'  => ['positivo' => ['Red publica','Alcantarillado municipal'],
+                     'negativo' => ['No tiene','Sin alcantarillado']]],
+    ];
+    $dimsSentimiento = [];
+    foreach ($dimsMaps as $cfg) {
+        $dist = freq_dist($socialRows, $cfg['campo'], $cfg['mapa']);
+        $sent = sentiment_index($dist);
+        $dimsSentimiento[] = [
+            'titulo' => $cfg['titulo'],
+            'indice' => $sent['indice'],
+            'n'      => $sent['total'],
+        ];
+    }
+
     return [
         'summary' => [
             'total_surveys' => $total,
@@ -1412,38 +1447,7 @@ function get_dashboard(string $sector = 'general'): array
             'top_conflict_sector' => array_key_first($conflictSector) ?: 'Sin datos',
             'lowest_trust_sector' => array_key_first($lowTrustSector) ?: 'Sin datos',
         ],
-        'dimensiones_sentimiento' => (function() use ($socialRows): array {
-            $maps = [
-                ['campo' => 'political_climate',         'titulo' => 'Clima Politico',
-                 'mapa'  => ['positivo' => ['Armonia','Armonía','Cohesion comunitaria','Cohesión comunitaria','Trabajo colaborativo','Union','Unión'],
-                             'negativo' => ['Division comunitaria','División comunitaria','Conflicto abierto entre actores','Conflicto','Polarizacion']]],
-                ['campo' => 'authority_trust',           'titulo' => 'Confianza Autoridades',
-                 'mapa'  => ['positivo' => ['Alta','Media-alta','Muy alta'],
-                             'negativo' => ['Baja','Muy baja','Nula']]],
-                ['campo' => 'investment_acceptance',     'titulo' => 'Inversion Externa',
-                 'mapa'  => ['positivo' => ['Aceptacion amplia','Aceptación amplia','Aceptacion condicionada','Aceptación condicionada'],
-                             'negativo' => ['Rechazo preventivo','Rechazo firme','Rechazo total']]],
-                ['campo' => 'mine_reopening_perception', 'titulo' => 'Reapertura Minera',
-                 'mapa'  => ['positivo' => ['Beneficiaria mucho','Beneficiaría mucho','Beneficiaria algo','Beneficiaría algo'],
-                             'negativo' => ['Perjudicaria algo','Perjudicaría algo','Perjudicaria mucho','Perjudicaría mucho']]],
-                ['campo' => 'household_income',          'titulo' => 'Economia Familiar',
-                 'mapa'  => ['positivo' => ['Holgado','Cubre bien','Muy bien'],
-                             'negativo' => ['No cubre la canasta','Muy limitado','Insuficiente']]],
-                ['campo' => 'water_source',              'titulo' => 'Acceso al Agua',
-                 'mapa'  => ['positivo' => ['Red pública','Red publica','Agua potable','Sistema comunitario'],
-                             'negativo' => ['Vertiente','Acequia','Sin acceso','Rio','Río','Sin agua']]],
-                ['campo' => 'has_sewer',                 'titulo' => 'Alcantarillado',
-                 'mapa'  => ['positivo' => ['Red pública','Red publica','Alcantarillado municipal'],
-                             'negativo' => ['No tiene','Sin alcantarillado']]],
-            ];
-            $result = [];
-            foreach ($maps as $cfg) {
-                $dist = freq_dist($socialRows, $cfg['campo'], $cfg['mapa']);
-                $sent = sentiment_index($dist);
-                $result[] = ['titulo' => $cfg['titulo'], 'indice' => $sent['indice'], 'n' => $sent['total']];
-            }
-            return $result;
-        })(),
+        'dimensiones_sentimiento' => $dimsSentimiento,
     ];
 }
 
