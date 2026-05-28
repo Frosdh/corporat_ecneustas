@@ -86,12 +86,7 @@ class _SurveyorHomeScreenState extends State<SurveyorHomeScreen> with SingleTick
   final List<String> _selectedMineRisks = [];
 
   // Options Definitions
-  final List<Map<String, String>> _sectors = [
-    {'value': 'centro', 'label': 'Centro Parroquial'},
-    {'value': 'deleg', 'label': 'La Deleg'},
-    {'value': 'sallac', 'label': 'Sallac'},
-    {'value': 'pishio', 'label': 'Pishio'},
-  ];
+
 
   final List<String> _genders = ['Mujer', 'Hombre', 'Otro'];
   final List<String> _ageRanges = ['18-25', '26-35', '36-45', '46-60', '61 o mas'];
@@ -1618,12 +1613,7 @@ class _SurveyorHomeScreenState extends State<SurveyorHomeScreen> with SingleTick
                       // PREGUNTA 1 — Sector (GPS, no editable)
                       _buildGpsReadOnlyField(
                         label: '1. SECTOR',
-                        value: _selectedSector != null
-                            ? (_sectors.firstWhere(
-                                (s) => s['value'] == _selectedSector,
-                                orElse: () => {'label': _selectedSector!},
-                              )['label'] ?? _selectedSector!)
-                            : '',
+                        value: _selectedSector ?? '',
                         icon: Icons.map_outlined,
                         isLoading: _isGpsLoadingForSurvey && _selectedSector == null,
                       ),

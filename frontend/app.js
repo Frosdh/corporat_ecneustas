@@ -384,6 +384,39 @@ function renderDashboard(dashboard) {
 
     renderMap(dashboard.map_points || []);
     renderReports(dashboard);
+    
+    if (dashboard.operations && dashboard.operations.surveys_by_sector) {
+        populateSectorFilters(dashboard.operations.surveys_by_sector);
+    }
+}
+
+function populateSectorFilters(sectors) {
+    const filters = ['sector-filter', 'analisis-sector-filter'];
+    filters.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const currentVal = el.value;
+        
+        el.innerHTML = '';
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = 'general';
+        defaultOpt.textContent = id === 'analisis-sector-filter' ? 'Todo San Bartolomé' : 'Todo San Bartolome';
+        el.appendChild(defaultOpt);
+        
+        sectors.forEach(item => {
+            if (!item.label || item.label.toLowerCase() === 'general' || item.label.toLowerCase() === 'todo san bartolome' || item.label.toLowerCase() === 'todo san bartolomé') return;
+            const opt = document.createElement('option');
+            opt.value = item.label;
+            opt.textContent = item.label;
+            el.appendChild(opt);
+        });
+        
+        if ([...el.options].some(opt => opt.value === currentVal)) {
+            el.value = currentVal;
+        } else {
+            el.value = 'general';
+        }
+    });
 }
 
 function renderReports(dashboard) {
@@ -616,7 +649,7 @@ function renderApplications() {
         return;
     }
 
-    const statusLabel = { pending: 'Pendiente', in_review: 'En revision', approved: 'Aprobada', rejected: 'Rechazada', suspended: 'Suspendida' };
+    const statusLabel = { pending: 'Pendiente', in_review: 'En revisión', approved: 'Aprobado', rejected: 'Rechazado', suspended: 'Suspendido' };
 
     list.innerHTML = filtered.map((item) => {
         const documents = (item.documents || []).map((doc) => `
@@ -643,21 +676,40 @@ function renderApplications() {
                 <p class="long-text" style="margin-top:8px;"><strong>Direccion:</strong> ${escapeHtml(item.address)}</p>
                 <p class="long-text" style="margin-top:4px;"><strong>Experiencia:</strong> ${escapeHtml(item.prior_experience)}</p>
                 <div class="doc-list" style="margin-top:10px;">${documents || '<span class="helper-text">Sin documentos cargados.</span>'}</div>
-                <div class="review-grid" style="margin-top:14px;">
-                    <div>
-                        <label class="field-label">Zona final asignada</label>
-                        <input id="zone-${item.id}" type="text" placeholder="Ej. Sallac, Centro Parroquial..." value="${escapeHtml(item.requested_zone || '')}">
+                ${item.review_status === 'approved' ? `
+                    <div class="review-final-block review-final-approved" style="margin-top:14px; padding:14px 16px; background:rgba(46,125,50,0.07); border:1.5px solid rgba(46,125,50,0.3); border-radius:8px;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                            <span style="font-size:18px;">✅</span>
+                            <strong style="color:#2e7d32; font-size:15px;">Solicitud Aprobada</strong>
+                        </div>
+                        <p style="margin:0 0 4px 0; font-size:14px;"><strong>Zona asignada:</strong> ${escapeHtml(item.requested_zone || 'No especificada')}</p>
+                        ${item.review_notes ? `<p style="margin:0; font-size:14px;"><strong>Observaciones:</strong> ${escapeHtml(item.review_notes)}</p>` : ''}
                     </div>
-                    <div>
-                        <label class="field-label">Observaciones de revision</label>
-                        <textarea id="notes-${item.id}" rows="3" placeholder="Escribe observaciones...">${escapeHtml(item.review_notes || '')}</textarea>
+                ` : item.review_status === 'rejected' ? `
+                    <div class="review-final-block review-final-rejected" style="margin-top:14px; padding:14px 16px; background:rgba(198,40,40,0.06); border:1.5px solid rgba(198,40,40,0.25); border-radius:8px;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                            <span style="font-size:18px;">❌</span>
+                            <strong style="color:#c62828; font-size:15px;">Solicitud Rechazada</strong>
+                        </div>
+                        ${item.review_notes ? `<p style="margin:0; font-size:14px;"><strong>Observaciones:</strong> ${escapeHtml(item.review_notes)}</p>` : '<p style="margin:0; font-size:14px; color:var(--muted);">Sin observaciones.</p>'}
                     </div>
-                </div>
-                <div class="inline-actions" style="margin-top:14px;">
-                    <button id="btn-review-${item.id}" class="secondary-button" type="button" onclick="reviewApplication(${item.id}, 'in_review', this.closest('.inline-actions'))">En revision</button>
-                    <button id="btn-approve-${item.id}" class="success-button" type="button" onclick="reviewApplication(${item.id}, 'approved', this.closest('.inline-actions'))">Aprobar</button>
-                    <button id="btn-reject-${item.id}" class="danger-button" type="button" onclick="reviewApplication(${item.id}, 'rejected', this.closest('.inline-actions'))">Rechazar</button>
-                </div>
+                ` : `
+                    <div class="review-grid" style="margin-top:14px;">
+                        <div>
+                            <label class="field-label">Zona final asignada</label>
+                            <input id="zone-${item.id}" type="text" placeholder="Ej. Sallac, Centro Parroquial..." value="${escapeHtml(item.requested_zone || '')}">
+                        </div>
+                        <div>
+                            <label class="field-label">Observaciones de revision</label>
+                            <textarea id="notes-${item.id}" rows="3" placeholder="Escribe observaciones...">${escapeHtml(item.review_notes || '')}</textarea>
+                        </div>
+                    </div>
+                    <div class="inline-actions" style="margin-top:14px;">
+                        <button id="btn-review-${item.id}" class="secondary-button" type="button" onclick="reviewApplication(${item.id}, 'in_review', this.closest('.inline-actions'))">En revision</button>
+                        <button id="btn-approve-${item.id}" class="success-button" type="button" onclick="reviewApplication(${item.id}, 'approved', this.closest('.inline-actions'))">Aprobar</button>
+                        <button id="btn-reject-${item.id}" class="danger-button" type="button" onclick="reviewApplication(${item.id}, 'rejected', this.closest('.inline-actions'))">Rechazar</button>
+                    </div>
+                `}
                 <div id="review-feedback-${item.id}" class="review-feedback hidden"></div>
             </article>
         `;
@@ -693,8 +745,8 @@ async function reviewApplication(applicationId, decision, actionsContainer) {
         });
 
         if (feedbackEl) {
-            const decisionLabel = { approved: 'Aprobado', rejected: 'Rechazado', in_review: 'En revision' }[decision] || decision;
-            feedbackEl.textContent = `✓ ${decisionLabel} correctamente.`;
+            const decisionLabel = { approved: 'Aprobado', rejected: 'Rechazado', in_review: 'En revisión' }[decision] || decision;
+            feedbackEl.textContent = `\u2713 ${decisionLabel} correctamente.`;
             feedbackEl.className = 'review-feedback review-feedback-success';
         }
 
@@ -741,7 +793,7 @@ async function loadSurveyors() {
                     <h3>${escapeHtml(item.full_name)}</h3>
                     <p>${escapeHtml(item.document_number)} · ${escapeHtml(item.email || '')} · ${escapeHtml(item.phone || '')}</p>
                 </div>
-                <span class="status-badge status-${escapeHtml(item.account_status || 'approved')}">${escapeHtml(item.account_status || 'approved')}</span>
+                <span class="status-badge status-${escapeHtml(item.account_status || 'approved')}">${{ approved: 'Aprobado', suspended: 'Suspendido', pending: 'Pendiente', in_review: 'En revisión', rejected: 'Rechazado' }[item.account_status] || escapeHtml(item.account_status || 'approved')}</span>
             </div>
             <div class="application-grid">
                 <div><strong>Zona:</strong> ${escapeHtml(item.assigned_zone || '')}</div>
@@ -1484,6 +1536,14 @@ async function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
         try {
             await navigator.serviceWorker.register('sw.js');
+            
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    refreshing = true;
+                    window.location.reload();
+                }
+            });
         } catch (error) {
             console.warn('No se pudo registrar el service worker', error);
         }

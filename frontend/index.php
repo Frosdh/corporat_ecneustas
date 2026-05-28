@@ -161,10 +161,6 @@
                         <label class="field-label" for="sector-filter">Sector en monitoreo</label>
                         <select id="sector-filter">
                             <option value="general">Todo San Bartolome</option>
-                            <option value="centro">Centro Parroquial</option>
-                            <option value="deleg">La Deleg</option>
-                            <option value="sallac">Sallac</option>
-                            <option value="pishio">Pishio</option>
                         </select>
                     </div>
                     <div id="network-card" class="card network-card hidden">
@@ -226,8 +222,8 @@
                         <div class="application-kpis">
                             <div class="mini-kpi"><span>Pendientes</span><strong id="applications-pending">0</strong></div>
                             <div class="mini-kpi"><span>En revision</span><strong id="applications-review">0</strong></div>
-                            <div class="mini-kpi"><span>Aprobadas</span><strong id="applications-approved">0</strong></div>
-                            <div class="mini-kpi"><span>Rechazadas</span><strong id="applications-rejected">0</strong></div>
+                            <div class="mini-kpi"><span>Aprobados</span><strong id="applications-approved">0</strong></div>
+                            <div class="mini-kpi"><span>Rechazados</span><strong id="applications-rejected">0</strong></div>
                         </div>
                     </article>
                 </div>
@@ -767,8 +763,8 @@
                     <button class="subtab active" data-status="all" type="button">Todas <span id="count-all">0</span></button>
                     <button class="subtab" data-status="pending" type="button">Pendientes <span id="count-pending">0</span></button>
                     <button class="subtab" data-status="in_review" type="button">En revision <span id="count-in_review">0</span></button>
-                    <button class="subtab" data-status="approved" type="button">Aprobadas <span id="count-approved">0</span></button>
-                    <button class="subtab" data-status="rejected" type="button">Rechazadas <span id="count-rejected">0</span></button>
+                    <button class="subtab" data-status="approved" type="button">Aprobados <span id="count-approved">0</span></button>
+                    <button class="subtab" data-status="rejected" type="button">Rechazados <span id="count-rejected">0</span></button>
                 </div>
                 <div id="applications-list" class="stack-list"></div>
             </section>
@@ -856,10 +852,6 @@
                     <div class="analisis-topbar-right">
                         <select id="analisis-sector-filter" class="analisis-select">
                             <option value="general">Todo San Bartolomé</option>
-                            <option value="centro">Centro Parroquial</option>
-                            <option value="deleg">La Deleg</option>
-                            <option value="sallac">Sallac</option>
-                            <option value="pishio">Pishio</option>
                         </select>
                         <button id="analisis-refresh-btn" class="analisis-refresh-btn" type="button">&#8635; Actualizar</button>
                         <span id="analisis-last-update" class="analisis-timestamp">Sin cargar</span>

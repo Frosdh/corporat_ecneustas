@@ -1,4 +1,4 @@
-const CACHE_NAME = 'san-bartolome-pro-v7';
+const CACHE_NAME = 'san-bartolome-pro-v8';
 const ASSETS = [
     './',
     './index.php',
@@ -23,7 +23,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-    if (event.request.method !== 'GET') {
+    if (event.request.method !== 'GET' || event.request.url.includes('api.php')) {
         return;
     }
 

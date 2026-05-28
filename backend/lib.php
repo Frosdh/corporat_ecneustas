@@ -582,7 +582,8 @@ function review_application(array $input): array
                 review_notes = :review_notes,
                 reviewed_by_user_id = :reviewed_by_user_id,
                 reviewed_at = NOW(),
-                approved_surveyor_id = :approved_surveyor_id
+                approved_surveyor_id = :approved_surveyor_id,
+                requested_zone = :requested_zone
             WHERE id = :id
         ');
         $applicationUpdate->execute([
@@ -590,6 +591,7 @@ function review_application(array $input): array
             ':review_notes' => $notes !== '' ? $notes : null,
             ':reviewed_by_user_id' => $reviewerId,
             ':approved_surveyor_id' => $decision === 'approved' ? $surveyorId : null,
+            ':requested_zone' => $decision === 'approved' && $zone !== '' ? $zone : $application['requested_zone'],
             ':id' => $applicationId,
         ]);
 
@@ -1017,18 +1019,7 @@ function compute_json_option_counts(array $rows, string $field): array
 
 function normalize_sector_label(string $sector): string
 {
-    switch ($sector) {
-        case 'centro':
-            return 'Centro Parroquial';
-        case 'deleg':
-            return 'La Deleg';
-        case 'sallac':
-            return 'Sallac';
-        case 'pishio':
-            return 'Pishio';
-        default:
-            return ucfirst($sector);
-    }
+    return ucfirst($sector);
 }
 
 function build_label_total_rows(array $counts, int $limit = 0): array
