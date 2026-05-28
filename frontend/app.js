@@ -2107,6 +2107,10 @@ function renderRadarDimensiones(dimensiones) {
     if (radarDimChart) { radarDimChart.destroy(); radarDimChart = null; }
     const labels = dimensiones.map(d => d.titulo);
     const vals   = dimensiones.map(d => Math.max(0, Math.min(100, 50 + d.sentimiento.indice / 2)));
+    const pointColors = dimensiones.map(d => {
+        const indice = d.sentimiento.indice;
+        return indice >= 15 ? '#0f9f6e' : (indice <= -15 ? '#c43d45' : '#d97706');
+    });
     radarDimChart = new Chart(ctx, {
         type: 'radar',
         data: {
@@ -2117,8 +2121,10 @@ function renderRadarDimensiones(dimensiones) {
                 backgroundColor: 'rgba(111,78,55,0.18)',
                 borderColor: '#6F4E37',
                 borderWidth: 2,
-                pointBackgroundColor: '#6F4E37',
-                pointRadius: 4,
+                pointBackgroundColor: pointColors,
+                pointBorderColor: pointColors,
+                pointRadius: 5,
+                pointHoverRadius: 7,
             }],
         },
         options: {
@@ -2164,12 +2170,31 @@ function setPreguntasUI(mode) {
     document.getElementById('preguntas-content')?.classList.toggle('hidden', mode !== 'content');
 }
 
-const PREG_COLORS = [
-    '#6F4E37','#A0522D','#CD853F','#D2691E','#8B4513',
-    '#BC8A5F','#C19A6B','#E07B39','#A67B5B','#7B3F00',
+// Paleta amplia y variada — se rota aleatoriamente en cada render
+const _PALETA_BASE = [
+    '#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6',
+    '#06B6D4','#F97316','#84CC16','#EC4899','#14B8A6',
+    '#6366F1','#A855F7','#22C55E','#FB923C','#E11D48',
+    '#0EA5E9','#D97706','#16A34A','#7C3AED','#DC2626',
 ];
+let _paletaOffset = 0;
+
+function getChartColors(n) {
+    // Cada llamada rota el offset para que cada grafica tenga colores distintos
+    const palette = [..._PALETA_BASE];
+    // Shuffle con offset actual
+    const rotated = [...palette.slice(_paletaOffset), ...palette.slice(0, _paletaOffset)];
+    _paletaOffset = (_paletaOffset + Math.max(2, n)) % palette.length;
+    return rotated.slice(0, n);
+}
+
+function randomizePaletaOffset() {
+    _paletaOffset = Math.floor(Math.random() * _PALETA_BASE.length);
+}
 
 function renderPreguntas(data) {
+    // Rotar paleta aleatoriamente en cada render para colores frescos
+    randomizePaletaOffset();
     // Destroy old charts
     Object.values(preguntasCharts).forEach(c => c && c.destroy());
     Object.keys(preguntasCharts).forEach(k => delete preguntasCharts[k]);
@@ -2210,7 +2235,7 @@ function renderPreguntas(data) {
 
             const labels = preg.distribucion.map(d => d.label);
             const counts = preg.distribucion.map(d => d.count);
-            const colors = PREG_COLORS.slice(0, labels.length);
+            const colors = getChartColors(labels.length);
 
             if (preg.tipo === 'donut') {
                 preguntasCharts[preg.campo] = new Chart(ctx, {

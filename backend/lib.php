@@ -1753,12 +1753,21 @@ function stream_application_document(int $documentId): never
 //  Estadística descriptiva + sentimiento comunitario en tiempo real
 // ============================================================
 
+function normalize_label(string $val): string
+{
+    // Agrupa "Otro: texto libre" como "Otro" para campos con opcion abierta
+    if (str_starts_with($val, 'Otro:') || str_starts_with($val, 'otro:')) {
+        return 'Otro';
+    }
+    return $val;
+}
+
 function freq_dist(array $rows, string $field, array $sentimentMap = []): array
 {
     $counts = [];
     $total  = 0;
     foreach ($rows as $row) {
-        $val = trim((string) ($row[$field] ?? ''));
+        $val = normalize_label(trim((string) ($row[$field] ?? '')));
         if ($val === '' || $val === 'null') continue;
         $counts[$val] = ($counts[$val] ?? 0) + 1;
         $total++;
@@ -2137,7 +2146,7 @@ function freq_dist_multi(array $rows, string $field, string $storage): array
         if (empty($vals)) continue;
         $respondents++;
         foreach ($vals as $v) {
-            $v = trim((string) $v);
+            $v = normalize_label(trim((string) $v));
             if ($v === '' || $v === 'null') continue;
             $counts[$v] = ($counts[$v] ?? 0) + 1;
         }
@@ -2162,7 +2171,8 @@ function get_preguntas_data(string $sector = 'general'): array
 
     $sql = "
         SELECT primary_problem, social_priority, political_climate,
-               household_income, water_source, has_sewer, has_internet, road_status,
+               household_income, water_source, has_sewer, has_septic, has_internet,
+               road_status, road_who_fixes,
                investment_acceptance, mine_reopening_perception, mine_benefits, mine_risks,
                authority_trust, age_range, respondent_gender, education_level,
                occupation, youth_path, women_roles,
@@ -2180,59 +2190,85 @@ function get_preguntas_data(string $sector = 'general'): array
     }
 
     // 'multi' key: 'pipe' = pipe-separated string, 'json' = JSON array, absent = single value
+    // Grupos organizados segun secciones reales de la encuesta movil
     $grupos = [
         [
-            'id'        => 'social',
-            'titulo'    => 'Dinamica Social y Problematica Comunitaria',
-            'preguntas' => [
-                ['campo' => 'primary_problem',   'pregunta' => 'Problema principal que afecta a la comunidad',    'tipo' => 'bar',   'multi' => 'pipe'],
-                ['campo' => 'social_priority',   'pregunta' => 'Prioridad social territorial para el sector',    'tipo' => 'bar',   'multi' => 'pipe'],
-                ['campo' => 'political_climate', 'pregunta' => 'Clima politico actual en la comunidad',          'tipo' => 'bar'],
-                ['campo' => 'authority_trust',   'pregunta' => 'Nivel de confianza en autoridades locales',      'tipo' => 'bar'],
-            ],
-        ],
-        [
-            'id'        => 'mineria',
-            'titulo'    => 'Percepcion sobre Mineria e Inversion',
-            'preguntas' => [
-                ['campo' => 'investment_acceptance',     'pregunta' => 'Aceptacion de inversion externa en el sector',     'tipo' => 'bar'],
-                ['campo' => 'mine_reopening_perception', 'pregunta' => 'Percepcion sobre reapertura de la mina',           'tipo' => 'bar'],
-                ['campo' => 'mine_benefits',             'pregunta' => 'Principales beneficios esperados de la mineria',   'tipo' => 'bar',   'multi' => 'json'],
-                ['campo' => 'mine_risks',                'pregunta' => 'Principales riesgos percibidos de la mineria',     'tipo' => 'bar',   'multi' => 'json'],
-            ],
-        ],
-        [
-            'id'        => 'servicios',
-            'titulo'    => 'Servicios Basicos e Infraestructura',
-            'preguntas' => [
-                ['campo' => 'household_income', 'pregunta' => 'Situacion economica del hogar',       'tipo' => 'bar'],
-                ['campo' => 'water_source',     'pregunta' => 'Fuente principal de agua del hogar',  'tipo' => 'bar'],
-                ['campo' => 'has_sewer',        'pregunta' => 'Sistema de alcantarillado disponible','tipo' => 'bar'],
-                ['campo' => 'has_internet',     'pregunta' => 'Acceso a internet en el hogar',       'tipo' => 'bar'],
-                ['campo' => 'road_status',      'pregunta' => 'Estado de la via de acceso principal','tipo' => 'bar'],
-            ],
-        ],
-        [
             'id'        => 'perfil',
-            'titulo'    => 'Perfil Demografico',
+            'titulo'    => 'Datos del Encuestado',
             'preguntas' => [
-                ['campo' => 'age_range',         'pregunta' => 'Rango de edad del encuestado',              'tipo' => 'bar'],
-                ['campo' => 'respondent_gender', 'pregunta' => 'Genero del encuestado',                     'tipo' => 'donut'],
-                ['campo' => 'education_level',   'pregunta' => 'Nivel de educacion del encuestado',         'tipo' => 'bar'],
-                ['campo' => 'occupation',        'pregunta' => 'Ocupacion principal del encuestado',        'tipo' => 'bar'],
-                ['campo' => 'youth_path',        'pregunta' => 'Destino predominante de la juventud',       'tipo' => 'bar'],
-                ['campo' => 'women_roles',       'pregunta' => 'Rol principal de la mujer en la comunidad', 'tipo' => 'bar',   'multi' => 'pipe'],
+                ['campo' => 'age_range',          'pregunta' => 'Rango de edad del encuestado',       'tipo' => 'bar'],
+                ['campo' => 'respondent_gender',  'pregunta' => 'Genero del encuestado',              'tipo' => 'donut'],
+                ['campo' => 'education_level',    'pregunta' => 'Nivel de educacion del encuestado',  'tipo' => 'bar'],
+            ],
+        ],
+        [
+            'id'        => 'social',
+            'titulo'    => 'Problematicas y Dinamica Social',
+            'preguntas' => [
+                ['campo' => 'primary_problem', 'pregunta' => 'Problematicas principales actuales (seleccion multiple)',         'tipo' => 'bar', 'multi' => 'pipe'],
+                ['campo' => 'youth_path',      'pregunta' => 'A que se dedican los jovenes al terminar sus estudios',           'tipo' => 'bar',
+                 'opciones' => ['Migracion por falta de oportunidades','Agricultura o trabajo informal','Continuan estudios superiores','Empleo local eventual','Otro']],
+                ['campo' => 'women_roles',     'pregunta' => 'Limitaciones economicas frecuentes para mujeres del sector',      'tipo' => 'bar', 'multi' => 'json'],
+            ],
+        ],
+        [
+            'id'        => 'hogar',
+            'titulo'    => 'Condiciones de Hogar y Validacion',
+            'preguntas' => [
+                ['campo' => 'water_source',     'pregunta' => 'Fuente principal de agua',                     'tipo' => 'bar',
+                 'norm'    => ['Rio o acequia'=>'Rio o acequia','Río o acequia'=>'Rio o acequia',
+                               'Red publica con tratamiento'=>'Red publica con tratamiento','Red pública con tratamiento'=>'Red publica con tratamiento',
+                               'Vertiente comunal sin purificacion'=>'Vertiente comunal sin purificacion','Vertiente comunal sin purificación'=>'Vertiente comunal sin purificacion',
+                               'Tanquero u otra compra'=>'Tanquero u otra compra'],
+                 'opciones' => ['Red publica con tratamiento','Vertiente comunal sin purificacion','Rio o acequia','Tanquero u otra compra']],
+                ['campo' => 'has_sewer',        'pregunta' => 'Alcantarillado',                               'tipo' => 'donut',
+                 'norm'    => ['Si tiene'=>'Si tiene','Sí tiene'=>'Si tiene','si tiene'=>'Si tiene','No tiene'=>'No tiene','no tiene'=>'No tiene'],
+                 'opciones' => ['Si tiene','No tiene']],
+                ['campo' => 'has_septic',       'pregunta' => 'Fosa septica',                                 'tipo' => 'donut',
+                 'norm'    => ['Si tiene'=>'Si tiene','Sí tiene'=>'Si tiene','si tiene'=>'Si tiene','No tiene'=>'No tiene','no tiene'=>'No tiene'],
+                 'opciones' => ['Si tiene','No tiene']],
+                ['campo' => 'has_internet',     'pregunta' => 'Conectividad a internet',                      'tipo' => 'bar',
+                 'norm'    => ['Si estable'=>'Si estable','Sí estable'=>'Si estable','Intermitente'=>'Intermitente','No tiene'=>'No tiene','no tiene'=>'No tiene'],
+                 'opciones' => ['Si estable','Intermitente','No tiene']],
+                ['campo' => 'road_status',      'pregunta' => 'Estado de las vias de acceso',                 'tipo' => 'bar',
+                 'norm'    => ['Bueno'=>'Bueno','Buen estado'=>'Bueno','Buena'=>'Bueno','bueno'=>'Bueno','Regular'=>'Regular','regular'=>'Regular','Malo'=>'Malo','Mal estado'=>'Malo','Mala'=>'Malo','malo'=>'Malo'],
+                 'opciones' => ['Bueno','Regular','Malo']],
+                ['campo' => 'road_who_fixes',   'pregunta' => 'Quien debe arreglar las vias',                 'tipo' => 'bar',
+                 'opciones' => ['GAD Parroquial','GAD Cantonal','GAD Provincial']],
+                ['campo' => 'household_income', 'pregunta' => 'Ingresos del hogar',                           'tipo' => 'bar',
+                 'norm'    => ['No cubre la canasta'=>'No cubre la canasta','Cubre apenas'=>'Cubre apenas','Cubre con algo de holgura'=>'Cubre con algo de holgura','Holgado'=>'Cubre con algo de holgura'],
+                 'opciones' => ['No cubre la canasta','Cubre apenas','Cubre con algo de holgura']],
+                ['campo' => 'authority_trust',  'pregunta' => 'Confianza en autoridades',                     'tipo' => 'bar',
+                 'norm'    => ['Alta'=>'Alta','alta'=>'Alta','Media-alta'=>'Alta','Media'=>'Media','media'=>'Media','Moderada'=>'Media','Baja'=>'Baja','baja'=>'Baja','Muy baja'=>'Baja','Nula'=>'Baja'],
+                 'opciones' => ['Alta','Media','Baja']],
+            ],
+        ],
+        [
+            'id'        => 'clima',
+            'titulo'    => 'Clima Politico y Percepcion Territorial',
+            'preguntas' => [
+                ['campo' => 'political_climate',         'pregunta' => 'Como se esta manejando la parte politica local',                 'tipo' => 'bar',
+                 'opciones' => ['Desconfianza institucional','Division comunitaria','Estabilidad relativa','Conflicto abierto entre actores']],
+                ['campo' => 'social_priority',           'pregunta' => 'Si aparecen inversiones externas, en que invertir (multi)',      'tipo' => 'bar', 'multi' => 'pipe'],
+                ['campo' => 'investment_acceptance',     'pregunta' => 'Aceptacion de inversion externa en el sector',                   'tipo' => 'bar',
+                 'opciones' => ['Rechazo preventivo','Aceptacion condicionada','Aceptacion amplia']],
+                ['campo' => 'mine_reopening_perception', 'pregunta' => 'Percepcion sobre la reapertura de la mina',                      'tipo' => 'bar',
+                 'opciones' => ['Beneficiaria mucho','Beneficiaria algo','Beneficio dudoso','No beneficiaria']],
+                ['campo' => 'mine_benefits',             'pregunta' => 'Principales beneficios esperados de la mineria (multi)',         'tipo' => 'bar', 'multi' => 'json',
+                 'opciones' => ['Empleo juvenil','Movimiento comercial','Obras comunitarias','Pago de impuestos','Ninguno claro']],
+                ['campo' => 'mine_risks',                'pregunta' => 'Principales riesgos percibidos de la mineria (multi)',           'tipo' => 'bar', 'multi' => 'json',
+                 'opciones' => ['Contaminacion del agua','Danos al suelo','Conflicto social','Poca transparencia']],
             ],
         ],
         [
             'id'        => 'conocimiento',
             'titulo'    => 'Conocimiento sobre Mineria',
             'preguntas' => [
-                ['campo' => 'knows_mining_types',    'pregunta' => 'Conoce los tipos de mineria existentes',            'tipo' => 'donut'],
-                ['campo' => 'knows_mining_benefits', 'pregunta' => 'Conoce los beneficios que puede traer la mineria',  'tipo' => 'donut'],
-                ['campo' => 'knows_modern_mining',   'pregunta' => 'Conoce la mineria moderna y sus estandares',        'tipo' => 'donut'],
-                ['campo' => 'knows_local_mines',     'pregunta' => 'Conoce los proyectos mineros en su zona',           'tipo' => 'donut'],
-                ['campo' => 'knows_env_guarantees',  'pregunta' => 'Conoce las garantias ambientales exigidas',         'tipo' => 'donut'],
+                ['campo' => 'knows_mining_types',    'pregunta' => 'Conoce de mineria subterranea, a cielo abierto o combinada', 'tipo' => 'donut', 'opciones' => ['Si','No','Primera vez que escucho']],
+                ['campo' => 'knows_mining_benefits', 'pregunta' => 'Conoce los beneficios que puede traer la mineria',           'tipo' => 'donut', 'opciones' => ['Si','No','Primera vez que escucho']],
+                ['campo' => 'knows_modern_mining',   'pregunta' => 'Conoce la mineria moderna y sus estandares ambientales',     'tipo' => 'donut', 'opciones' => ['Si','No','Primera vez que escucho esto']],
+                ['campo' => 'knows_local_mines',     'pregunta' => 'Conoce los proyectos mineros activos en su zona',            'tipo' => 'donut', 'opciones' => ['Si','No','Hay que investigar']],
+                ['campo' => 'knows_env_guarantees',  'pregunta' => 'Conoce las garantias ambientales exigidas a las empresas',   'tipo' => 'donut', 'opciones' => ['Si','No','Asi deberia ser']],
             ],
         ],
     ];
@@ -2244,9 +2280,43 @@ function get_preguntas_data(string $sector = 'general'): array
             } else {
                 $dist = freq_dist($rows, $preg['campo']);
             }
+            // Aplicar mapa de normalizacion si el campo lo define
+            if (!empty($preg['norm'])) {
+                $merged = [];
+                foreach ($dist['items'] as $item) {
+                    $canon = $preg['norm'][$item['label']] ?? $item['label'];
+                    $merged[$canon] = ($merged[$canon] ?? 0) + $item['count'];
+                }
+                $total = $dist['total_respondentes'];
+                arsort($merged);
+                $items = [];
+                foreach ($merged as $label => $count) {
+                    $items[] = ['label' => $label, 'count' => $count,
+                                'pct' => $total > 0 ? round(($count / $total) * 100, 1) : 0.0];
+                }
+                $dist['items'] = $items;
+            }
+            // Garantizar que todas las opciones fijas aparezcan (aunque tengan 0 respuestas)
+            if (!empty($preg['opciones'])) {
+                $existing = array_column($dist['items'], 'count', 'label');
+                $total = $dist['total_respondentes'];
+                $items = [];
+                foreach ($preg['opciones'] as $opt) {
+                    $count = $existing[$opt] ?? 0;
+                    $items[] = ['label' => $opt, 'count' => $count,
+                                'pct' => $total > 0 ? round(($count / $total) * 100, 1) : 0.0];
+                }
+                // Tambien incluir valores no esperados (respuestas libres, etc.)
+                foreach ($dist['items'] as $item) {
+                    if (!in_array($item['label'], $preg['opciones'], true)) {
+                        $items[] = $item;
+                    }
+                }
+                $dist['items'] = $items;
+            }
             $preg['distribucion'] = $dist['items'];
             $preg['respondentes'] = $dist['total_respondentes'];
-            unset($preg['multi']); // no need to send to client
+            unset($preg['multi'], $preg['norm'], $preg['opciones']);
         }
         unset($preg);
     }
