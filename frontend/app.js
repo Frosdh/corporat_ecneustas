@@ -2023,14 +2023,14 @@ function renderTendencia(tendencia) {
             labels: tendencia.map(t => t.dia),
             datasets: [
                 {
-                    label: 'Encuestas por dia',
+                    label: 'Encuestas por d\u00EDa',
                     data: tendencia.map(t => t.total),
                     backgroundColor: 'rgba(14,78,176,0.75)',
                     borderRadius: 4,
                     yAxisID: 'y',
                 },
                 {
-                    label: 'Apertura a inversion (%)',
+                    label: 'Apertura a inversi\u00F3n (%)',
                     data: tendencia.map(t => t.apertura_pct),
                     type: 'line',
                     borderColor: '#0f9f6e',
