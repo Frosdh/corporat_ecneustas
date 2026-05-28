@@ -384,7 +384,7 @@ function renderDashboard(dashboard) {
 
     renderMap(dashboard.map_points || []);
     renderReports(dashboard);
-    
+
     if (dashboard.operations && dashboard.operations.surveys_by_sector) {
         populateSectorFilters(dashboard.operations.surveys_by_sector);
     }
@@ -396,13 +396,13 @@ function populateSectorFilters(sectors) {
         const el = document.getElementById(id);
         if (!el) return;
         const currentVal = el.value;
-        
+
         el.innerHTML = '';
         const defaultOpt = document.createElement('option');
         defaultOpt.value = 'general';
         defaultOpt.textContent = id === 'analisis-sector-filter' ? 'Todo San Bartolom\u00e9' : 'Todo San Bartolome';
         el.appendChild(defaultOpt);
-        
+
         sectors.forEach(item => {
             if (!item.label || item.label.toLowerCase() === 'general' || item.label.toLowerCase() === 'todo san bartolome' || item.label.toLowerCase() === 'todo san bartolomé') return;
             const opt = document.createElement('option');
@@ -410,7 +410,7 @@ function populateSectorFilters(sectors) {
             opt.textContent = item.label;
             el.appendChild(opt);
         });
-        
+
         if ([...el.options].some(opt => opt.value === currentVal)) {
             el.value = currentVal;
         } else {
@@ -1534,7 +1534,7 @@ async function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
         try {
             await navigator.serviceWorker.register('sw.js');
-            
+
             let refreshing = false;
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 if (!refreshing) {
