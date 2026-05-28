@@ -1,4 +1,4 @@
-const CACHE_NAME = 'san-bartolome-pro-v8';
+const CACHE_NAME = 'san-bartolome-pro-v10';
 const ASSETS = [
     './',
     './index.php',
@@ -18,26 +18,29 @@ self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((keys) =>
             Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
-        ).then(() => self.clients.claim()) // Toma control de todas las pestañas abiertas
+        ).then(() => self.clients.claim()) // Toma control de todas las pestanas abiertas
     );
 });
 
+// Estrategia: Network-First — siempre intenta la red primero.
+// Solo usa el cache cuando no hay conexion (modo offline).
+// Esto garantiza que los archivos actualizados se cargan de inmediato.
 self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET' || event.request.url.includes('api.php')) {
         return;
     }
 
     event.respondWith(
-        caches.match(event.request).then((cached) => {
-            if (cached) {
-                return cached;
-            }
-
-            return fetch(event.request).then((response) => {
+        fetch(event.request)
+            .then((response) => {
+                // Guarda la respuesta fresca en el cache para uso offline futuro
                 const copy = response.clone();
                 caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
                 return response;
-            }).catch(() => caches.match('./index.php'));
-        })
+            })
+            .catch(() =>
+                // Sin red: sirve desde cache
+                caches.match(event.request).then((cached) => cached || caches.match('./index.php'))
+            )
     );
 });

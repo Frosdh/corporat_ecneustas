@@ -141,11 +141,21 @@ try {
         case 'analisis':
             require_auth();
             if (!user_can_access_dashboard()) {
-                respond(['ok' => false, 'message' => 'No tienes acceso al análisis.'], 403);
+                respond(['ok' => false, 'message' => 'No tienes acceso al analisis.'], 403);
             }
             respond([
                 'ok'      => true,
                 'analisis'=> get_analisis_experto($_GET['sector'] ?? 'general'),
+            ]);
+
+        case 'preguntas':
+            require_auth();
+            if (!user_can_access_dashboard()) {
+                respond(['ok' => false, 'message' => 'No tienes acceso.'], 403);
+            }
+            respond([
+                'ok'       => true,
+                'preguntas'=> get_preguntas_data($_GET['sector'] ?? 'general'),
             ]);
 
         case 'surveys':

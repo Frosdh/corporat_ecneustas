@@ -1703,3 +1703,76 @@ fieldset {
         grid-column: span 2;
     }
 }
+
+/* ============================================================
+   PREGUNTAS TAB
+   ============================================================ */
+.preguntas-grupo {
+    margin-bottom: 36px;
+}
+
+.preguntas-grupo-titulo {
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--primary);
+    border-left: 3px solid var(--primary);
+    padding-left: 10px;
+    margin: 0 0 16px;
+}
+
+.preguntas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+}
+
+.preguntas-card {
+    background: var(--panel);
+    border: 1px solid rgba(111,78,55,0.12);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.preguntas-card-sm {
+    max-width: 340px;
+}
+
+.preguntas-card-q {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0;
+    line-height: 1.35;
+}
+
+.preguntas-n {
+    font-size: 0.68rem;
+    color: var(--muted);
+    font-weight: 500;
+}
+
+.preguntas-chart-wrap {
+    margin-top: 8px;
+    position: relative;
+    width: 100%;
+}
+
+.preguntas-card canvas {
+    width: 100% !important;
+    max-height: 220px;
+}
+
+.preguntas-card-sm canvas {
+    max-height: 200px;
+}
+
+@media (max-width: 600px) {
+    .preguntas-grid {
+        grid-template-columns: 1fr;
+    }
+}

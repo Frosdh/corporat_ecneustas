@@ -2119,3 +2119,139 @@ function get_analisis_experto(string $sector = 'general'): array
         'distribucion_por_sector' => $sectorItems,
     ];
 }
+
+function freq_dist_multi(array $rows, string $field, string $storage): array
+{
+    // Counts individual options from multi-value fields.
+    // $storage: 'pipe' = "A|B|C", 'json' = ["A","B","C"]
+    $counts = [];
+    $respondents = 0;
+    foreach ($rows as $row) {
+        $raw = $row[$field] ?? '';
+        if ($storage === 'json') {
+            $vals = $raw ? json_decode((string) $raw, true) : [];
+            if (!is_array($vals)) $vals = [];
+        } else {
+            $vals = array_filter(array_map('trim', explode('|', (string) $raw)));
+        }
+        if (empty($vals)) continue;
+        $respondents++;
+        foreach ($vals as $v) {
+            $v = trim((string) $v);
+            if ($v === '' || $v === 'null') continue;
+            $counts[$v] = ($counts[$v] ?? 0) + 1;
+        }
+    }
+    arsort($counts);
+    $total = array_sum($counts); // total mentions (can exceed respondents for multi-select)
+    $out = [];
+    foreach ($counts as $label => $count) {
+        $out[] = ['label' => $label, 'count' => $count, 'pct' => $total > 0 ? round(($count / $respondents) * 100, 1) : 0.0];
+    }
+    return ['items' => $out, 'total_respondentes' => $respondents];
+}
+
+function get_preguntas_data(string $sector = 'general'): array
+{
+    $where  = '';
+    $params = [];
+    if ($sector !== 'general' && $sector !== '') {
+        $where  = 'WHERE sector = :sector';
+        $params = [':sector' => normalize_sector_label($sector)];
+    }
+
+    $sql = "
+        SELECT primary_problem, social_priority, political_climate,
+               household_income, water_source, has_sewer, has_internet, road_status,
+               investment_acceptance, mine_reopening_perception, mine_benefits, mine_risks,
+               authority_trust, age_range, respondent_gender, education_level,
+               occupation, youth_path, women_roles,
+               knows_mining_types, knows_mining_benefits,
+               knows_modern_mining, knows_local_mines, knows_env_guarantees
+        FROM surveys $where
+    ";
+    $stmt = db()->prepare($sql);
+    $stmt->execute($params);
+    $rows = $stmt->fetchAll();
+    $n    = count($rows);
+
+    if ($n === 0) {
+        return ['total' => 0, 'grupos' => []];
+    }
+
+    // 'multi' key: 'pipe' = pipe-separated string, 'json' = JSON array, absent = single value
+    $grupos = [
+        [
+            'id'        => 'social',
+            'titulo'    => 'Dinamica Social y Problematica Comunitaria',
+            'preguntas' => [
+                ['campo' => 'primary_problem',   'pregunta' => 'Problema principal que afecta a la comunidad',    'tipo' => 'bar',   'multi' => 'pipe'],
+                ['campo' => 'social_priority',   'pregunta' => 'Prioridad social territorial para el sector',    'tipo' => 'bar',   'multi' => 'pipe'],
+                ['campo' => 'political_climate', 'pregunta' => 'Clima politico actual en la comunidad',          'tipo' => 'bar'],
+                ['campo' => 'authority_trust',   'pregunta' => 'Nivel de confianza en autoridades locales',      'tipo' => 'bar'],
+            ],
+        ],
+        [
+            'id'        => 'mineria',
+            'titulo'    => 'Percepcion sobre Mineria e Inversion',
+            'preguntas' => [
+                ['campo' => 'investment_acceptance',     'pregunta' => 'Aceptacion de inversion externa en el sector',     'tipo' => 'bar'],
+                ['campo' => 'mine_reopening_perception', 'pregunta' => 'Percepcion sobre reapertura de la mina',           'tipo' => 'bar'],
+                ['campo' => 'mine_benefits',             'pregunta' => 'Principales beneficios esperados de la mineria',   'tipo' => 'bar',   'multi' => 'json'],
+                ['campo' => 'mine_risks',                'pregunta' => 'Principales riesgos percibidos de la mineria',     'tipo' => 'bar',   'multi' => 'json'],
+            ],
+        ],
+        [
+            'id'        => 'servicios',
+            'titulo'    => 'Servicios Basicos e Infraestructura',
+            'preguntas' => [
+                ['campo' => 'household_income', 'pregunta' => 'Situacion economica del hogar',       'tipo' => 'bar'],
+                ['campo' => 'water_source',     'pregunta' => 'Fuente principal de agua del hogar',  'tipo' => 'bar'],
+                ['campo' => 'has_sewer',        'pregunta' => 'Sistema de alcantarillado disponible','tipo' => 'bar'],
+                ['campo' => 'has_internet',     'pregunta' => 'Acceso a internet en el hogar',       'tipo' => 'bar'],
+                ['campo' => 'road_status',      'pregunta' => 'Estado de la via de acceso principal','tipo' => 'bar'],
+            ],
+        ],
+        [
+            'id'        => 'perfil',
+            'titulo'    => 'Perfil Demografico',
+            'preguntas' => [
+                ['campo' => 'age_range',         'pregunta' => 'Rango de edad del encuestado',              'tipo' => 'bar'],
+                ['campo' => 'respondent_gender', 'pregunta' => 'Genero del encuestado',                     'tipo' => 'donut'],
+                ['campo' => 'education_level',   'pregunta' => 'Nivel de educacion del encuestado',         'tipo' => 'bar'],
+                ['campo' => 'occupation',        'pregunta' => 'Ocupacion principal del encuestado',        'tipo' => 'bar'],
+                ['campo' => 'youth_path',        'pregunta' => 'Destino predominante de la juventud',       'tipo' => 'bar'],
+                ['campo' => 'women_roles',       'pregunta' => 'Rol principal de la mujer en la comunidad', 'tipo' => 'bar',   'multi' => 'pipe'],
+            ],
+        ],
+        [
+            'id'        => 'conocimiento',
+            'titulo'    => 'Conocimiento sobre Mineria',
+            'preguntas' => [
+                ['campo' => 'knows_mining_types',    'pregunta' => 'Conoce los tipos de mineria existentes',            'tipo' => 'donut'],
+                ['campo' => 'knows_mining_benefits', 'pregunta' => 'Conoce los beneficios que puede traer la mineria',  'tipo' => 'donut'],
+                ['campo' => 'knows_modern_mining',   'pregunta' => 'Conoce la mineria moderna y sus estandares',        'tipo' => 'donut'],
+                ['campo' => 'knows_local_mines',     'pregunta' => 'Conoce los proyectos mineros en su zona',           'tipo' => 'donut'],
+                ['campo' => 'knows_env_guarantees',  'pregunta' => 'Conoce las garantias ambientales exigidas',         'tipo' => 'donut'],
+            ],
+        ],
+    ];
+
+    foreach ($grupos as &$grupo) {
+        foreach ($grupo['preguntas'] as &$preg) {
+            if (!empty($preg['multi'])) {
+                $dist = freq_dist_multi($rows, $preg['campo'], $preg['multi']);
+            } else {
+                $dist = freq_dist($rows, $preg['campo']);
+            }
+            $preg['distribucion'] = $dist['items'];
+            $preg['respondentes'] = $dist['total_respondentes'];
+            unset($preg['multi']); // no need to send to client
+        }
+        unset($preg);
+    }
+    unset($grupo);
+
+    return ['total' => $n, 'grupos' => $grupos];
+}
+

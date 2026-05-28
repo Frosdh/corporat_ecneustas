@@ -154,7 +154,8 @@ header('Expires: 0');
                 <button id="tab-button-my-surveys" class="tab hidden" data-tab="my-surveys">Mis encuestas</button>
                 <button id="tab-button-applications" class="tab" data-tab="applications">Postulaciones</button>
                 <button id="tab-button-surveyors" class="tab" data-tab="surveyors">Encuestadores</button>
-                <button id="tab-button-analisis" class="tab" data-tab="analisis">&#129302; Análisis IA</button>
+                <button id="tab-button-preguntas" class="tab" data-tab="preguntas">Preguntas</button>
+                <button id="tab-button-analisis" class="tab" data-tab="analisis">An&aacute;lisis IA</button>
                 <button id="tab-button-reports" class="tab" data-tab="reports">Reportes</button>
                 <button id="tab-button-audit" class="tab" data-tab="audit">Auditoria</button>
                 <button id="tab-button-offline" class="tab hidden" data-tab="offline">Cola Offline</button>
@@ -833,6 +834,31 @@ header('Expires: 0');
                     </article>
                 </div>
             </section>
+            <!-- =========================================================
+                 TAB: PREGUNTAS — Gr&aacute;ficas por pregunta de encuesta
+                 ========================================================= -->
+            <section id="tab-preguntas" class="tab-panel hidden">
+                <div class="analisis-topbar">
+                    <div class="analisis-topbar-left">
+                        <h2 class="analisis-titulo">Respuestas por Pregunta</h2>
+                        <p class="analisis-subtitulo">Distribuci&oacute;n real de respuestas &middot; Actualizado desde la base de datos</p>
+                    </div>
+                    <div class="analisis-topbar-right">
+                        <select id="preguntas-sector-filter" class="analisis-select">
+                            <option value="general">Todo San Bartolom&eacute;</option>
+                        </select>
+                        <button id="preguntas-refresh-btn" class="analisis-refresh-btn" type="button">&#8635; Actualizar</button>
+                    </div>
+                </div>
+                <div id="preguntas-loading" class="analisis-loading hidden">
+                    <div class="analisis-spinner"></div>
+                </div>
+                <div id="preguntas-empty" class="analisis-empty hidden">
+                    <p>No hay encuestas registradas todav&iacute;a.</p>
+                </div>
+                <div id="preguntas-content" class="hidden"></div>
+            </section>
+
             <!-- =========================================================
                  TAB: ANÁLISIS EXPERTO DE ENCUESTAS (IA / PIVOT-style)
                  ========================================================= -->

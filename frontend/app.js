@@ -82,6 +82,9 @@ function bindEvents() {
             if (button.dataset.tab === 'analisis') {
                 await loadAnalisis();
             }
+            if (button.dataset.tab === 'preguntas') {
+                await loadPreguntas();
+            }
             if (button.dataset.tab === 'my-surveys' && state.currentUser?.role === 'surveyor') {
                 await loadMySurveys();
             }
@@ -256,6 +259,8 @@ function applyRoleUi() {
     document.getElementById('tab-button-my-surveys').classList.toggle('hidden', isAdmin);
     document.getElementById('tab-button-applications').classList.toggle('hidden', !isAdmin);
     document.getElementById('tab-button-surveyors').classList.toggle('hidden', !isAdmin);
+    const preguntasBtn = document.getElementById('tab-button-preguntas');
+    if (preguntasBtn) preguntasBtn.classList.remove('hidden');
     document.getElementById('tab-button-reports').classList.toggle('hidden', !isAdmin);
     document.getElementById('tab-button-audit').classList.toggle('hidden', !isAdmin);
     document.getElementById('tab-button-offline').classList.add('hidden');
@@ -554,7 +559,7 @@ function renderDimGauges(dims) {
 }
 
 function populateSectorFilters(sectors) {
-    const filters = ['sector-filter', 'analisis-sector-filter'];
+    const filters = ['sector-filter', 'analisis-sector-filter', 'preguntas-sector-filter'];
     filters.forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
@@ -563,7 +568,7 @@ function populateSectorFilters(sectors) {
         el.innerHTML = '';
         const defaultOpt = document.createElement('option');
         defaultOpt.value = 'general';
-        defaultOpt.textContent = id === 'analisis-sector-filter' ? 'Todo San Bartolom\u00e9' : 'Todo San Bartolome';
+        defaultOpt.textContent = (id === 'analisis-sector-filter' || id === 'preguntas-sector-filter') ? 'Todo San Bartolom\u00e9' : 'Todo San Bartolome';
         el.appendChild(defaultOpt);
 
         sectors.forEach(item => {
@@ -2095,7 +2100,170 @@ function renderGauge(indice) {
 // ============================================================
 //  RADAR — comparativa de dimensiones
 // ============================================================
+let radarDimChart = null;
 function renderRadarDimensiones(dimensiones) {
     const ctx = document.getElementById('chart-radar-dimensiones');
+    if (!ctx || !dimensiones || !dimensiones.length) return;
+    if (radarDimChart) { radarDimChart.destroy(); radarDimChart = null; }
+    const labels = dimensiones.map(d => d.titulo);
+    const vals   = dimensiones.map(d => Math.max(0, Math.min(100, 50 + d.sentimiento.indice / 2)));
+    radarDimChart = new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Sentimiento (%)',
+                data: vals,
+                backgroundColor: 'rgba(111,78,55,0.18)',
+                borderColor: '#6F4E37',
+                borderWidth: 2,
+                pointBackgroundColor: '#6F4E37',
+                pointRadius: 4,
+            }],
+        },
+        options: {
+            scales: {
+                r: {
+                    min: 0, max: 100,
+                    ticks: { stepSize: 25, font: { size: 10 } },
+                    pointLabels: { font: { size: 10 } },
+                },
+            },
+            plugins: { legend: { display: false } },
+            animation: { duration: 600 },
+        },
+    });
+}
 
+// ============================================================
+//  TAB PREGUNTAS — graficas por pregunta de encuesta
+// ============================================================
+const preguntasCharts = {};
+
+async function loadPreguntas() {
+    const sector = document.getElementById('preguntas-sector-filter')?.value ?? 'general';
+    setPreguntasUI('loading');
+    try {
+        const payload = await requestJson('preguntas', { params: { sector } });
+        const data = payload.preguntas;
+        if (!data || data.total === 0) {
+            setPreguntasUI('empty');
+            return;
+        }
+        renderPreguntas(data);
+        setPreguntasUI('content');
+    } catch (err) {
+        setPreguntasUI('empty');
+        console.error('Error en preguntas:', err);
+    }
+}
+
+function setPreguntasUI(mode) {
+    document.getElementById('preguntas-loading')?.classList.toggle('hidden', mode !== 'loading');
+    document.getElementById('preguntas-empty')?.classList.toggle('hidden', mode !== 'empty');
+    document.getElementById('preguntas-content')?.classList.toggle('hidden', mode !== 'content');
+}
+
+const PREG_COLORS = [
+    '#6F4E37','#A0522D','#CD853F','#D2691E','#8B4513',
+    '#BC8A5F','#C19A6B','#E07B39','#A67B5B','#7B3F00',
+];
+
+function renderPreguntas(data) {
+    // Destroy old charts
+    Object.values(preguntasCharts).forEach(c => c && c.destroy());
+    Object.keys(preguntasCharts).forEach(k => delete preguntasCharts[k]);
+
+    const container = document.getElementById('preguntas-content');
+    container.innerHTML = '';
+
+    data.grupos.forEach(grupo => {
+        if (!grupo.preguntas || !grupo.preguntas.length) return;
+
+        const section = document.createElement('div');
+        section.className = 'preguntas-grupo';
+        section.innerHTML = `<h3 class="preguntas-grupo-titulo">${escHtml(grupo.titulo)}</h3>
+            <div class="preguntas-grid" id="pg-${escHtml(grupo.id)}"></div>`;
+        container.appendChild(section);
+
+        const grid = section.querySelector('.preguntas-grid');
+
+        grupo.preguntas.forEach(preg => {
+            if (!preg.distribucion || !preg.distribucion.length) return;
+
+            const cardId = 'pc-' + preg.campo;
+            const canvasId = 'canvas-' + preg.campo;
+            const n = preg.respondentes ?? 0;
+
+            const card = document.createElement('div');
+            card.className = 'preguntas-card' + (preg.tipo === 'donut' ? ' preguntas-card-sm' : '');
+            card.innerHTML = `
+                <p class="preguntas-card-q">${escHtml(preg.pregunta)}</p>
+                <span class="preguntas-n">${n} respuesta${n !== 1 ? 's' : ''}</span>
+                <div class="preguntas-chart-wrap">
+                    <canvas id="${canvasId}"></canvas>
+                </div>`;
+            grid.appendChild(card);
+
+            const ctx = card.querySelector('canvas');
+            if (!ctx) return;
+
+            const labels = preg.distribucion.map(d => d.label);
+            const counts = preg.distribucion.map(d => d.count);
+            const colors = PREG_COLORS.slice(0, labels.length);
+
+            if (preg.tipo === 'donut') {
+                preguntasCharts[preg.campo] = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels,
+                        datasets: [{ data: counts, backgroundColor: colors, borderWidth: 1, borderColor: '#fff' }],
+                    },
+                    options: {
+                        cutout: '55%',
+                        plugins: {
+                            legend: { position: 'bottom', labels: { font: { size: 10 }, padding: 8, boxWidth: 12 } },
+                            tooltip: { callbacks: { label: ctx2 => ` ${ctx2.label}: ${ctx2.raw} (${preg.distribucion[ctx2.dataIndex]?.pct ?? 0}%)` } },
+                        },
+                        animation: { duration: 600 },
+                    },
+                });
+            } else {
+                // Horizontal bar — ASCII labels only for Chart.js canvas
+                const safeLabels = labels.map(l => l.normalize('NFD').replace(/[\u0300-\u036f]/g,'').substring(0, 30));
+                preguntasCharts[preg.campo] = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: safeLabels,
+                        datasets: [{
+                            data: counts,
+                            backgroundColor: colors,
+                            borderRadius: 4,
+                            borderWidth: 0,
+                        }],
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { callbacks: { label: ctx2 => ` ${labels[ctx2.dataIndex]}: ${ctx2.raw} (${preg.distribucion[ctx2.dataIndex]?.pct ?? 0}%)` } },
+                        },
+                        scales: {
+                            x: { ticks: { font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                            y: { ticks: { font: { size: 10 } } },
+                        },
+                        animation: { duration: 600 },
+                    },
+                });
+            }
+        });
+    });
+}
+
+function escHtml(str) {
+    return String(str)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;');
 }
