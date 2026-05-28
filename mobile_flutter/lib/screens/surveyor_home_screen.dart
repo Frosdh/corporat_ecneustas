@@ -569,12 +569,18 @@ class _SurveyorHomeScreenState extends State<SurveyorHomeScreen> with SingleTick
     };
 
     try {
-      // Preparamos payload en JSON limpio
+      // Preparamos payload en JSON limpio — null → '' para campos de texto
       final Map<String, dynamic> surveyPayload = Map<String, dynamic>.from(newSurvey);
       surveyPayload['primary_problem'] = _selectedProblems.join('|');
-      surveyPayload['women_roles'] = _selectedWomenRoles ?? '';
-      surveyPayload['mine_benefits'] = _selectedMineBenefits.join('|');
-      surveyPayload['mine_risks'] = _selectedMineRisks.join('|');
+      surveyPayload['women_roles']     = _selectedWomenRoles ?? '';
+      surveyPayload['mine_benefits']   = _selectedMineBenefits.join('|');
+      surveyPayload['mine_risks']      = _selectedMineRisks.join('|');
+
+      // Convertir cualquier null restante a string vacío
+      surveyPayload.updateAll((key, value) {
+        if (value == null) return '';
+        return value;
+      });
 
       // Intentamos subirla directamente por red usando ApiService
       await widget.apiService.saveSurvey(surveyPayload);
@@ -676,11 +682,31 @@ class _SurveyorHomeScreenState extends State<SurveyorHomeScreen> with SingleTick
     final errors = <String>[];
     int synced = 0;
 
+    // Campos que deben ser string vacío si son null — nunca enviar null al servidor
+    const stringFields = [
+      'sector', 'community', 'surveyor_name', 'respondent_name',
+      'respondent_last_name', 'respondent_id_document', 'respondent_email',
+      'respondent_phone', 'respondent_gender', 'age_range', 'education_level',
+      'occupation', 'primary_problem', 'youth_path', 'women_roles',
+      'water_source', 'has_sewer', 'has_septic', 'has_internet',
+      'road_status', 'road_who_fixes', 'household_income', 'political_climate',
+      'authority_trust', 'social_priority', 'investment_acceptance',
+      'mine_reopening_perception', 'mine_benefits', 'mine_risks', 'comments',
+      'knows_mining_types', 'knows_mining_benefits', 'knows_modern_mining',
+      'knows_local_mines', 'knows_env_guarantees',
+    ];
+
     // Intentamos encuesta por encuesta para no perder ninguna por un fallo puntual
     for (final survey in _offlineSurveys) {
       try {
-        // Preparamos payload limpio (igual que en _handleSaveSurvey)
+        // Preparamos payload limpio: null → '', listas → string con '|'
         final payload = Map<String, dynamic>.from(survey);
+
+        // Convertir null a string vacío en todos los campos de texto
+        for (final field in stringFields) {
+          if (payload[field] == null) payload[field] = '';
+        }
+
         if (payload['primary_problem'] is List) {
           payload['primary_problem'] = (payload['primary_problem'] as List).join('|');
         }

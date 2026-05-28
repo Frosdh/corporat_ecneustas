@@ -653,7 +653,7 @@ function renderApplications() {
 
     list.innerHTML = filtered.map((item) => {
         const documents = (item.documents || []).map((doc) => `
-            <a class="doc-link" href="${apiUrl('document', { id: doc.id })}" target="_blank" rel="noopener">&#128196; ${escapeHtml(doc.doc_type)} - ${escapeHtml(doc.original_name)}</a>
+            <a class="doc-link" href="${apiUrl('document', { id: doc.id })}" target="_blank" rel="noopener">${escapeHtml(doc.doc_type)} &mdash; ${escapeHtml(doc.original_name)}</a>
         `).join('');
 
         const parts = [item.document_number, item.phone, item.email].filter(Boolean).map(escapeHtml);
@@ -758,7 +758,7 @@ async function reviewApplication(applicationId, decision, actionsContainer) {
         }, 600);
     } catch (error) {
         if (feedbackEl) {
-            feedbackEl.textContent = `✗ Error: ${error.message}`;
+            feedbackEl.textContent = `Error: ${error.message}`;
             feedbackEl.className = 'review-feedback review-feedback-error';
         } else {
             alert(`Error al procesar la solicitud: ${error.message}`);
@@ -1803,7 +1803,7 @@ function renderConocimiento(conocimiento) {
         const posItem = item.dist.items.find(i => i.sentimiento === 'positivo');
         const pct = posItem ? posItem.pct : 0;
         const col = pct >= 60 ? '#0f9f6e' : pct >= 30 ? '#d97706' : '#c43d45';
-        const lbl = pct >= 60 ? '✅ Buen nivel de conocimiento' : pct >= 30 ? '⚠️ Conocimiento parcial — requiere refuerzo' : '❌ Bajo conocimiento — socialización urgente';
+        const lbl = pct >= 60 ? 'Buen nivel de conocimiento' : pct >= 30 ? 'Conocimiento parcial — requiere refuerzo' : 'Bajo conocimiento — socialización urgente';
         return `
             <div class="analisis-conoc-item">
                 <div class="analisis-conoc-header">

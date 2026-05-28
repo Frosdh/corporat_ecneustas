@@ -154,7 +154,7 @@ header('Expires: 0');
                 <button id="tab-button-my-surveys" class="tab hidden" data-tab="my-surveys">Mis encuestas</button>
                 <button id="tab-button-applications" class="tab" data-tab="applications">Postulaciones</button>
                 <button id="tab-button-surveyors" class="tab" data-tab="surveyors">Encuestadores</button>
-                <button id="tab-button-analisis" class="tab" data-tab="analisis">&#129302; Análisis IA</button>
+                <button id="tab-button-analisis" class="tab" data-tab="analisis">An&aacute;lisis IA</button>
                 <button id="tab-button-reports" class="tab" data-tab="reports">Reportes</button>
                 <button id="tab-button-audit" class="tab" data-tab="audit">Auditoria</button>
                 <button id="tab-button-offline" class="tab hidden" data-tab="offline">Cola Offline</button>
@@ -856,7 +856,7 @@ header('Expires: 0');
                     </div>
                     <div class="analisis-topbar-right">
                         <select id="analisis-sector-filter" class="analisis-select">
-                            <option value="general">Todo San Bartolomé</option>
+                            <option value="general">Todo San Bartolom&eacute;</option>
                         </select>
                         <button id="analisis-refresh-btn" class="analisis-refresh-btn" type="button">&#8635; Actualizar</button>
                         <span id="analisis-last-update" class="analisis-timestamp">Sin cargar</span>
@@ -1036,7 +1036,7 @@ header('Expires: 0');
                     <div class="analisis-ficha">
                         <strong>Ficha técnica:</strong>
                         Análisis generado automáticamente con base en datos reales de campo &middot;
-                        San Bartolomé, Azuay, Ecuador &middot;
+                        San Bartolom&eacute;, Azuay, Ecuador &middot;
                         Metodología: Estadística descriptiva + análisis de sentimiento por dimensión &middot;
                         Escala neta: &minus;100 (totalmente negativo) a +100 (totalmente positivo) &middot;
                         <span id="analisis-generado-en">—</span>

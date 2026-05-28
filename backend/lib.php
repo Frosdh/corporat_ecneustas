@@ -803,21 +803,37 @@ function normalize_survey(array $survey): array
         'knows_mining_types', 'knows_mining_benefits', 'knows_modern_mining', 'knows_local_mines', 'knows_env_guarantees',
     ];
 
+    // Campos que siempre deben ser string (nunca null) — encuestas con campos vacíos son válidas
+    $stringFields = [
+        'sector', 'community', 'survey_status', 'surveyor_name',
+        'respondent_name', 'respondent_last_name', 'respondent_id_document',
+        'respondent_email', 'respondent_phone', 'respondent_gender', 'age_range',
+        'education_level', 'occupation', 'primary_problem', 'youth_path',
+        'water_source', 'has_sewer', 'has_septic', 'has_internet',
+        'road_status', 'road_who_fixes', 'household_income', 'political_climate',
+        'authority_trust', 'social_priority', 'investment_acceptance',
+        'mine_reopening_perception', 'comments',
+        'knows_mining_types', 'knows_mining_benefits', 'knows_modern_mining',
+        'knows_local_mines', 'knows_env_guarantees',
+    ];
+
     $normalized = [];
     foreach ($fields as $field) {
         $value = $survey[$field] ?? null;
-        $normalized[$field] = is_string($value) ? trim($value) : $value;
+        if (in_array($field, $stringFields)) {
+            // null o false → string vacío; cualquier otro valor → trim
+            $normalized[$field] = ($value === null || $value === false) ? '' : trim((string) $value);
+        } else {
+            $normalized[$field] = is_string($value) ? trim($value) : $value;
+        }
     }
 
-    $normalized['client_uuid']    = $normalized['client_uuid']    ?: bin2hex(random_bytes(16));
-    $normalized['survey_date']    = $normalized['survey_date']    ?: date('Y-m-d H:i:s');
-    $normalized['survey_status']  = $normalized['survey_status']  ?: 'sincronizada';
-    $normalized['sector']         = $normalized['sector']         ?? '';
-    $normalized['community']      = $normalized['community']      ?? '';
-    $normalized['surveyor_id']    = $normalized['surveyor_id']    ?? '';
-    $normalized['women_roles']    = parse_multi_value($survey['women_roles']    ?? []);
-    $normalized['mine_benefits']  = parse_multi_value($survey['mine_benefits']  ?? []);
-    $normalized['mine_risks']     = parse_multi_value($survey['mine_risks']     ?? []);
+    $normalized['client_uuid']   = $normalized['client_uuid']   ?: bin2hex(random_bytes(16));
+    $normalized['survey_date']   = $normalized['survey_date']   ?: date('Y-m-d H:i:s');
+    $normalized['survey_status'] = $normalized['survey_status'] ?: 'sincronizada';
+    $normalized['women_roles']   = parse_multi_value($survey['women_roles']   ?? []);
+    $normalized['mine_benefits'] = parse_multi_value($survey['mine_benefits'] ?? []);
+    $normalized['mine_risks']    = parse_multi_value($survey['mine_risks']    ?? []);
 
     return $normalized;
 }

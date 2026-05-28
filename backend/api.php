@@ -72,16 +72,23 @@ try {
             }
 
             $savedCount = 0;
+            $failedCount = 0;
             foreach ($surveys as $survey) {
-                save_survey((array) $survey);
-                $savedCount++;
+                try {
+                    save_survey((array) $survey);
+                    $savedCount++;
+                } catch (Throwable $e) {
+                    // Continuamos con las demás aunque una falle
+                    $failedCount++;
+                }
             }
 
             respond([
-                'ok' => true,
-                'message' => 'Sincronizacion completada.',
+                'ok'          => true,
+                'message'     => "Sincronizacion completada. Guardadas: $savedCount" . ($failedCount > 0 ? ", con errores: $failedCount" : '.'),
                 'saved_count' => $savedCount,
-                'dashboard' => user_can_access_dashboard() ? get_dashboard('general') : null,
+                'fail_count'  => $failedCount,
+                'dashboard'   => user_can_access_dashboard() ? get_dashboard('general') : null,
             ]);
 
         case 'applications':
