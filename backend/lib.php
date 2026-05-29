@@ -1063,6 +1063,7 @@ function compute_json_option_counts(array $rows, string $field): array
 
 function normalize_sector_label(string $sector): string
 {
+    $sector = str_ireplace('Bartoloma', 'Bartolomé', $sector);
     return ucfirst($sector);
 }
 
@@ -1345,26 +1346,32 @@ function get_dashboard(string $sector = 'general'): array
     // Calcular indices de sentimiento por dimension para tacometros del dashboard
     $dimsMaps = [
         ['campo' => 'political_climate',         'titulo' => 'Clima Politico',
-         'mapa'  => ['positivo' => ['Armonia','Armon&iacute;a','Cohesion comunitaria','Cohesin comunitaria','Trabajo colaborativo','Union','Uni&oacute;n'],
-                     'negativo' => ['Division comunitaria','Divisi&oacute;n comunitaria','Conflicto abierto entre actores','Conflicto','Polarizacion']]],
+         'mapa'  => ['positivo' => ['Estabilidad relativa'],
+                     'negativo' => ['Desconfianza institucional','Division comunitaria','Conflicto abierto entre actores']]],
         ['campo' => 'authority_trust',           'titulo' => 'Confianza Autoridades',
-         'mapa'  => ['positivo' => ['Alta','Media-alta','Muy alta'],
-                     'negativo' => ['Baja','Muy baja','Nula']]],
+         'mapa'  => ['positivo' => ['Alta'],
+                     'negativo' => ['Baja']]],
         ['campo' => 'investment_acceptance',     'titulo' => 'Inversion Externa',
-         'mapa'  => ['positivo' => ['Aceptacion amplia','Aceptacion condicionada'],
-                     'negativo' => ['Rechazo preventivo','Rechazo firme','Rechazo total']]],
+         'mapa'  => ['positivo' => ['Aceptacion amplia','Aceptación amplia'],
+                     'negativo' => ['Rechazo preventivo']]],
         ['campo' => 'mine_reopening_perception', 'titulo' => 'Reapertura Minera',
          'mapa'  => ['positivo' => ['Beneficiaria mucho','Beneficiaria algo'],
-                     'negativo' => ['Perjudicaria algo','Perjudicaria mucho']]],
+                     'negativo' => ['No beneficiaria']]],
         ['campo' => 'household_income',          'titulo' => 'Economia Familiar',
-         'mapa'  => ['positivo' => ['Holgado','Cubre bien','Muy bien'],
-                     'negativo' => ['No cubre la canasta','Muy limitado','Insuficiente']]],
+         'mapa'  => ['positivo' => ['Cubre con algo de holgura'],
+                     'negativo' => ['No cubre la canasta']]],
         ['campo' => 'water_source',              'titulo' => 'Acceso al Agua',
-         'mapa'  => ['positivo' => ['Red publica','Agua potable','Sistema comunitario'],
-                     'negativo' => ['Vertiente','Acequia','Sin acceso','Rio','Sin agua']]],
+         'mapa'  => ['positivo' => ['Red publica con tratamiento','Red pública con tratamiento'],
+                     'negativo' => ['Rio o acequia','Río o acequia']]],
         ['campo' => 'has_sewer',                 'titulo' => 'Alcantarillado',
-         'mapa'  => ['positivo' => ['Red publica','Alcantarillado municipal'],
-                     'negativo' => ['No tiene','Sin alcantarillado']]],
+         'mapa'  => ['positivo' => ['Si tiene','Sí tiene'],
+                     'negativo' => ['No tiene']]],
+        ['campo' => 'has_internet',              'titulo' => 'Acceso a Internet',
+         'mapa'  => ['positivo' => ['Si estable','Sí estable'],
+                     'negativo' => ['No tiene']]],
+        ['campo' => 'road_status',               'titulo' => 'Estado Vial',
+         'mapa'  => ['positivo' => ['Bueno'],
+                     'negativo' => ['Malo']]],
     ];
     $dimsSentimiento = [];
     foreach ($dimsMaps as $cfg) {
@@ -1898,70 +1905,64 @@ function get_analisis_experto(string $sector = 'general'): array
         ];
     }
 
-    // Mapas de sentimiento por dimension
+    // Mapas de sentimiento — valores exactos del app movil
     $mapClima = [
-        'positivo' => ['Armonia','Armonía','Cohesion comunitaria','Cohesión comunitaria','Trabajo colaborativo','Calma','Union','Unión'],
-        'neutro'   => ['Calma relativa','Tension latente','Tensión latente'],
-        'negativo' => ['Division comunitaria','División comunitaria','Conflicto abierto entre actores','Conflicto','Polarizacion','Polarización'],
+        'positivo' => ['Estabilidad relativa'],
+        'neutro'   => [],
+        'negativo' => ['Desconfianza institucional','Division comunitaria','Conflicto abierto entre actores'],
     ];
     $mapConfianza = [
-        'positivo' => ['Alta','Media-alta','Muy alta'],
-        'neutro'   => ['Media','Moderada'],
-        'negativo' => ['Baja','Muy baja','Nula'],
+        'positivo' => ['Alta'],
+        'neutro'   => ['Media'],
+        'negativo' => ['Baja'],
     ];
     $mapInversion = [
-        'positivo' => ['Aceptacion amplia','Aceptación amplia','Aceptacion condicionada','Aceptación condicionada'],
-        'neutro'   => ['Indiferente','No sabe'],
-        'negativo' => ['Rechazo preventivo','Rechazo firme','Rechazo total'],
+        'positivo' => ['Aceptacion amplia','Aceptación amplia'],
+        'neutro'   => ['Aceptacion condicionada','Aceptación condicionada'],
+        'negativo' => ['Rechazo preventivo'],
     ];
     $mapReapertura = [
-        'positivo' => ['Beneficiaria mucho','Beneficiaría mucho','Beneficiaria algo','Beneficiaría algo'],
-        'neutro'   => ['Indiferente','No sabe','NS/NR'],
-        'negativo' => ['Perjudicaria algo','Perjudicaría algo','Perjudicaria mucho','Perjudicaría mucho'],
+        'positivo' => ['Beneficiaria mucho','Beneficiaria algo'],
+        'neutro'   => ['Beneficio dudoso'],
+        'negativo' => ['No beneficiaria'],
     ];
     $mapIngreso = [
-        'positivo' => ['Holgado','Cubre bien','Muy bien'],
-        'neutro'   => ['Cubre apenas','Regular'],
-        'negativo' => ['No cubre la canasta','Muy limitado','Insuficiente'],
+        'positivo' => ['Cubre con algo de holgura'],
+        'neutro'   => ['Cubre apenas'],
+        'negativo' => ['No cubre la canasta'],
     ];
     $mapAgua = [
-        'positivo' => ['Red pública','Red publica','Agua potable','Sistema comunitario'],
-        'neutro'   => ['Cisterna','Pozo propio'],
-        'negativo' => ['Vertiente','Acequia','Sin acceso','Rio','Río','Sin agua'],
+        'positivo' => ['Red publica con tratamiento','Red pública con tratamiento'],
+        'neutro'   => ['Vertiente comunal sin purificacion','Vertiente comunal sin purificación','Tanquero u otra compra'],
+        'negativo' => ['Rio o acequia','Río o acequia'],
     ];
     $mapAlcant = [
-        'positivo' => ['Red pública','Red publica','Alcantarillado municipal'],
-        'neutro'   => ['Pozo séptico','Pozo septico'],
-        'negativo' => ['No tiene','Campo abierto','Sin sistema'],
+        'positivo' => ['Si tiene','Sí tiene'],
+        'neutro'   => [],
+        'negativo' => ['No tiene'],
     ];
     $mapInternet = [
-        'positivo' => ['Sí tiene','Si tiene','Si','Sí','Fijo y móvil','Fijo'],
-        'neutro'   => ['Solo móvil','Solo movil','Parcial'],
-        'negativo' => ['No tiene','No','Sin acceso'],
+        'positivo' => ['Si estable','Sí estable'],
+        'neutro'   => ['Intermitente'],
+        'negativo' => ['No tiene'],
     ];
     $mapVia = [
-        'positivo' => ['Pavimentada','Buen estado','Asfalto','Buena'],
-        'neutro'   => ['Adoquín','Adoquin','Regular','Tierra compactada'],
-        'negativo' => ['Tierra','Mal estado','Intransitable','Sin acceso','Deteriorada'],
+        'positivo' => ['Bueno'],
+        'neutro'   => ['Regular'],
+        'negativo' => ['Malo'],
     ];
 
+    // Solo dimensiones con sentido de sentimiento territorial
     $dimsConfig = [
         ['campo' => 'political_climate',         'titulo' => 'Clima Politico',                  'mapa' => $mapClima],
         ['campo' => 'authority_trust',           'titulo' => 'Confianza en Autoridades',        'mapa' => $mapConfianza],
-        ['campo' => 'investment_acceptance',     'titulo' => 'Aceptacion de Inversion Externa', 'mapa' => $mapInversion],
+        ['campo' => 'investment_acceptance',     'titulo' => 'Aceptacion de Inversion',         'mapa' => $mapInversion],
         ['campo' => 'mine_reopening_perception', 'titulo' => 'Percepcion Reapertura Minera',    'mapa' => $mapReapertura],
-        ['campo' => 'primary_problem',           'titulo' => 'Problematica Principal',          'mapa' => []],
         ['campo' => 'household_income',          'titulo' => 'Situacion Economica Familiar',    'mapa' => $mapIngreso],
         ['campo' => 'water_source',              'titulo' => 'Fuente de Agua',                  'mapa' => $mapAgua],
         ['campo' => 'has_sewer',                 'titulo' => 'Cobertura de Alcantarillado',     'mapa' => $mapAlcant],
         ['campo' => 'has_internet',              'titulo' => 'Acceso a Internet',               'mapa' => $mapInternet],
         ['campo' => 'road_status',               'titulo' => 'Estado Vial',                     'mapa' => $mapVia],
-        ['campo' => 'age_range',                 'titulo' => 'Distribucion Etaria',             'mapa' => []],
-        ['campo' => 'respondent_gender',         'titulo' => 'Distribucion por Genero',         'mapa' => []],
-        ['campo' => 'education_level',           'titulo' => 'Nivel de Educacion',              'mapa' => []],
-        ['campo' => 'occupation',                'titulo' => 'Ocupacion Principal',             'mapa' => []],
-        ['campo' => 'youth_path',                'titulo' => 'Destino de la Juventud',          'mapa' => []],
-        ['campo' => 'social_priority',           'titulo' => 'Prioridad Social Territorial',    'mapa' => []],
     ];
 
     $dimensiones = [];
@@ -2072,9 +2073,16 @@ function get_analisis_experto(string $sector = 'general'): array
             break;
         }
     }
+    // Limpiar caracteres corruptos (diamond) u otros caracteres inválidos sin modificar la BD
+    $probTop = @mb_convert_encoding($probTop, 'UTF-8', 'UTF-8'); // limpia bytes inválidos
+    $probTop = str_replace(["\xEF\xBF\xBD", "", ""], "", $probTop);
+    $probTop = trim($probTop);
+    if (empty($probTop)) {
+        $probTop = 'Sin datos claros';
+    }
 
     $narrativa = sprintf(
-        'Con base en %d encuestas levantadas en San Bartolome, el indice de sentimiento comunitario compuesto es %s puntos (escala -100 a +100), clasificado como %s. El %s%% de las percepciones evaluadas son positivas y el %s%% son negativas. La problematica que mas preocupa a la ciudadania es "%s". La dimension con mejor indice es "%s" (%s pts) y la mas critica es "%s" (%s pts). Estos datos reflejan el pulso real del territorio al momento del analisis.',
+        'Con base en %d encuestas levantadas en San Bartolomé, el índice de sentimiento comunitario compuesto es %s puntos (escala -100 a +100), clasificado como %s. El %s%% de las percepciones evaluadas son positivas y el %s%% son negativas. La problemática que más preocupa a la ciudadanía es "%s". La dimensión con mejor índice es "%s" (%s pts) y la más crítica es "%s" (%s pts). Estos datos reflejan el pulso real del territorio al momento del análisis.',
         $n,
         ($gIdx > 0 ? '+' : '') . $gIdx,
         $nivel,

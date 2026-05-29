@@ -2019,10 +2019,23 @@ function renderCorrelaciones(correlaciones) {
 }
 
 function renderTendencia(tendencia) {
-    const ctx = document.getElementById('chart-tendencia');
-    if (!ctx || !tendencia || tendencia.length === 0 || typeof Chart === 'undefined') return;
+    const canvas = document.getElementById('chart-tendencia');
+    if (!canvas || !tendencia || tendencia.length === 0 || typeof Chart === 'undefined') return;
     destroyChart('tendencia');
-    analisisState.charts['tendencia'] = new Chart(ctx, {
+
+    const ctx = canvas.getContext('2d');
+    
+    // Gradiente para las barras
+    const gradientBar = ctx.createLinearGradient(0, 0, 0, 400);
+    gradientBar.addColorStop(0, 'rgba(14, 78, 176, 0.9)');
+    gradientBar.addColorStop(1, 'rgba(14, 78, 176, 0.3)');
+
+    // Gradiente para la linea de tendencia
+    const gradientLine = ctx.createLinearGradient(0, 0, 0, 400);
+    gradientLine.addColorStop(0, 'rgba(16, 185, 129, 0.35)');
+    gradientLine.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+
+    analisisState.charts['tendencia'] = new Chart(canvas, {
         type: 'bar',
         data: {
             labels: tendencia.map(t => t.dia),
@@ -2030,33 +2043,103 @@ function renderTendencia(tendencia) {
                 {
                     label: 'Encuestas por d\u00EDa',
                     data: tendencia.map(t => t.total),
-                    backgroundColor: 'rgba(14,78,176,0.75)',
-                    borderRadius: 4,
+                    backgroundColor: gradientBar,
+                    hoverBackgroundColor: 'rgba(14, 78, 176, 1)',
+                    borderColor: 'rgba(14, 78, 176, 1)',
+                    borderWidth: { top: 2, right: 0, bottom: 0, left: 0 },
+                    borderRadius: 6,
+                    borderSkipped: false,
                     yAxisID: 'y',
+                    order: 2,
+                    barPercentage: 0.6,
+                    categoryPercentage: 0.8
                 },
                 {
                     label: 'Apertura a inversi\u00F3n (%)',
                     data: tendencia.map(t => t.apertura_pct),
                     type: 'line',
-                    borderColor: '#0f9f6e',
-                    backgroundColor: 'rgba(15,159,110,0.1)',
-                    pointRadius: 4,
+                    borderColor: '#10B981',
+                    borderWidth: 3,
+                    backgroundColor: gradientLine,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#10B981',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 8,
+                    pointHoverBackgroundColor: '#10B981',
+                    pointHoverBorderColor: '#ffffff',
+                    pointHoverBorderWidth: 2,
                     fill: true,
-                    tension: 0.35,
+                    tension: 0.4,
                     yAxisID: 'y2',
+                    order: 1
                 },
             ],
         },
         options: {
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
             plugins: {
-                legend: { position: 'bottom' },
-                tooltip: { mode: 'index', intersect: false },
+                legend: { 
+                    position: 'top',
+                    align: 'end',
+                    labels: {
+                        usePointStyle: true,
+                        boxWidth: 8,
+                        padding: 20,
+                        font: { size: 12, weight: '500' }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                    titleFont: { size: 13, weight: '600' },
+                    bodyFont: { size: 13 },
+                    padding: 12,
+                    cornerRadius: 8,
+                    displayColors: true,
+                    boxPadding: 4,
+                    usePointStyle: true,
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += context.parsed.y + (context.dataset.yAxisID === 'y2' ? '%' : '');
+                            }
+                            return label;
+                        }
+                    }
+                },
             },
             scales: {
-                y: { position: 'left', title: { display: true, text: 'Encuestas' }, grid: { color: 'rgba(0,0,0,0.05)' } },
-                y2: { position: 'right', max: 100, title: { display: true, text: 'Apertura (%)' }, grid: { display: false }, ticks: { callback: v => v + '%' } },
+                x: {
+                    grid: { display: false, drawBorder: false },
+                    ticks: { color: '#6B7280', font: { size: 11 } }
+                },
+                y: { 
+                    position: 'left', 
+                    title: { display: true, text: 'Nº Encuestas', font: { size: 11, weight: '600' }, color: '#6B7280' }, 
+                    grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false, borderDash: [4, 4] },
+                    ticks: { color: '#6B7280', font: { size: 11 } },
+                    beginAtZero: true
+                },
+                y2: { 
+                    position: 'right', 
+                    max: 100, 
+                    title: { display: true, text: 'Apertura (%)', font: { size: 11, weight: '600' }, color: '#6B7280' }, 
+                    grid: { display: false, drawBorder: false }, 
+                    ticks: { callback: v => v + '%', color: '#6B7280', font: { size: 11 } },
+                    beginAtZero: true
+                },
             },
-            animation: { duration: 700 },
+            animation: { 
+                duration: 1000,
+                easing: 'easeOutQuart'
+            },
         },
     });
 }

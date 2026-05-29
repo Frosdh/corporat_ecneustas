@@ -272,12 +272,14 @@ header('Expires: 0');
                     </article>
 
                     <article class="card">
-                        <div class="section-title"><h3>KPIs estrategicos</h3></div>
+                        <div class="section-title">
+                            <h3>Aceptación a Inversión Externa (KPIs Estratégicos)</h3>
+                        </div>
                         <div class="application-kpis">
-                            <div class="mini-kpi"><span>Favorable</span><strong id="strategy-favorable">0%</strong></div>
-                            <div class="mini-kpi"><span>Condicionada</span><strong id="strategy-conditioned">0%</strong></div>
-                            <div class="mini-kpi"><span>Contraria</span><strong id="strategy-contrary">0%</strong></div>
-                            <div class="mini-kpi"><span>Sector abierto</span><strong id="strategy-open-sector">Sin datos</strong></div>
+                            <div class="mini-kpi" title="Personas que respondieron 'Aceptación amplia'"><span>Favorable</span><strong id="strategy-favorable">0%</strong></div>
+                            <div class="mini-kpi" title="Personas que respondieron 'Aceptación condicionada'"><span>Condicionada</span><strong id="strategy-conditioned">0%</strong></div>
+                            <div class="mini-kpi" title="Personas que respondieron 'Rechazo preventivo'"><span>Contraria</span><strong id="strategy-contrary">0%</strong></div>
+                            <div class="mini-kpi" title="Barrio con mayor cantidad absoluta de respuestas favorables"><span>Sector más abierto</span><strong id="strategy-open-sector">Sin datos</strong></div>
                         </div>
                     </article>
                 </div>
@@ -973,7 +975,7 @@ header('Expires: 0');
                     <div class="analisis-section-row">
                         <div>
                             <h3 class="analisis-section-header">Vista Radar — Comparativa por Dimensión</h3>
-                            <p class="analisis-section-desc">Cada eje: índice de sentimiento. Verde = favorable, rojo = crítico.</p>
+                            <p class="analisis-section-desc">Cada eje evalúa el sentimiento mediante un <b>Índice Neto</b> (escala -100 a +100 puntos), calculado como: <i>% Positivo menos % Negativo</i>. Verde = favorable, rojo = crítico.</p>
                         </div>
                     </div>
                     <div class="card analisis-radar-card">
