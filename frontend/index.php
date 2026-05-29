@@ -272,15 +272,53 @@ header('Expires: 0');
                     </article>
 
                     <article class="card">
-                        <div class="section-title">
-                            <h3>Aceptación a Inversión Externa (KPIs Estratégicos)</h3>
+                        <div class="section-title" style="margin-bottom:.25rem">
+                            <h3>Aceptación a Inversión Externa</h3>
                         </div>
-                        <div class="application-kpis">
-                            <div class="mini-kpi" title="Personas que respondieron 'Aceptación amplia'"><span>Favorable</span><strong id="strategy-favorable">0%</strong></div>
-                            <div class="mini-kpi" title="Personas que respondieron 'Aceptación condicionada'"><span>Condicionada</span><strong id="strategy-conditioned">0%</strong></div>
-                            <div class="mini-kpi" title="Personas que respondieron 'Rechazo preventivo'"><span>Contraria</span><strong id="strategy-contrary">0%</strong></div>
-                            <div class="mini-kpi" title="Barrio con mayor cantidad absoluta de respuestas favorables"><span>Sector más abierto</span><strong id="strategy-open-sector">Sin datos</strong></div>
+                        <p style="font-size:.78rem;color:#A67C52;margin-bottom:.9rem;">
+                            Pregunta: <em>"¿Acepta usted inversión externa en su comunidad?"</em>
+                            &mdash; calculado sobre encuestados que respondieron esa pregunta.
+                        </p>
+                        <div class="application-kpis" style="grid-template-columns:1fr 1fr;gap:.75rem;">
+
+                            <div class="mini-kpi strat-favorable">
+                                <span class="strat-label">
+                                    ✅ Favorable
+                                    <span class="strat-tip">Respondieron <strong>"Aceptación amplia"</strong>. Personas completamente abiertas a recibir inversión externa sin condiciones.</span>
+                                </span>
+                                <strong id="strategy-favorable">0%</strong>
+                                <small id="strategy-favorable-count" style="color:#A67C52;font-size:.72rem;font-weight:400;"></small>
+                            </div>
+
+                            <div class="mini-kpi strat-conditioned">
+                                <span class="strat-label">
+                                    ⚠️ Condicionada
+                                    <span class="strat-tip">Respondieron <strong>"Aceptación condicionada"</strong>. Abiertos a inversión pero con condiciones o garantías previas.</span>
+                                </span>
+                                <strong id="strategy-conditioned">0%</strong>
+                                <small id="strategy-conditioned-count" style="color:#A67C52;font-size:.72rem;font-weight:400;"></small>
+                            </div>
+
+                            <div class="mini-kpi strat-contrary">
+                                <span class="strat-label">
+                                    ❌ Contraria
+                                    <span class="strat-tip">Respondieron <strong>"Rechazo preventivo"</strong>. Personas que rechazan la inversión externa como medida de precaución.</span>
+                                </span>
+                                <strong id="strategy-contrary">0%</strong>
+                                <small id="strategy-contrary-count" style="color:#A67C52;font-size:.72rem;font-weight:400;"></small>
+                            </div>
+
+                            <div class="mini-kpi strat-sector">
+                                <span class="strat-label">
+                                    📍 Sector más abierto
+                                    <span class="strat-tip">Sector con la <strong>mayor cantidad absoluta</strong> de respuestas favorables ("Aceptación amplia") entre todos los sectores encuestados.</span>
+                                </span>
+                                <strong id="strategy-open-sector">Sin datos</strong>
+                                <small style="color:#A67C52;font-size:.72rem;font-weight:400;">mayor concentración favorable</small>
+                            </div>
+
                         </div>
+                        <div id="strategy-base" style="font-size:.72rem;color:#A67C52;margin-top:.6rem;text-align:right;"></div>
                     </article>
                 </div>
             </section>
@@ -847,7 +885,7 @@ header('Expires: 0');
                     </div>
                     <div class="analisis-topbar-right">
                         <select id="preguntas-sector-filter" class="analisis-select">
-                            <option value="general">Todo San Bartolom&eacute;</option>
+                            <option value="general">Todo San Bartolome</option>
                         </select>
                         <button id="preguntas-refresh-btn" class="analisis-refresh-btn" type="button">&#8635; Actualizar</button>
                     </div>
@@ -874,7 +912,7 @@ header('Expires: 0');
                     </div>
                     <div class="analisis-topbar-right">
                         <select id="analisis-sector-filter" class="analisis-select">
-                            <option value="general">Todo San Bartolomé</option>
+                            <option value="general">Todo San Bartolome</option>
                         </select>
                         <button id="analisis-refresh-btn" class="analisis-refresh-btn" type="button">&#8635; Actualizar</button>
                         <span id="analisis-last-update" class="analisis-timestamp">Sin cargar</span>

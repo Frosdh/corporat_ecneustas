@@ -2153,3 +2153,41 @@ fieldset {
     .survey-modal-body { padding: .7rem .8rem 1.2rem; }
     .survey-modal-box { border-radius: 14px; }
 }
+
+/* ── KPIs Estratégicos ── */
+.strat-label {
+    position: relative;
+    font-size: .8rem;
+    color: #6F4E37;
+    cursor: default;
+    display: flex;
+    align-items: flex-start;
+    gap: .3rem;
+    line-height: 1.4;
+}
+.strat-tip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 0;
+    background: #3b2313;
+    color: #fff;
+    font-size: .72rem;
+    font-weight: 400;
+    line-height: 1.5;
+    padding: .6rem .85rem;
+    border-radius: 10px;
+    width: 230px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.25);
+    z-index: 200;
+    pointer-events: none;
+}
+.strat-label:hover .strat-tip { display: block; }
+.mini-kpi.strat-favorable  { border-left: 3px solid #059669; }
+.mini-kpi.strat-conditioned{ border-left: 3px solid #d97706; }
+.mini-kpi.strat-contrary   { border-left: 3px solid #dc2626; }
+.mini-kpi.strat-sector     { border-left: 3px solid #6F4E37; }
+.strat-favorable  strong { color: #059669 !important; }
+.strat-conditioned strong { color: #d97706 !important; }
+.strat-contrary   strong { color: #dc2626 !important; }
+.strat-sector     strong { color: #6F4E37 !important; }

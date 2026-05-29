@@ -394,10 +394,15 @@ function renderDashboard(dashboard) {
     setText('social-top-investment', social.investment_acceptance_top || 'Sin datos');
     setText('social-top-reopening', social.reopening_perception_top || 'Sin datos');
 
-    setText('strategy-favorable', `${strategic.favorable_pct ?? 0}%`);
+    setText('strategy-favorable',  `${strategic.favorable_pct ?? 0}%`);
     setText('strategy-conditioned', `${strategic.conditioned_pct ?? 0}%`);
-    setText('strategy-contrary', `${strategic.contrary_pct ?? 0}%`);
+    setText('strategy-contrary',   `${strategic.contrary_pct ?? 0}%`);
     setText('strategy-open-sector', strategic.top_open_sector || 'Sin datos');
+    const stBase = strategic.stance_total ?? 0;
+    setText('strategy-favorable-count',  `${strategic.favorable_count ?? 0} de ${stBase} respuestas`);
+    setText('strategy-conditioned-count',`${strategic.conditioned_count ?? 0} de ${stBase} respuestas`);
+    setText('strategy-contrary-count',   `${strategic.contrary_count ?? 0} de ${stBase} respuestas`);
+    setText('strategy-base', stBase > 0 ? `Base: ${stBase} encuestados respondieron esta pregunta` : '');
 
     renderDimGauges(dashboard.dimensiones_sentimiento || []);
     renderDimGauges(dashboard.dimensiones_sentimiento || []);
