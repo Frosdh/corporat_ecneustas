@@ -1038,13 +1038,33 @@ fieldset {
 
 .analisis-pill-naranja {
     background: rgba(217, 119, 6, 0.25);
-    color: #fbbf24;
+    color: #f59e0b;
 }
 
 .analisis-pill-rojo {
     background: rgba(196, 61, 69, 0.25);
     color: #f87171;
 }
+
+/* Radar Card Premium Design */
+.analisis-radar-card {
+    background: linear-gradient(135deg, #111827 0%, #1e3a8a 100%);
+    border-radius: var(--radius);
+    padding: 30px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    margin-bottom: 30px;
+    height: 480px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.analisis-radar-card canvas {
+    max-width: 100%;
+    max-height: 100%;
+}
+
 
 /* Narrativa ejecutiva */
 .analisis-narrativa {

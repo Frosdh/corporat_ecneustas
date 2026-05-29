@@ -2470,25 +2470,43 @@ function renderRadarDimensiones(dimensiones) {
             datasets: [{
                 label: 'Sentimiento (%)',
                 data: vals,
-                backgroundColor: 'rgba(111,78,55,0.18)',
-                borderColor: '#6F4E37',
+                backgroundColor: 'rgba(56, 189, 248, 0.25)', // Nice modern blue with transparency
+                borderColor: '#38bdf8', // Modern bright blue border
                 borderWidth: 2,
                 pointBackgroundColor: pointColors,
-                pointBorderColor: pointColors,
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
                 pointRadius: 5,
-                pointHoverRadius: 7,
+                pointHoverRadius: 8,
             }],
         },
         options: {
+            maintainAspectRatio: false,
             scales: {
                 r: {
                     min: 0, max: 100,
-                    ticks: { stepSize: 25, font: { size: 10 } },
-                    pointLabels: { font: { size: 10 } },
+                    ticks: { 
+                        stepSize: 25, 
+                        font: { size: 10 },
+                        color: 'rgba(255,255,255,0.7)',
+                        backdropColor: 'transparent',
+                        z: 10
+                    },
+                    pointLabels: { 
+                        font: { size: 12, weight: 'bold' },
+                        color: '#f8fafc' // White text for labels
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.15)', // White subtle grid
+                        circular: true
+                    },
+                    angleLines: {
+                        color: 'rgba(255, 255, 255, 0.15)' // White subtle lines
+                    }
                 },
             },
             plugins: { legend: { display: false } },
-            animation: { duration: 600 },
+            animation: { duration: 800, easing: 'easeOutQuart' },
         },
     });
 }
