@@ -2487,13 +2487,13 @@ function renderRadarDimensiones(dimensiones) {
                     min: 0, max: 100,
                     ticks: { 
                         stepSize: 25, 
-                        font: { size: 10 },
+                        font: { size: 13 },
                         color: 'rgba(255,255,255,0.7)',
                         backdropColor: 'transparent',
                         z: 10
                     },
                     pointLabels: { 
-                        font: { size: 12, weight: 'bold' },
+                        font: { size: 15, weight: 'bold' },
                         color: '#f8fafc' // White text for labels
                     },
                     grid: {
