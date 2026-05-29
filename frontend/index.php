@@ -282,39 +282,31 @@ header('Expires: 0');
                         <div class="application-kpis" style="grid-template-columns:1fr 1fr;gap:.75rem;">
 
                             <div class="mini-kpi strat-favorable">
-                                <span class="strat-label">
-                                    ✅ Favorable
-                                    <span class="strat-tip">Respondieron <strong>"Aceptación amplia"</strong>. Personas completamente abiertas a recibir inversión externa sin condiciones.</span>
-                                </span>
+                                <span class="strat-label">✅ Favorable</span>
                                 <strong id="strategy-favorable">0%</strong>
                                 <small id="strategy-favorable-count" style="color:#A67C52;font-size:.72rem;font-weight:400;"></small>
+                                <p class="strat-tip">Respondieron <strong>"Aceptación amplia"</strong>. Personas completamente abiertas a recibir inversión externa sin condiciones.</p>
                             </div>
 
                             <div class="mini-kpi strat-conditioned">
-                                <span class="strat-label">
-                                    ⚠️ Condicionada
-                                    <span class="strat-tip">Respondieron <strong>"Aceptación condicionada"</strong>. Abiertos a inversión pero con condiciones o garantías previas.</span>
-                                </span>
+                                <span class="strat-label">⚠️ Condicionada</span>
                                 <strong id="strategy-conditioned">0%</strong>
                                 <small id="strategy-conditioned-count" style="color:#A67C52;font-size:.72rem;font-weight:400;"></small>
+                                <p class="strat-tip">Respondieron <strong>"Aceptación condicionada"</strong>. Abiertos a inversión pero con condiciones o garantías previas.</p>
                             </div>
 
                             <div class="mini-kpi strat-contrary">
-                                <span class="strat-label">
-                                    ❌ Contraria
-                                    <span class="strat-tip">Respondieron <strong>"Rechazo preventivo"</strong>. Personas que rechazan la inversión externa como medida de precaución.</span>
-                                </span>
+                                <span class="strat-label">❌ Contraria</span>
                                 <strong id="strategy-contrary">0%</strong>
                                 <small id="strategy-contrary-count" style="color:#A67C52;font-size:.72rem;font-weight:400;"></small>
+                                <p class="strat-tip">Respondieron <strong>"Rechazo preventivo"</strong>. Personas que rechazan la inversión externa como medida de precaución.</p>
                             </div>
 
                             <div class="mini-kpi strat-sector">
-                                <span class="strat-label">
-                                    📍 Sector más abierto
-                                    <span class="strat-tip">Sector con la <strong>mayor cantidad absoluta</strong> de respuestas favorables ("Aceptación amplia") entre todos los sectores encuestados.</span>
-                                </span>
+                                <span class="strat-label">📍 Sector más abierto</span>
                                 <strong id="strategy-open-sector">Sin datos</strong>
                                 <small style="color:#A67C52;font-size:.72rem;font-weight:400;">mayor concentración favorable</small>
+                                <p class="strat-tip">Sector con la <strong>mayor cantidad absoluta</strong> de respuestas favorables ("Aceptación amplia") entre todos los sectores encuestados.</p>
                             </div>
 
                         </div>
