@@ -2149,13 +2149,21 @@ function get_analisis_experto(string $sector = 'general'): array
     $dimNeg = end($dimsSorted) ?: null;
 
     // Problema principal
-    $probTop = '';
-    foreach ($dimensiones as $d) {
-        if ($d['campo'] === 'primary_problem' && !empty($d['distribucion']['items'])) {
-            $probTop = $d['distribucion']['items'][0]['label'];
-            break;
+    $probCounts = [];
+    foreach ($rows as $r) {
+        $val = trim((string)($r['primary_problem'] ?? ''));
+        if ($val === '') continue;
+        $parts = explode('|', $val);
+        foreach ($parts as $p) {
+            $p = trim($p);
+            if ($p !== '') {
+                $probCounts[$p] = ($probCounts[$p] ?? 0) + 1;
+            }
         }
     }
+    arsort($probCounts);
+    $probTop = !empty($probCounts) ? array_key_first($probCounts) : '';
+
     // Limpiar caracteres corruptos (diamond) u otros caracteres inválidos sin modificar la BD
     $probTop = @mb_convert_encoding($probTop, 'UTF-8', 'UTF-8'); // limpia bytes inválidos
     $probTop = str_replace(["\xEF\xBF\xBD", "", ""], "", $probTop);

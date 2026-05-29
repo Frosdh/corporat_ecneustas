@@ -166,7 +166,7 @@ header('Expires: 0');
                     <div class="card">
                         <label class="field-label" for="sector-filter">Sector en monitoreo</label>
                         <select id="sector-filter">
-                            <option value="general">Todo San Bartolome</option>
+                            <option value="general">Todas las zonas</option>
                         </select>
                     </div>
                     <div id="network-card" class="card network-card hidden">
@@ -180,9 +180,9 @@ header('Expires: 0');
 
                 <div class="kpi-grid">
                     <article class="card kpi-card">
-                        <span class="eyebrow">Muestras levantadas</span>
-                        <h3 id="kpi-total">0 / 300</h3>
-                        <div class="progress"><div id="kpi-total-bar" class="progress-bar"></div></div>
+                        <span class="eyebrow">Encuestas registradas</span>
+                        <h3 id="kpi-total">0</h3>
+                        <div class="progress" title="Avance hacia la meta de encuestas"><div id="kpi-total-bar" class="progress-bar"></div></div>
                     </article>
                     <article class="card kpi-card">
                         <span class="eyebrow">Pobreza estructural</span>
@@ -198,7 +198,7 @@ header('Expires: 0');
                     </article>
                 </div>
 
-                <!-- Tacómetros de sentimiento por dimensión -->
+                <!-- Tacometros de sentimiento por dimension -->
                 <article class="card dash-gauge-card">
                     <div class="section-title">
                         <h3>Sentimiento por Dimensi&oacute;n</h3>
@@ -273,46 +273,82 @@ header('Expires: 0');
 
                     <article class="card">
                         <div class="section-title" style="margin-bottom:.25rem">
-                            <h3>Aceptación a Inversión Externa</h3>
+                            <h3>Aceptacion a Inversion Externa</h3>
                         </div>
                         <p style="font-size:.78rem;color:#A67C52;margin-bottom:.9rem;">
-                            Pregunta: <em>"¿Acepta usted inversión externa en su comunidad?"</em>
+                            Pregunta: <em>"Â¿Acepta usted inversion externa en su comunidad?"</em>
                             &mdash; calculado sobre encuestados que respondieron esa pregunta.
                         </p>
                         <div class="application-kpis" style="grid-template-columns:1fr 1fr;gap:.75rem;">
 
                             <div class="mini-kpi strat-favorable">
-                                <span class="strat-label">✅ Favorable</span>
+                                <span class="strat-label">âœ… Favorable</span>
                                 <strong id="strategy-favorable">0%</strong>
                                 <small id="strategy-favorable-count" style="color:#A67C52;font-size:.72rem;font-weight:400;"></small>
-                                <p class="strat-tip">Respondieron <strong>"Aceptación amplia"</strong>. Personas completamente abiertas a recibir inversión externa sin condiciones.</p>
+                                <p class="strat-tip">Respondieron <strong>"Aceptacion amplia"</strong>. Personas completamente abiertas a recibir inversion externa sin condiciones.</p>
                             </div>
 
                             <div class="mini-kpi strat-conditioned">
-                                <span class="strat-label">⚠️ Condicionada</span>
+                                <span class="strat-label">âš ï¸ Condicionada</span>
                                 <strong id="strategy-conditioned">0%</strong>
                                 <small id="strategy-conditioned-count" style="color:#A67C52;font-size:.72rem;font-weight:400;"></small>
-                                <p class="strat-tip">Respondieron <strong>"Aceptación condicionada"</strong>. Abiertos a inversión pero con condiciones o garantías previas.</p>
+                                <p class="strat-tip">Respondieron <strong>"Aceptacion condicionada"</strong>. Abiertos a inversion pero con condiciones o garantias previas.</p>
                             </div>
 
                             <div class="mini-kpi strat-contrary">
-                                <span class="strat-label">❌ Contraria</span>
+                                <span class="strat-label">âŒ Contraria</span>
                                 <strong id="strategy-contrary">0%</strong>
                                 <small id="strategy-contrary-count" style="color:#A67C52;font-size:.72rem;font-weight:400;"></small>
-                                <p class="strat-tip">Respondieron <strong>"Rechazo preventivo"</strong>. Personas que rechazan la inversión externa como medida de precaución.</p>
+                                <p class="strat-tip">Respondieron <strong>"Rechazo preventivo"</strong>. Personas que rechazan la inversion externa como medida de precaucion.</p>
                             </div>
 
                             <div class="mini-kpi strat-sector">
-                                <span class="strat-label">📍 Sector más abierto</span>
+                                <span class="strat-label">ðŸ“ Sector mas abierto</span>
                                 <strong id="strategy-open-sector">Sin datos</strong>
-                                <small style="color:#A67C52;font-size:.72rem;font-weight:400;">mayor concentración favorable</small>
-                                <p class="strat-tip">Sector con la <strong>mayor cantidad absoluta</strong> de respuestas favorables ("Aceptación amplia") entre todos los sectores encuestados.</p>
+                                <small style="color:#A67C52;font-size:.72rem;font-weight:400;">mayor concentracion favorable</small>
+                                <p class="strat-tip">Sector con la <strong>mayor cantidad absoluta</strong> de respuestas favorables ("Aceptacion amplia") entre todos los sectores encuestados.</p>
                             </div>
 
                         </div>
                         <div id="strategy-base" style="font-size:.72rem;color:#A67C52;margin-top:.6rem;text-align:right;"></div>
                     </article>
                 </div>
+
+                <!-- ═══ LISTADO DE ENCUESTAS REALIZADAS ═══ -->
+                <article class="card" style="margin-top:1.2rem;">
+                    <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                        <h3>Encuestas Realizadas</h3>
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                            <input id="dash-survey-search" type="text" placeholder="Buscar encuestado, sector…"
+                                style="padding:5px 10px;border:1px solid #d1c5b0;border-radius:6px;font-size:.82rem;width:200px;">
+                            <span id="dash-survey-count" style="font-size:.8rem;color:#A67C52;font-weight:600;"></span>
+                        </div>
+                    </div>
+                    <div style="overflow-x:auto;margin-top:.6rem;">
+                        <table id="dash-surveys-table" style="width:100%;border-collapse:collapse;font-size:.82rem;">
+                            <thead>
+                                <tr style="background:#f5ede0;color:#5a3e28;">
+                                    <th style="padding:8px 10px;text-align:left;white-space:nowrap;">#</th>
+                                    <th style="padding:8px 10px;text-align:left;white-space:nowrap;">Fecha</th>
+                                    <th style="padding:8px 10px;text-align:left;white-space:nowrap;">Sector</th>
+                                    <th style="padding:8px 10px;text-align:left;white-space:nowrap;">Comunidad</th>
+                                    <th style="padding:8px 10px;text-align:left;white-space:nowrap;">Encuestador/a</th>
+                                    <th style="padding:8px 10px;text-align:left;white-space:nowrap;">Género</th>
+                                    <th style="padding:8px 10px;text-align:left;white-space:nowrap;">Edad</th>
+                                    <th style="padding:8px 10px;text-align:left;white-space:nowrap;">Ocupación</th>
+                                    <th style="padding:8px 10px;text-align:left;white-space:nowrap;">Problemática</th>
+                                    <th style="padding:8px 10px;text-align:left;white-space:nowrap;">Clima político</th>
+                                    <th style="padding:8px 10px;text-align:left;white-space:nowrap;">Inversión</th>
+                                    <th style="padding:8px 10px;text-align:left;white-space:nowrap;">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-surveys-body">
+                                <tr><td colspan="12" style="padding:20px;text-align:center;color:#A67C52;">Cargando encuestas…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </article>
+
             </section>
 
             <section id="tab-reports" class="tab-panel hidden">
@@ -867,7 +903,7 @@ header('Expires: 0');
                 </div>
             </section>
             <!-- =========================================================
-                 TAB: PREGUNTAS — Gr&aacute;ficas por pregunta de encuesta
+                 TAB: PREGUNTAS â€” Gr&aacute;ficas por pregunta de encuesta
                  ========================================================= -->
             <section id="tab-preguntas" class="tab-panel hidden">
                 <div class="analisis-topbar">
@@ -877,7 +913,7 @@ header('Expires: 0');
                     </div>
                     <div class="analisis-topbar-right">
                         <select id="preguntas-sector-filter" class="analisis-select">
-                            <option value="general">Todo San Bartolome</option>
+                            <option value="general">Todas las zonas</option>
                         </select>
                         <button id="preguntas-refresh-btn" class="analisis-refresh-btn" type="button">&#8635; Actualizar</button>
                     </div>
@@ -892,22 +928,22 @@ header('Expires: 0');
             </section>
 
             <!-- =========================================================
-                 TAB: ANÁLISIS EXPERTO DE ENCUESTAS (IA / PIVOT-style)
+                 TAB: ANALISIS EXPERTO DE ENCUESTAS (IA / PIVOT-style)
                  ========================================================= -->
             <section id="tab-analisis" class="tab-panel hidden">
 
                 <!-- Barra de control -->
                 <div class="analisis-topbar">
                     <div class="analisis-topbar-left">
-                        <h2 class="analisis-titulo">Análisis Experto de Encuestas</h2>
-                        <p class="analisis-subtitulo">Estadística descriptiva &middot; Sentimiento comunitario &middot; Actualización automática cada 90 s</p>
+                        <h2 class="analisis-titulo">Analisis Experto de Encuestas</h2>
+                        <p class="analisis-subtitulo">Estadistica descriptiva &middot; Sentimiento comunitario &middot; Actualizacion automatica cada 90 s</p>
                     </div>
                     <div class="analisis-topbar-right">
                         <select id="analisis-sector-filter" class="analisis-select">
-                            <option value="general">Todo San Bartolome</option>
+                            <option value="general">Todas las zonas</option>
                         </select>
-                        <button id="analisis-refresh-btn" class="analisis-refresh-btn" type="button">&#8635; Actualizar</button>
-                        <button id="analisis-pdf-btn" class="analisis-refresh-btn" type="button" style="background:#7c3aed;" title="Exportar reporte técnico-científico en PDF">&#128196; Reporte PDF</button>
+                        <button id="analisis-refresh-btn" class="analisis-refresh-btn" type="button">Actualizar</button>
+                        <button id="analisis-pdf-btn" class="analisis-refresh-btn" type="button" style="background:#7c3aed;" title="Exportar reporte tecnico-cientifico en PDF">Reporte PDF</button>
                         <span id="analisis-last-update" class="analisis-timestamp">Sin cargar</span>
                     </div>
                 </div>
@@ -919,8 +955,8 @@ header('Expires: 0');
                 </div>
                 <div id="analisis-empty" class="analisis-empty hidden">
                     <div class="analisis-empty-icon" style="font-size:36px; color:var(--muted); line-height:1;">&#9998;</div>
-                    <p>Sin encuestas registradas aún.</p>
-                    <small>El análisis aparecerá automáticamente cuando lleguen datos de campo.</small>
+                    <p>Sin encuestas registradas aun.</p>
+                    <small>El analisis aparecera automaticamente cuando lleguen datos de campo.</small>
                 </div>
 
                 <!-- Contenido principal -->
@@ -932,35 +968,35 @@ header('Expires: 0');
                             <div class="kpi-icon-wrap kpi-blue">#</div>
                             <div class="kpi-info">
                                 <span class="kpi-label">Total Encuestas</span>
-                                <strong id="analisis-total-n" class="kpi-value">—</strong>
+                                <strong id="analisis-total-n" class="kpi-value">â€”</strong>
                             </div>
                         </div>
                         <div class="analisis-kpi-card">
                             <div class="kpi-icon-wrap kpi-teal">~</div>
                             <div class="kpi-info">
-                                <span class="kpi-label">Índice Neto Global</span>
-                                <strong id="kpi-indice-global" class="kpi-value">—</strong>
+                                <span class="kpi-label">Andice Neto Global</span>
+                                <strong id="kpi-indice-global" class="kpi-value">â€”</strong>
                             </div>
                         </div>
                         <div class="analisis-kpi-card">
                             <div class="kpi-icon-wrap kpi-green">+</div>
                             <div class="kpi-info">
                                 <span class="kpi-label">Sentimiento Positivo</span>
-                                <strong id="analisis-pos-global" class="kpi-value kpi-green-val">—</strong>
+                                <strong id="analisis-pos-global" class="kpi-value kpi-green-val">â€”</strong>
                             </div>
                         </div>
                         <div class="analisis-kpi-card">
                             <div class="kpi-icon-wrap kpi-red">-</div>
                             <div class="kpi-info">
                                 <span class="kpi-label">Sentimiento Negativo</span>
-                                <strong id="analisis-neg-global" class="kpi-value kpi-red-val">—</strong>
+                                <strong id="analisis-neg-global" class="kpi-value kpi-red-val">â€”</strong>
                             </div>
                         </div>
                         <div class="analisis-kpi-card kpi-wide">
                             <div class="kpi-icon-wrap kpi-orange">!</div>
                             <div class="kpi-info">
-                                <span class="kpi-label">Problemática Principal</span>
-                                <strong id="analisis-problema" class="kpi-value kpi-problem-text">—</strong>
+                                <span class="kpi-label">Problematica Principal</span>
+                                <strong id="analisis-problema" class="kpi-value kpi-problem-text">â€”</strong>
                             </div>
                         </div>
                     </div>
@@ -969,7 +1005,7 @@ header('Expires: 0');
                     <div class="analisis-ejecutivo-card" id="analisis-ejecutivo">
                         <div class="analisis-ejecutivo-left">
                             <div class="analisis-label-pill" id="analisis-nivel-badge">ANALIZANDO&hellip;</div>
-                            <h3 id="analisis-narrativa" class="analisis-narrativa">Cargando análisis experto&hellip;</h3>
+                            <h3 id="analisis-narrativa" class="analisis-narrativa">Cargando analisis experto&hellip;</h3>
                         </div>
                         <div class="analisis-ejecutivo-right">
                             <canvas id="chart-sentimiento-global" width="230" height="230"></canvas>
@@ -977,17 +1013,17 @@ header('Expires: 0');
                                 <div class="donut-leg-item">
                                     <span class="legend-dot" style="background:#0f9f6e"></span>
                                     <span>Positivo</span>
-                                    <strong id="leg-pos">—</strong>%
+                                    <strong id="leg-pos">â€”</strong>%
                                 </div>
                                 <div class="donut-leg-item">
                                     <span class="legend-dot" style="background:#d97706"></span>
                                     <span>Neutro</span>
-                                    <strong id="leg-neu">—</strong>%
+                                    <strong id="leg-neu">â€”</strong>%
                                 </div>
                                 <div class="donut-leg-item">
                                     <span class="legend-dot" style="background:#c43d45"></span>
                                     <span>Negativo</span>
-                                    <strong id="leg-neg">—</strong>%
+                                    <strong id="leg-neg">â€”</strong>%
                                 </div>
                             </div>
                         </div>
@@ -996,8 +1032,8 @@ header('Expires: 0');
                     <!-- Radar de dimensiones -->
                     <div class="analisis-section-row">
                         <div class="premium-radar-header">
-                            <h3 class="analisis-section-header">Vista Radar — Comparativa por Dimensión</h3>
-                            <p class="analisis-section-desc">Cada eje evalúa el sentimiento mediante un <b>Índice Neto</b> (escala -100 a +100 puntos), calculado como: <i>% Positivo menos % Negativo</i>. Verde = favorable, rojo = crítico.</p>
+                            <h3 class="analisis-section-header">Vista Radar â€” Comparativa por Dimension</h3>
+                            <p class="analisis-section-desc">Cada eje evalua el sentimiento mediante un <b>Andice Neto</b> (escala -100 a +100 puntos), calculado como: <i>% Positivo menos % Negativo</i>. Verde = favorable, rojo = critico.</p>
                         </div>
                     </div>
                     <div class="card analisis-radar-card">
@@ -1007,8 +1043,8 @@ header('Expires: 0');
                     <!-- Dimensiones -->
                     <div class="analisis-section-row">
                         <div>
-                            <h3 class="analisis-section-header">Análisis Detallado por Dimensión</h3>
-                            <p class="analisis-section-desc">Distribución de respuestas y sentimiento por cada eje temático de la encuesta parroquial.</p>
+                            <h3 class="analisis-section-header">Analisis Detallado por Dimension</h3>
+                            <p class="analisis-section-desc">Distribucion de respuestas y sentimiento por cada eje tematico de la encuesta parroquial.</p>
                         </div>
                     </div>
                     <div id="analisis-dimensiones-grid" class="analisis-dim-grid"></div>
@@ -1017,7 +1053,7 @@ header('Expires: 0');
                     <div class="analisis-section-row">
                         <div>
                             <h3 class="analisis-section-header">Percepciones sobre la Actividad Minera</h3>
-                            <p class="analisis-section-desc">Selección múltiple — un encuestado puede indicar varios ítems.</p>
+                            <p class="analisis-section-desc">Seleccion multiple â€” un encuestado puede indicar varios items.</p>
                         </div>
                     </div>
                     <div class="analisis-mining-grid">
@@ -1034,8 +1070,8 @@ header('Expires: 0');
                     <!-- Conocimiento minero -->
                     <div class="analisis-section-row">
                         <div>
-                            <h3 class="analisis-section-header">Nivel de Conocimiento sobre Minería</h3>
-                            <p class="analisis-section-desc">Semáforo: <span style="color:#4caf50; font-weight:600;">&#9679;</span> &ge;60% buen conocimiento &nbsp;<span style="color:#ff9800; font-weight:600;">&#9679;</span> 30-59% parcial &nbsp;<span style="color:#e53935; font-weight:600;">&#9679;</span> &lt;30% socializaci&oacute;n urgente</p>
+                            <h3 class="analisis-section-header">Nivel de Conocimiento sobre Mineria</h3>
+                            <p class="analisis-section-desc">Semaforo: <span style="color:#4caf50; font-weight:600;">&#9679;</span> &ge;60% buen conocimiento &nbsp;<span style="color:#ff9800; font-weight:600;">&#9679;</span> 30-59% parcial &nbsp;<span style="color:#e53935; font-weight:600;">&#9679;</span> &lt;30% socializaci&oacute;n urgente</p>
                         </div>
                     </div>
                     <div class="card analisis-conocimiento-card">
@@ -1045,7 +1081,7 @@ header('Expires: 0');
                     <!-- Correlaciones -->
                     <div class="analisis-section-row">
                         <div>
-                            <h3 class="analisis-section-header">Correlaciones y Cruces Estratégicos</h3>
+                            <h3 class="analisis-section-header">Correlaciones y Cruces Estrategicos</h3>
                             <p class="analisis-section-desc">Diferencia expresada en puntos porcentuales (pp) entre grupos comparados.</p>
                         </div>
                     </div>
@@ -1054,8 +1090,8 @@ header('Expires: 0');
                     <!-- Tendencia temporal -->
                     <div class="analisis-section-row">
                         <div>
-                            <h3 class="analisis-section-header">Tendencia del Levantamiento (últimos 14 días)</h3>
-                            <p class="analisis-section-desc">Barras: encuestas por día &nbsp;&middot;&nbsp; Línea: % de apertura a inversión minera.</p>
+                            <h3 class="analisis-section-header">Tendencia del Levantamiento (ultimos 14 dias)</h3>
+                            <p class="analisis-section-desc">Barras: encuestas por dia &nbsp;&middot;&nbsp; Linea: % de apertura a inversion minera.</p>
                         </div>
                     </div>
                     <div class="card analisis-chart-card">
@@ -1066,18 +1102,18 @@ header('Expires: 0');
                     <div class="analisis-section-row">
                         <div>
                             <h3 class="analisis-section-header">Gauge de Sentimiento Neto</h3>
-                            <p class="analisis-section-desc">Semicírculo de &minus;100 a +100 puntos. Verde = favorable, rojo = crítico.</p>
+                            <p class="analisis-section-desc">Semicirculo de &minus;100 a +100 puntos. Verde = favorable, rojo = critico.</p>
                         </div>
                     </div>
                     <div class="card analisis-chart-card" style="max-width:420px;margin:0 auto;">
                         <canvas id="chart-gauge" height="180"></canvas>
                     </div>
 
-                    <!-- Distribución por sector -->
+                    <!-- Distribucion por sector -->
                     <div class="analisis-section-row">
                         <div>
-                            <h3 class="analisis-section-header">Distribución por Sector</h3>
-                            <p class="analisis-section-desc">Número de encuestas registradas por zona geográfica.</p>
+                            <h3 class="analisis-section-header">Distribucion por Sector</h3>
+                            <p class="analisis-section-desc">Numero de encuestas registradas por zona geografica.</p>
                         </div>
                     </div>
                     <div class="card analisis-chart-card">
@@ -1099,3 +1135,5 @@ header('Expires: 0');
     <script src="frontend/app.js?v=<?= time() ?>" charset="utf-8"></script>
 </body>
 </html>
+
+
