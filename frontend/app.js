@@ -2610,9 +2610,13 @@ function escHtml(str) {
 
 
 
+
+
+
 // ============================================================
-//  GENERADOR DE REPORTE TÉCNICO EN PDF
+//  REPORTE TÉCNICO-CIENTÍFICO — HTML + BLOB + PRINT
 // ============================================================
+
 async function generateAnalisisPDF() {
     const data = analisisState.data;
     if (!data) { alert('Carga primero el análisis antes de exportar.'); return; }
@@ -2621,340 +2625,470 @@ async function generateAnalisisPDF() {
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Generando…'; }
 
     try {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        const W = 210, H = 297;
-        const margin = 15;
-        const contentW = W - margin * 2;
+        const r  = data.resumen_ejecutivo || {};
+        const sg = data.sentimiento_global || {};
 
-        const sector = String(document.getElementById('analisis-sector-filter')?.selectedOptions[0]?.text || 'Todo San Bartolome');
-        const fecha = new Date().toLocaleDateString('es-EC', { year:'numeric', month:'long', day:'numeric' });
-        const r = data.resumen_ejecutivo || {};
+        const sEl    = document.getElementById('analisis-sector-filter');
+        const sector = sEl?.selectedOptions[0]?.text || 'Todo San Bartolomé';
+        const sVal   = sEl?.value || 'general';
 
-        // ── Helpers ──────────────────────────────────────────
-        function str(val) { return val === null || val === undefined ? '—' : String(val); }
+        const now   = new Date();
+        const meses = ['enero','febrero','marzo','abril','mayo','junio',
+                       'julio','agosto','septiembre','octubre','noviembre','diciembre'];
+        const fecha = `${now.getDate()} de ${meses[now.getMonth()]} de ${now.getFullYear()}`;
 
-        function setFont(style, size, color) {
-            doc.setFont('helvetica', style || 'normal');
-            doc.setFontSize(size || 10);
-            doc.setTextColor(...(color || [30, 30, 30]));
-        }
-
-        function hline(y, color) {
-            doc.setDrawColor(...(color || [180, 180, 180]));
-            doc.setLineWidth(0.3);
-            doc.line(margin, y, W - margin, y);
-        }
-
-        function filledRect(x, y, w, h, r2, g, b) {
-            doc.setFillColor(r2, g, b);
-            doc.roundedRect(x, y, w, h, 2, 2, 'F');
-        }
-
-        function kpiBox(x, y, w, label, value, r2, g, b) {
-            filledRect(x, y, w, 22, r2, g, b);
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(16);
-            doc.setTextColor(255, 255, 255);
-            doc.text(str(value), x + w / 2, y + 13, { align: 'center' });
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(7.5);
-            doc.setTextColor(220, 220, 220);
-            doc.text(str(label), x + w / 2, y + 19, { align: 'center' });
-        }
-
-        async function captureCanvas(canvasId) {
-            const el = document.getElementById(canvasId);
+        // ── Captura gráficas ──────────────────────────────────
+        async function cap(id) {
+            const el = document.getElementById(id);
             if (!el) return null;
             try {
-                const img = await html2canvas(el, { backgroundColor: '#1a1a2e', scale: 2, useCORS: true });
-                return img.toDataURL('image/png');
+                const c = await html2canvas(el, { backgroundColor:'#1e2235', scale:2, useCORS:true, logging:false });
+                return c.toDataURL('image/png');
             } catch { return null; }
         }
-
-        function safeSign(val) {
-            const n = Number(val) || 0;
-            return (n > 0 ? '+' : '') + n + ' pts';
+        const [imgDonut, imgRadar, imgTendencia] = await Promise.all([
+            cap('chart-sentimiento-global'),
+            cap('chart-radar-dimensiones'),
+            cap('chart-tendencia'),
+        ]);
+        const imgsDim = [];
+        for (let i = 0; i < (data.dimensiones || []).length; i++) {
+            imgsDim.push(await cap('chart-dim-' + i));
         }
 
-        // ════════════════════════════════════════════
-        // PÁGINA 1 — PORTADA
-        // ════════════════════════════════════════════
-        filledRect(0, 0, W, 80, 14, 78, 176);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(22);
-        doc.setTextColor(255, 255, 255);
-        doc.text('REPORTE TECNICO DE ANALISIS', W / 2, 28, { align: 'center' });
-        doc.setFontSize(14);
-        doc.text('Encuestas Parroquiales — San Bartolome', W / 2, 40, { align: 'center' });
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.text('Zona analizada: ' + sector, W / 2, 54, { align: 'center' });
-        doc.text('Fecha de emision: ' + fecha, W / 2, 62, { align: 'center' });
-        doc.text('Generado: ' + str(data.generado_en), W / 2, 70, { align: 'center' });
+        // ── Fetch preguntas ────────────────────────────────────
+        let pregData = null;
+        try {
+            const pp = await requestJson('preguntas', { params: { sector: sVal } });
+            if (pp?.preguntas?.total > 0) pregData = pp.preguntas;
+        } catch { /* sin preguntas */ }
 
-        // Nivel sentimiento pill
-        const pillColors = { verde: [15, 159, 110], amarillo: [217, 119, 6], rojo: [196, 61, 69] };
-        const pc = pillColors[r.color_sentimiento] || [80, 80, 80];
-        filledRect(margin, 88, contentW, 18, ...pc);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(13);
-        doc.setTextColor(255, 255, 255);
-        doc.text('Nivel de Sentimiento: ' + str(r.nivel_sentimiento), W / 2, 100, { align: 'center' });
+        // ── Helpers ───────────────────────────────────────────
+        const esc = v => String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const p   = v => (Number(v) || 0).toFixed(1) + '%';
+        const n   = v => Number(v) || 0;
+        const sgn = v => { const x = n(v); return (x >= 0 ? '+' : '') + x; };
 
-        // KPI boxes row
-        const kpiY = 114;
-        const kw = (contentW - 6) / 4;
-        kpiBox(margin, kpiY, kw, 'Encuestas', str(r.total_encuestas), 14, 78, 176);
-        kpiBox(margin + kw + 2, kpiY, kw, 'Indice Neto', safeSign(r.indice_global), 15, 159, 110);
-        kpiBox(margin + (kw + 2) * 2, kpiY, kw, 'Positivo', str(r.positivo_global) + '%', 15, 159, 110);
-        kpiBox(margin + (kw + 2) * 3, kpiY, kw, 'Negativo', str(r.negativo_global) + '%', 196, 61, 69);
+        function sentColor(i) { const x=n(i); return x>=15?'#0f9f6e':x<=-15?'#c43d45':'#d97706'; }
+        function sentLabel(i) { const x=n(i); return x>=15?'FAVORABLE':x<=-15?'CRÍTICO':'AMBIVALENTE'; }
 
-        // Narrativa ejecutiva
-        setFont('bold', 11, [14, 78, 176]);
-        doc.text('Narrativa Ejecutiva', margin, kpiY + 30);
-        hline(kpiY + 32, [14, 78, 176]);
-        setFont('normal', 9, [50, 50, 50]);
-        const narText = str(r.narrativa);
-        const narLines = doc.splitTextToSize(narText, contentW);
-        doc.text(narLines, margin, kpiY + 38);
-        const narHeight = narLines.length * 4.5;
+        function barRow(label, pctVal, count, color) {
+            const w = Math.min(100, Math.max(0, n(pctVal)));
+            const cntTxt = count !== undefined ? ` <small style="color:#888">(n=${n(count)})</small>` : '';
+            return `<div class="br">
+              <span class="bl">${esc(label)}</span>
+              <div class="bt"><div class="bf" style="width:${w}%;background:${color}"></div></div>
+              <span class="bp" style="color:${color}">${w.toFixed(1)}%${cntTxt}</span>
+            </div>`;
+        }
 
-        // Problemática
-        const probY = kpiY + 42 + narHeight;
-        setFont('bold', 10, [196, 61, 69]);
-        doc.text('Problematica Principal:', margin, probY);
-        setFont('normal', 10, [50, 50, 50]);
-        doc.text(str(r.problema_principal), margin + 48, probY);
-
-        // Tabla de sentimiento global
-        const sentY = Math.min(probY + 12, H - 55);
-        setFont('bold', 10, [30, 30, 30]);
-        doc.text('Sentimiento Global', margin, sentY);
-        hline(sentY + 2);
-        const sg = data.sentimiento_global || {};
-        const rows = [
-            ['Positivo', str(sg.positivo_pct) + '%', str(sg.positivo_n) + ' personas'],
-            ['Neutro',   str(sg.neutro_pct)   + '%', str(sg.neutro_n)   + ' personas'],
-            ['Negativo', str(sg.negativo_pct)  + '%', str(sg.negativo_n)  + ' personas'],
-        ];
-        const rowColors = [[15,159,110],[217,119,6],[196,61,69]];
-        rows.forEach(([label, pct, n], i) => {
-            const ry = sentY + 6 + i * 9;
-            if (ry < H - 10) {
-                filledRect(margin, ry, 4, 7, ...rowColors[i]);
-                setFont('normal', 9, [30, 30, 30]);
-                doc.text(str(label), margin + 7, ry + 5);
-                doc.text(str(pct), margin + 60, ry + 5);
-                doc.text(str(n), margin + 100, ry + 5);
-            }
+        // ── Dimensiones ───────────────────────────────────────
+        let dimsHtml = '';
+        (data.dimensiones || []).forEach((dim, i) => {
+            const ds  = dim.sentimiento || {};
+            const col = sentColor(ds.indice);
+            const lbl = sentLabel(ds.indice);
+            const img = imgsDim[i] ? `<div class="dim-img-wrap"><img src="${imgsDim[i]}"></div>` : '';
+            const bars = (dim.distribucion?.items || []).slice(0,8).map(it => barRow(it.label, it.pct, undefined, col)).join('');
+            dimsHtml += `
+            <div class="dim-card no-break">
+              <div class="dim-h" style="background:${col}">
+                <span class="dim-name">${esc(dim.nombre)}</span>
+                <span class="dim-badge">${lbl} &nbsp; ${sgn(ds.indice)} pts</span>
+              </div>
+              <div class="dim-stats">
+                <span style="color:#0f9f6e">▲ Positivo: ${p(ds.positivo_pct)}</span>
+                <span style="color:#d97706">● Neutro: ${p(ds.neutro_pct)}</span>
+                <span style="color:#c43d45">▼ Negativo: ${p(ds.negativo_pct)}</span>
+              </div>
+              <div class="dim-body">${img}<div class="dim-bars">${bars}</div></div>
+            </div>`;
         });
 
-        // ════════════════════════════════════════════
-        // PÁGINA 2 — GRÁFICAS
-        // ════════════════════════════════════════════
-        doc.addPage();
-        filledRect(0, 0, W, 18, 14, 78, 176);
-        setFont('bold', 13, [255, 255, 255]);
-        doc.text('Analisis Grafico de Sentimiento', W / 2, 12, { align: 'center' });
-
-        let py = 24;
-
-        const donutImg = await captureCanvas('chart-sentimiento-global');
-        if (donutImg) {
-            setFont('bold', 10, [14, 78, 176]);
-            doc.text('Distribucion de Sentimiento', margin, py);
-            hline(py + 2, [14, 78, 176]);
-            doc.addImage(donutImg, 'PNG', W/2 - 35, py + 5, 70, 70);
-            py += 82;
-        }
-
-        const gaugeImg = await captureCanvas('chart-gauge');
-        if (gaugeImg) {
-            setFont('bold', 10, [14, 78, 176]);
-            doc.text('Gauge de Sentimiento Neto', margin, py);
-            hline(py + 2, [14, 78, 176]);
-            doc.addImage(gaugeImg, 'PNG', W/2 - 45, py + 5, 90, 55);
-            py += 65;
-        }
-
-        const radarImg = await captureCanvas('chart-radar-dimensiones');
-        if (radarImg) {
-            if (py + 85 > H - 20) { doc.addPage(); py = 20; }
-            setFont('bold', 10, [14, 78, 176]);
-            doc.text('Radar Comparativo por Dimension', margin, py);
-            hline(py + 2, [14, 78, 176]);
-            doc.addImage(radarImg, 'PNG', margin, py + 5, contentW, 80);
-            py += 90;
-        }
-
-        // ════════════════════════════════════════════
-        // PÁGINA 3 — DIMENSIONES
-        // ════════════════════════════════════════════
-        doc.addPage();
-        filledRect(0, 0, W, 18, 14, 78, 176);
-        setFont('bold', 13, [255, 255, 255]);
-        doc.text('Analisis Detallado por Dimension', W / 2, 12, { align: 'center' });
-
-        py = 26;
-        (data.dimensiones || []).forEach((dim) => {
-            if (py > H - 40) { doc.addPage(); py = 20; }
-            const dimSent = dim.sentimiento || {};
-            const indice = Number(dimSent.indice) || 0;
-            const sc = indice >= 15 ? [15,159,110] : indice <= -15 ? [196,61,69] : [217,119,6];
-            filledRect(margin, py, contentW, 8, ...sc);
-            setFont('bold', 10, [255, 255, 255]);
-            const dimLabel = indice >= 15 ? 'FAVORABLE' : indice <= -15 ? 'CRITICO' : 'AMBIVALENTE';
-            doc.text(str(dim.nombre), margin + 3, py + 5.5);
-            doc.text('Indice: ' + safeSign(indice) + '  |  ' + dimLabel, W - margin - 3, py + 5.5, { align: 'right' });
-            py += 10;
-
-            setFont('normal', 8, [50, 50, 50]);
-            doc.text('Positivo: ' + str(dimSent.positivo_pct) + '%   Neutro: ' + str(dimSent.neutro_pct) + '%   Negativo: ' + str(dimSent.negativo_pct) + '%', margin, py);
-            py += 5;
-
-            const items = (dim.distribucion?.items || []).slice(0, 6);
-            items.forEach(item => {
-                if (py > H - 20) { doc.addPage(); py = 20; }
-                const itemPct = Number(item.pct) || 0;
-                const barW = (itemPct / 100) * (contentW - 60);
-                filledRect(margin + 55, py - 3, Math.max(0.5, barW), 5, ...sc);
-                setFont('normal', 7.5, [60, 60, 60]);
-                const rawLabel = str(item.label);
-                const shortLabel = rawLabel.length > 28 ? rawLabel.substring(0, 27) + '...' : rawLabel;
-                doc.text(shortLabel, margin, py + 0.5);
-                doc.text(str(itemPct) + '%', margin + 52, py + 0.5, { align: 'right' });
-                py += 6;
+        // ── Preguntas ─────────────────────────────────────────
+        let pregHtml = '';
+        if (pregData) {
+            (pregData.grupos || []).forEach(g => {
+                if (!g.preguntas?.length) return;
+                pregHtml += `<div class="pg-grupo"><h3 class="pg-gtit">${esc(g.titulo)}</h3><div class="pg-grid">`;
+                g.preguntas.forEach(preg => {
+                    if (!preg.distribucion?.length) return;
+                    const tot = preg.distribucion.reduce((s,d) => s + n(d.count), 0);
+                    const rows = preg.distribucion.map(o => {
+                        const pct2 = tot > 0 ? (n(o.count)/tot)*100 : 0;
+                        return barRow(o.label, pct2, o.count, '#0e4eb0');
+                    }).join('');
+                    pregHtml += `<div class="pg-card no-break">
+                      <p class="pg-q">${esc(preg.pregunta)}</p>
+                      <p class="pg-n">n = ${n(preg.respondentes)} respuestas</p>
+                      ${rows}
+                    </div>`;
+                });
+                pregHtml += '</div></div>';
             });
-            py += 4;
-        });
-
-        // ════════════════════════════════════════════
-        // PÁGINA 4 — PERCEPCIONES MINERAS
-        // ════════════════════════════════════════════
-        doc.addPage();
-        filledRect(0, 0, W, 18, 14, 78, 176);
-        setFont('bold', 13, [255, 255, 255]);
-        doc.text('Percepciones sobre la Actividad Minera', W / 2, 12, { align: 'center' });
-
-        py = 26;
-
-        function renderBarSection(title, items, color) {
-            if (py > H - 30) { doc.addPage(); py = 20; }
-            setFont('bold', 10, color);
-            doc.text(str(title), margin, py);
-            hline(py + 2, color);
-            py += 7;
-            (items || []).slice(0, 8).forEach(item => {
-                if (py > H - 15) { doc.addPage(); py = 20; }
-                const itemPct = Number(item.pct) || 0;
-                const barW = (itemPct / 100) * (contentW - 55);
-                doc.setFillColor(...color);
-                doc.roundedRect(margin + 52, py - 3.5, Math.max(0.5, barW), 5, 1, 1, 'F');
-                setFont('normal', 7.5, [60, 60, 60]);
-                const rawLabel = str(item.label);
-                const shortLabel = rawLabel.length > 28 ? rawLabel.substring(0, 27) + '...' : rawLabel;
-                doc.text(shortLabel, margin, py + 0.5);
-                doc.text(str(itemPct) + '%  (n=' + str(item.n) + ')', margin + 50, py + 0.5, { align: 'right' });
-                py += 6.5;
-            });
-            py += 6;
         }
 
-        renderBarSection('Beneficios Percibidos', data.beneficios_mineros, [15, 159, 110]);
-        renderBarSection('Riesgos Percibidos', data.riesgos_mineros, [196, 61, 69]);
+        // ── Percepciones mineras ──────────────────────────────
+        const benHtml  = (data.beneficios_mineros||[]).map(it => barRow(it.label,it.pct,it.n,'#0f9f6e')).join('');
+        const rskHtml  = (data.riesgos_mineros||[]).map(it => barRow(it.label,it.pct,it.n,'#c43d45')).join('');
+        const conocHtml = (data.conocimiento_minero||[]).map(it => {
+            const kp = n(it.pct);
+            const kc = kp>=60?'#0f9f6e':kp>=30?'#d97706':'#c43d45';
+            return `<div class="krow"><span class="kdot" style="background:${kc}"></span>
+              <span>${esc(it.label)}</span><strong style="color:${kc}">${kp.toFixed(1)}%</strong></div>`;
+        }).join('');
 
-        // Conocimiento minero
-        if (py > H - 50) { doc.addPage(); py = 20; }
-        setFont('bold', 10, [14, 78, 176]);
-        doc.text('Nivel de Conocimiento sobre Mineria', margin, py);
-        hline(py + 2, [14, 78, 176]);
-        py += 7;
-        (data.conocimiento_minero || []).forEach(item => {
-            if (py > H - 15) { doc.addPage(); py = 20; }
-            const itemPct = Number(item.pct) || 0;
-            const tc = itemPct >= 60 ? [15,159,110] : itemPct >= 30 ? [217,119,6] : [196,61,69];
-            filledRect(margin, py - 3.5, 4, 5, ...tc);
-            setFont('normal', 8, [50, 50, 50]);
-            const rawLabel = str(item.label);
-            const shortLabel = rawLabel.length > 35 ? rawLabel.substring(0, 34) + '...' : rawLabel;
-            doc.text(shortLabel, margin + 6, py + 0.5);
-            doc.text(str(itemPct) + '%', W - margin, py + 0.5, { align: 'right' });
-            py += 6;
-        });
+        // ── Correlaciones ─────────────────────────────────────
+        const corrHtml = (data.correlaciones||[]).map(c => `
+          <div class="corr no-break">
+            <strong>${esc(c.titulo)}</strong>
+            <p>${esc(c.descripcion||c.interpretacion||'')}</p>
+          </div>`).join('');
 
-        // ════════════════════════════════════════════
-        // PÁGINA 5 — CORRELACIONES Y TENDENCIA
-        // ════════════════════════════════════════════
-        doc.addPage();
-        filledRect(0, 0, W, 18, 14, 78, 176);
-        setFont('bold', 13, [255, 255, 255]);
-        doc.text('Correlaciones y Tendencia Temporal', W / 2, 12, { align: 'center' });
+        // ── Sector dist ───────────────────────────────────────
+        const sectorHtml = (data.distribucion_por_sector||[]).map(it => barRow(it.label,it.pct,it.n,'#0e4eb0')).join('');
 
-        py = 26;
-        setFont('bold', 10, [14, 78, 176]);
-        doc.text('Correlaciones y Cruces Estrategicos', margin, py);
-        hline(py + 2, [14, 78, 176]);
-        py += 7;
+        // ── Nivel / color ─────────────────────────────────────
+        const nvlColor = {verde:'#0f9f6e',amarillo:'#d97706',rojo:'#c43d45'}[r.color_sentimiento]||'#555';
+        const indice   = n(r.indice_global);
 
-        (data.correlaciones || []).forEach(corr => {
-            if (py > H - 20) { doc.addPage(); py = 20; }
-            setFont('bold', 8.5, [30, 30, 30]);
-            doc.text(str(corr.titulo), margin, py);
-            setFont('normal', 7.5, [80, 80, 80]);
-            const lines = doc.splitTextToSize(str(corr.descripcion), contentW);
-            py += 4;
-            doc.text(lines, margin, py);
-            py += lines.length * 3.5 + 5;
-        });
+        // ── Conclusión mejorada ───────────────────────────────
+        const dimCriticas = (data.dimensiones||[]).filter(d => n(d.sentimiento?.indice) <= -15).map(d => d.nombre);
+        const dimFav      = (data.dimensiones||[]).filter(d => n(d.sentimiento?.indice) >= 15).map(d => d.nombre);
+        const critTxt     = dimCriticas.length ? `Las dimensiones que requieren atención urgente son: <strong>${dimCriticas.join(', ')}</strong>.` : '';
+        const favTxt      = dimFav.length ? `Las áreas con mayor favorabilidad comunitaria son: <strong>${dimFav.join(', ')}</strong>.` : '';
 
-        // Tendencia
-        if (py > H - 70) { doc.addPage(); py = 20; }
-        const tendImg = await captureCanvas('chart-tendencia');
-        if (tendImg) {
-            setFont('bold', 10, [14, 78, 176]);
-            doc.text('Tendencia del Levantamiento (ultimos 14 dias)', margin, py);
-            hline(py + 2, [14, 78, 176]);
-            doc.addImage(tendImg, 'PNG', margin, py + 5, contentW, 55);
-            py += 65;
+        const concl = `
+          <p>El análisis de las encuestas comunitarias en la zona <strong>"${esc(sector)}"</strong> revela
+          un índice neto de sentimiento de <strong>${sgn(indice)} puntos</strong>, categorizado como
+          <strong style="color:${nvlColor}">${esc(r.nivel_sentimiento)}</strong> dentro de la escala
+          de −100 a +100 puntos. Esta clasificación indica que el ${p(r.negativo_global)} de la ciudadanía
+          expresa preocupación, rechazo o insatisfacción frente a las dimensiones evaluadas, mientras
+          que únicamente el ${p(r.positivo_global)} presenta una posición favorable.</p>
+          <p style="margin-top:12px">La problemática que mayor preocupación genera en la ciudadanía es
+          <strong>"${esc(r.problema_principal)}"</strong>. ${critTxt} ${favTxt}</p>
+          <p style="margin-top:12px">Frente a este escenario, se plantean las siguientes líneas de acción:</p>
+          <ul class="recomend">
+            <li>Priorizar intervenciones de política pública en las dimensiones con índice crítico, articulando
+                respuestas concretas a las problemáticas de mayor recurrencia en las encuestas.</li>
+            <li>Fortalecer la confianza institucional mediante espacios de diálogo comunitario y rendición
+                de cuentas transparente entre las autoridades del GAD y la ciudadanía.</li>
+            <li>Implementar programas de socialización sobre actividad minera responsable,
+                especialmente en sectores con bajo nivel de conocimiento (semáforo rojo),
+                garantizando el acceso a información objetiva, técnica y en lenguaje accesible.</li>
+            <li>Diseñar estrategias diferenciadas por sector geográfico, considerando las brechas de
+                sentimiento detectadas entre zonas con mayor y menor participación en el levantamiento.</li>
+            <li>Mantener un sistema de monitoreo continuo mediante encuestas periódicas que permita
+                evaluar el impacto de las intervenciones y ajustar las estrategias de acuerdo con la
+                evolución del sentimiento comunitario.</li>
+          </ul>`;
+
+        // ══════════════════════════════════════════════════════
+        //  HTML DEL REPORTE
+        // ══════════════════════════════════════════════════════
+        const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reporte Técnico-Científico — San Bartolomé — ${esc(sector)}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif;font-size:10.5pt;color:#1e293b;background:#fff;line-height:1.65}
+h1,h2,h3,h4{font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif}
+
+/* Portada */
+.portada{background:linear-gradient(150deg,#0a3070 0%,#1155bb 55%,#0d4aa0 100%);
+         color:#fff;padding:70px 55px 55px;min-height:100vh;
+         display:flex;flex-direction:column;justify-content:space-between;page-break-after:always}
+.portada-insignia{font-size:9pt;letter-spacing:4px;text-transform:uppercase;opacity:.65;margin-bottom:50px;font-weight:600}
+.portada-titulo{font-size:32pt;font-weight:900;line-height:1.15;margin-bottom:12px;letter-spacing:-0.5px}
+.portada-sub{font-size:14pt;opacity:.85;margin-bottom:35px;font-weight:300}
+.portada-tabla{width:100%;border-collapse:collapse;background:rgba(255,255,255,.10);border-radius:10px;overflow:hidden}
+.portada-tabla td{padding:12px 18px;font-size:10.5pt;border-bottom:1px solid rgba(255,255,255,.1)}
+.portada-tabla td:first-child{font-weight:700;font-size:9pt;letter-spacing:1px;text-transform:uppercase;
+                               opacity:.7;width:180px}
+.portada-tabla tr:last-child td{border-bottom:none}
+.nivel-pill{margin-top:28px;padding:16px 24px;border-radius:8px;text-align:center;
+            font-size:13pt;font-weight:800;letter-spacing:.5px;box-shadow:0 4px 15px rgba(0,0,0,0.15)}
+.portada-foot{font-size:8.5pt;opacity:.5;text-align:center;margin-top:35px}
+
+/* Página */
+.page{padding:32px 42px;page-break-after:always}
+.page:last-of-type{page-break-after:auto}
+
+/* Cabecera de sección */
+.ph{background:#0e4eb0;color:#fff;border-radius:7px;padding:12px 20px;margin-bottom:24px}
+.ph h2{font-size:14pt;font-weight:800;margin-bottom:2px}
+.ph p{font-size:9pt;opacity:.85;font-weight:300}
+
+/* KPIs */
+.krow4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.kc{border-radius:9px;padding:18px 14px;text-align:center;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
+.kc .v{font-size:22pt;font-weight:900;display:block;line-height:1.1;margin-bottom:4px}
+.kc .l{font-size:8.5pt;opacity:.9;text-transform:uppercase;font-weight:600;letter-spacing:0.5px}
+
+/* Narrativa */
+.narr{background:#f1f5f9;border-left:5px solid #0e4eb0;padding:16px 22px;
+      border-radius:0 8px 8px 0;margin-bottom:20px;font-size:11pt;line-height:1.75;color:#334155}
+.prob{display:inline-block;background:#fee2e2;color:#991b1b;padding:6px 16px;
+      border-radius:20px;font-size:10pt;font-weight:700;margin-bottom:24px;}
+
+/* Tabla sentimiento */
+.stbl{width:100%;border-collapse:collapse;margin-bottom:24px}
+.stbl th{background:#0e4eb0;color:#fff;padding:10px 16px;font-size:9.5pt;text-align:left;font-weight:600}
+.stbl td{padding:10px 16px;font-size:10pt;border-bottom:1px solid #e2e8f0;color:#334155}
+.stbl tr:nth-child(even) td{background:#f8fafc}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px;vertical-align:middle}
+
+/* Metodología */
+.metod{background:#fdfce8;border:1px solid #fde047;border-radius:8px;
+       padding:16px 20px;font-size:9.5pt;line-height:1.75;margin-top:20px;color:#422006}
+.metod strong{color:#854d0e;font-weight:700}
+
+/* Barras */
+.br{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:9.5pt}
+.bl{width:200px;flex-shrink:0;color:#1e293b;font-weight:500}
+.bt{flex:1;height:10px;background:#e2e8f0;border-radius:5px;overflow:hidden}
+.bf{height:100%;border-radius:5px}
+.bp{width:90px;text-align:right;font-weight:700;font-size:9pt;color:#334155}
+
+/* Dimensiones */
+.dim-card{border:1px solid #e2e8f0;border-radius:10px;margin-bottom:20px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.02)}
+.dim-h{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;color:#fff}
+.dim-name{font-weight:800;font-size:11pt;letter-spacing:0.3px}
+.dim-badge{font-size:9pt;background:rgba(0,0,0,.25);padding:3px 12px;
+           border-radius:15px;font-weight:700;letter-spacing:0.5px}
+.dim-stats{display:flex;gap:24px;padding:10px 18px;background:#f8fafc;
+           font-size:9.5pt;font-weight:700;border-bottom:1px solid #e2e8f0}
+.dim-body{display:grid;grid-template-columns:160px 1fr;gap:16px;padding:16px 18px}
+.dim-img-wrap img{width:100%;border-radius:8px}
+.dim-bars{padding-top:2px}
+
+/* Preguntas */
+.pg-grupo{margin-bottom:30px}
+.pg-gtit{background:#1e293b;color:#f8fafc;padding:10px 18px;border-radius:8px;
+         font-size:12pt;font-weight:700;margin-bottom:16px}
+.pg-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pg-card{border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px;background:#fff}
+.pg-q{font-weight:700;font-size:10.5pt;color:#0f172a;margin-bottom:6px;line-height:1.5}
+.pg-n{font-size:8.5pt;color:#64748b;margin-bottom:12px;font-weight:500}
+
+/* Minería */
+.mine-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:26px}
+.mine-card{border:1px solid #e2e8f0;border-radius:10px;padding:18px;background:#fff}
+.mine-card h4{font-size:11pt;margin-bottom:14px;padding-bottom:8px;
+              border-bottom:2px solid;font-weight:800}
+
+/* Conocimiento */
+.krow{display:flex;align-items:center;gap:12px;padding:9px 0;
+      border-bottom:1px solid #f1f5f9;font-size:10pt;color:#334155;font-weight:500}
+.kdot{width:14px;height:14px;border-radius:50%;flex-shrink:0}
+.krow strong{margin-left:auto;font-size:11pt;font-weight:700}
+
+/* Correlaciones */
+.corr{background:#f8fafc;border-left:4px solid #0e4eb0;padding:14px 18px;
+      border-radius:0 8px 8px 0;margin-bottom:14px}
+.corr strong{display:block;font-size:10.5pt;margin-bottom:6px;color:#0e4eb0;}
+.corr p{font-size:10pt;line-height:1.65;color:#475569}
+
+/* Gráfica */
+.chart-wrap{text-align:center;margin:12px 0 24px}
+.chart-wrap img{max-width:100%;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.08)}
+.chart-cap{font-size:9pt;color:#64748b;margin-top:8px;font-style:italic}
+
+/* Conclusión */
+.concl-box{background:#f8fafc;border:1px solid #cbd5e1;border-left:5px solid #0f9f6e;border-radius:8px;
+           padding:24px 28px;font-size:11pt;line-height:1.8;color:#1e293b;}
+.concl-box p{margin-bottom:14px}
+.recomend{margin-top:16px;padding-left:24px;color:#334155}
+.recomend li{margin-bottom:12px;font-size:10.5pt;line-height:1.7}
+
+/* Sec title */
+.st{font-size:12pt;font-weight:800;color:#0e4eb0;margin:24px 0 8px;
+    padding-bottom:6px;border-bottom:2px solid #0e4eb0;}
+.sd{font-size:9.5pt;color:#64748b;font-style:italic;margin-bottom:16px}
+
+/* Pie */
+.pie{margin-top:28px;padding-top:12px;border-top:1px solid #e2e8f0;
+     font-size:8.5pt;color:#94a3b8;display:flex;justify-content:space-between;}
+
+.no-break{page-break-inside:avoid}
+
+/* Cierre */
+.cierre{text-align:center;padding:28px;background:#f1f5f9;border-radius:10px;
+        margin-top:32px;font-size:10pt;color:#475569;line-height:1.9}
+
+/* ── PRINT ── */
+@media print{
+  @page{margin:14mm 14mm 12mm}
+  body{font-size:10pt}
+  .portada{min-height:auto;padding:50px 40px 40px}
+  .portada-titulo{font-size:24pt}
+  .page{padding:0;margin-top:24px}
+  .dim-body{grid-template-columns:130px 1fr}
+  .pg-grid{grid-template-columns:1fr 1fr}
+  .mine-grid{grid-template-columns:1fr 1fr}
+  .bl{width:155px}
+  .kc .v{font-size:18pt}
+  .krow4{gap:10px}
+}
+</style>
+</head>
+<body>
+
+<!-- PORTADA -->
+<div class="portada">
+  <div>
+    <div class="portada-insignia">Sistema de Análisis Comunitario &middot; GAD Parroquial San Bartolomé &middot; Cuenca, Ecuador</div>
+    <div class="portada-titulo">Reporte Técnico-Científico de Encuestas Comunitarias</div>
+    <div class="portada-sub">Análisis de Sentimiento Comunitario &amp; Estadística Descriptiva Territorial</div>
+    <table class="portada-tabla">
+      <tr><td>Zona analizada</td><td>${esc(sector)}</td></tr>
+      <tr><td>Fecha de emisión</td><td>${fecha}</td></tr>
+      <tr><td>Total de encuestas</td><td>${n(r.total_encuestas)} encuestas procesadas</td></tr>
+      <tr><td>Último registro</td><td>${esc((data.generado_en||'').split(' ')[0])}</td></tr>
+    </table>
+    <div class="nivel-pill" style="background:${nvlColor}">
+      Nivel de Sentimiento Comunitario: ${esc(r.nivel_sentimiento)}
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      Índice Neto Global: ${sgn(indice)} puntos
+    </div>
+  </div>
+  <div class="portada-foot">
+    Documento generado automáticamente por el Sistema de Información Comunitaria &middot; ${fecha}
+  </div>
+</div>
+
+<!-- PAG 1: RESUMEN EJECUTIVO -->
+<div class="page">
+  <div class="ph"><h2>1. Resumen Ejecutivo</h2><p>Indicadores globales del análisis de sentimiento comunitario</p></div>
+  <div class="krow4">
+    <div class="kc" style="background:#0e4eb0"><span class="v">${n(r.total_encuestas)}</span><span class="l">Total de Encuestas</span></div>
+    <div class="kc" style="background:${nvlColor}"><span class="v">${sgn(indice)} pts</span><span class="l">Índice Neto Global</span></div>
+    <div class="kc" style="background:#0f9f6e"><span class="v">${p(r.positivo_global)}</span><span class="l">Sentimiento Positivo</span></div>
+    <div class="kc" style="background:#c43d45"><span class="v">${p(r.negativo_global)}</span><span class="l">Sentimiento Negativo</span></div>
+  </div>
+  <div class="narr">${esc(r.narrativa)}</div>
+  <div class="prob">&#9888; Problemática principal identificada: ${esc(r.problema_principal)}</div>
+  <div class="st">Distribución del Sentimiento Global</div>
+  <table class="stbl">
+    <tr><th>Sentimiento</th><th>Porcentaje</th><th>Interpretación</th></tr>
+    <tr><td><span class="dot" style="background:#0f9f6e"></span>Positivo</td>
+        <td><strong style="color:#0f9f6e">${p(sg.positivo_pct)}</strong></td>
+        <td>Respuestas favorables en las dimensiones evaluadas</td></tr>
+    <tr><td><span class="dot" style="background:#d97706"></span>Neutro</td>
+        <td><strong style="color:#d97706">${p(sg.neutro_pct)}</strong></td>
+        <td>Posición intermedia, ambivalente o sin definición clara</td></tr>
+    <tr><td><span class="dot" style="background:#c43d45"></span>Negativo</td>
+        <td><strong style="color:#c43d45">${p(sg.negativo_pct)}</strong></td>
+        <td>Respuestas de rechazo, insatisfacción o crítica</td></tr>
+  </table>
+  <div class="metod">
+    <strong>Marco Metodológico &mdash;</strong> El análisis aplica estadística descriptiva y procesamiento
+    de lenguaje natural (NLP) sobre las encuestas de la parroquia San Bartolomé. El
+    <strong>Índice Neto de Sentimiento</strong> se calcula como: <em>% Positivo &minus; % Negativo</em>
+    (escala &minus;100 a +100 puntos). Valores &ge; +15 se clasifican como <em>Favorable</em>,
+    entre &minus;15 y +15 como <em>Ambivalente</em>, y &le; &minus;15 como <em>Crítico</em>.
+  </div>
+  <div class="pie"><span>Reporte Técnico-Científico &middot; Encuestas Parroquiales San Bartolomé</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
+</div>
+
+<!-- PAG 2: GRÁFICAS -->
+<div class="page">
+  <div class="ph"><h2>2. Análisis Gráfico de Sentimiento</h2><p>Visualizaciones capturadas en tiempo real del sistema de análisis</p></div>
+  ${imgDonut ? `
+  <div class="st">2.1 Distribución de Sentimiento Comunitario</div>
+  <div class="sd">Proporción de encuestas clasificadas como Positivo, Neutro y Negativo sobre el total analizado.</div>
+  <div class="chart-wrap"><img src="${imgDonut}" style="max-width:300px">
+  <div class="chart-cap">Positivo ${p(sg.positivo_pct)} &middot; Neutro ${p(sg.neutro_pct)} &middot; Negativo ${p(sg.negativo_pct)}</div></div>` : ''}
+  ${imgRadar ? `
+  <div class="st">2.2 Radar Comparativo por Dimensión Temática</div>
+  <div class="sd">Cada eje representa el índice neto de una dimensión. Mayor extensión hacia afuera indica mayor favorabilidad.</div>
+  <div class="chart-wrap"><img src="${imgRadar}" style="max-width:480px"></div>` : ''}
+  <div class="pie"><span>Reporte Técnico-Científico &middot; Encuestas Parroquiales San Bartolomé</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
+</div>
+
+<!-- PAG 3: DIMENSIONES -->
+<div class="page">
+  <div class="ph"><h2>3. Análisis Detallado por Dimensión Temática</h2><p>Índice neto, sentimiento y distribución de respuestas por eje temático</p></div>
+  ${dimsHtml}
+  <div class="pie"><span>Reporte Técnico-Científico &middot; Encuestas Parroquiales San Bartolomé</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
+</div>
+
+<!-- PAG 4: PREGUNTAS -->
+${pregHtml ? `
+<div class="page">
+  <div class="ph"><h2>4. Distribución de Respuestas por Pregunta</h2><p>Porcentaje de encuestados que eligió cada opción &middot; Zona: ${esc(sector)}</p></div>
+  ${pregHtml}
+  <div class="pie"><span>Reporte Técnico-Científico &middot; Encuestas Parroquiales San Bartolomé</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
+</div>` : ''}
+
+<!-- PAG 5: PERCEPCIONES MINERAS -->
+<div class="page">
+  <div class="ph"><h2>5. Percepciones sobre la Actividad Minera</h2><p>Selección múltiple &mdash; un encuestado puede indicar varios ítems simultáneamente</p></div>
+  <div class="mine-grid">
+    <div class="mine-card no-break">
+      <h4 style="color:#0f9f6e;border-color:#0f9f6e">Beneficios Percibidos</h4>
+      ${benHtml||'<p style="color:#888;font-size:9pt">Sin datos registrados</p>'}
+    </div>
+    <div class="mine-card no-break">
+      <h4 style="color:#c43d45;border-color:#c43d45">Riesgos Percibidos</h4>
+      ${rskHtml||'<p style="color:#888;font-size:9pt">Sin datos registrados</p>'}
+    </div>
+  </div>
+  <div class="st">5.3 Nivel de Conocimiento sobre Minería</div>
+  <div class="sd">Semáforo: &#128994; &ge; 60% &mdash; conocimiento adecuado &nbsp;&middot;&nbsp; &#128993; 30&ndash;59% &mdash; conocimiento parcial &nbsp;&middot;&nbsp; &#128308; &lt; 30% &mdash; socialización urgente</div>
+  ${conocHtml||'<p style="color:#888;font-size:9pt">Sin datos registrados</p>'}
+  <div class="pie"><span>Reporte Técnico-Científico &middot; Encuestas Parroquiales San Bartolomé</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
+</div>
+
+<!-- PAG 6: CORRELACIONES Y TENDENCIA -->
+<div class="page">
+  <div class="ph"><h2>6. Correlaciones, Tendencia Temporal y Distribución Geográfica</h2><p>Cruces estratégicos, evolución del levantamiento y cobertura por sector</p></div>
+  <div class="st">6.1 Correlaciones y Cruces Estratégicos</div>
+  <div class="sd">Diferencia expresada en puntos porcentuales (pp) entre grupos comparados.</div>
+  ${corrHtml||'<p style="color:#888;font-size:9pt">Sin correlaciones disponibles</p>'}
+  ${imgTendencia ? `
+  <div class="st">6.2 Tendencia del Levantamiento (últimos 14 días)</div>
+  <div class="sd">Barras: número de encuestas por día &middot; Línea: porcentaje de apertura a inversión minera.</div>
+  <div class="chart-wrap"><img src="${imgTendencia}" style="max-width:580px"></div>` : ''}
+  <div class="st">6.3 Distribución por Sector Geográfico</div>
+  <div class="sd">Número de encuestas registradas por zona dentro de la parroquia.</div>
+  ${sectorHtml||'<p style="color:#888;font-size:9pt">Sin datos de sector</p>'}
+  <div class="pie"><span>Reporte Técnico-Científico &middot; Encuestas Parroquiales San Bartolomé</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
+</div>
+
+<!-- PAG 7: CONCLUSIONES -->
+<div class="page">
+  <div class="ph"><h2>7. Conclusiones y Recomendaciones</h2><p>Síntesis analítica y líneas de acción basadas en los datos del territorio</p></div>
+  <div class="concl-box">${concl}</div>
+  <div class="cierre">
+    <strong>Documento generado automáticamente</strong> por el Sistema de Análisis Comunitario de San Bartolomé.<br>
+    Los resultados reflejan las encuestas registradas al momento de la generación del presente reporte.<br>
+    <strong>Fecha:</strong> ${fecha} &nbsp;&middot;&nbsp; <strong>Zona:</strong> ${esc(sector)} &nbsp;&middot;&nbsp;
+    <strong>Total procesado:</strong> ${n(r.total_encuestas)} encuestas
+  </div>
+  <div class="pie" style="margin-top:18px"><span>Reporte Técnico-Científico &middot; Encuestas Parroquiales San Bartolomé</span><span>${fecha}</span></div>
+</div>
+
+<script>window.onload = () => { setTimeout(() => window.print(), 900); }<\/script>
+</body></html>`;
+
+        // Usar Blob URL con BOM para forzar UTF-8 en el navegador
+        const blob = new Blob(['\ufeff' + html], { type: 'text/html;charset=utf-8' });
+        const url  = URL.createObjectURL(blob);
+        const win  = window.open(url, '_blank');
+        if (!win) {
+            alert('El navegador bloqueó la ventana emergente. Permite ventanas emergentes para este sitio e intenta de nuevo.');
+        } else {
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
         }
-
-        // Distribución por sector
-        if (py > H - 40) { doc.addPage(); py = 20; }
-        setFont('bold', 10, [14, 78, 176]);
-        doc.text('Distribucion por Sector', margin, py);
-        hline(py + 2, [14, 78, 176]);
-        py += 7;
-        (data.distribucion_por_sector || []).slice(0, 12).forEach(item => {
-            if (py > H - 15) { doc.addPage(); py = 20; }
-            const itemPct = Number(item.pct) || 0;
-            const barW = (itemPct / 100) * (contentW - 55);
-            filledRect(margin + 52, py - 3.5, Math.max(0.5, barW), 5, 14, 78, 176);
-            setFont('normal', 7.5, [60, 60, 60]);
-            const rawLabel = str(item.label);
-            const shortLabel = rawLabel.length > 28 ? rawLabel.substring(0, 27) + '...' : rawLabel;
-            doc.text(shortLabel, margin, py + 0.5);
-            doc.text(str(itemPct) + '%  (n=' + str(item.n) + ')', margin + 50, py + 0.5, { align: 'right' });
-            py += 6.5;
-        });
-
-        // ── Pie de página en todas las páginas ──
-        const totalPages = doc.getNumberOfPages();
-        for (let i = 1; i <= totalPages; i++) {
-            doc.setPage(i);
-            hline(H - 10, [180, 180, 180]);
-            setFont('normal', 7, [130, 130, 130]);
-            doc.text('Reporte Tecnico - Encuestas Parroquiales San Bartolome  |  ' + fecha + '  |  Zona: ' + sector, margin, H - 6);
-            doc.text('Pagina ' + i + ' de ' + totalPages, W - margin, H - 6, { align: 'right' });
-        }
-
-        const safeSector = sector.replace(/[^a-zA-Z0-9]/g, '_');
-        doc.save('Reporte_IA_SanBartolome_' + safeSector + '_' + new Date().toISOString().slice(0,10) + '.pdf');
 
     } catch (err) {
-        console.error('Error generando PDF:', err);
-        alert('Error al generar el PDF: ' + err.message);
+        console.error('Error generando reporte:', err);
+        alert('Error al generar el reporte: ' + err.message);
     } finally {
-        if (btn) { btn.disabled = false; btn.textContent = '📄 PDF'; }
+        if (btn) { btn.disabled = false; btn.textContent = '📄 Reporte PDF'; }
     }
 }

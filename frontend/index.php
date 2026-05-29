@@ -907,7 +907,7 @@ header('Expires: 0');
                             <option value="general">Todo San Bartolome</option>
                         </select>
                         <button id="analisis-refresh-btn" class="analisis-refresh-btn" type="button">&#8635; Actualizar</button>
-                        <button id="analisis-pdf-btn" class="analisis-refresh-btn" type="button" style="background:#c43d45;" title="Exportar reporte técnico en PDF">&#128196; PDF</button>
+                        <button id="analisis-pdf-btn" class="analisis-refresh-btn" type="button" style="background:#7c3aed;" title="Exportar reporte técnico-científico en PDF">&#128196; Reporte PDF</button>
                         <span id="analisis-last-update" class="analisis-timestamp">Sin cargar</span>
                     </div>
                 </div>
@@ -1096,6 +1096,6 @@ header('Expires: 0');
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="frontend/app.js?v=<?= time() ?>"></script>
+    <script src="frontend/app.js?v=<?= time() ?>" charset="utf-8"></script>
 </body>
 </html>
