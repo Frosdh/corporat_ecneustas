@@ -907,6 +907,7 @@ header('Expires: 0');
                             <option value="general">Todo San Bartolome</option>
                         </select>
                         <button id="analisis-refresh-btn" class="analisis-refresh-btn" type="button">&#8635; Actualizar</button>
+                        <button id="analisis-pdf-btn" class="analisis-refresh-btn" type="button" style="background:#c43d45;" title="Exportar reporte técnico en PDF">&#128196; PDF</button>
                         <span id="analisis-last-update" class="analisis-timestamp">Sin cargar</span>
                     </div>
                 </div>
@@ -1058,52 +1059,43 @@ header('Expires: 0');
                         </div>
                     </div>
                     <div class="card analisis-chart-card">
-                        <canvas id="chart-tendencia" height="90"></canvas>
+                        <canvas id="chart-tendencia" height="320"></canvas>
                     </div>
 
-                    <!-- Distribución territorial -->
+                    <!-- Gauge de sentimiento -->
                     <div class="analisis-section-row">
                         <div>
-                            <h3 class="analisis-section-header">Distribución Territorial por Sector</h3>
+                            <h3 class="analisis-section-header">Gauge de Sentimiento Neto</h3>
+                            <p class="analisis-section-desc">Semicírculo de &minus;100 a +100 puntos. Verde = favorable, rojo = crítico.</p>
+                        </div>
+                    </div>
+                    <div class="card analisis-chart-card" style="max-width:420px;margin:0 auto;">
+                        <canvas id="chart-gauge" height="180"></canvas>
+                    </div>
+
+                    <!-- Distribución por sector -->
+                    <div class="analisis-section-row">
+                        <div>
+                            <h3 class="analisis-section-header">Distribución por Sector</h3>
+                            <p class="analisis-section-desc">Número de encuestas registradas por zona geográfica.</p>
                         </div>
                     </div>
                     <div class="card analisis-chart-card">
                         <div id="analisis-sector-dist" class="analisis-bar-list"></div>
                     </div>
 
-                    <!-- Ficha técnica -->
-                    <div class="analisis-ficha">
-                        <strong>Ficha técnica:</strong>
-                        Análisis generado automáticamente con base en datos reales de campo &middot;
-                        San Bartolomé, Azuay, Ecuador &middot;
-                        Metodología: Estadística descriptiva + análisis de sentimiento por dimensión &middot;
-                        Escala neta: &minus;100 (totalmente negativo) a +100 (totalmente positivo) &middot;
-                        <span id="analisis-generado-en">—</span>
-                    </div>
+                </div><!-- /analisis-content -->
 
-                </div><!-- #analisis-content -->
-            </section>
+            </section><!-- /tab-analisis -->
 
-        </main>
-    </div>
+        </main><!-- /app-main -->
+    </div><!-- /app-shell -->
 
-    <!-- Modal Ver Encuesta -->
-    <div id="survey-detail-modal" class="survey-modal-overlay" style="display:none;" onclick="closeSurveyModal(event)">
-        <div class="survey-modal-box">
-            <div class="survey-modal-header">
-                <div class="survey-modal-header-left" id="survey-modal-header-left">
-                    <h2 id="survey-modal-title">Detalle de encuesta</h2>
-                    <div class="survey-modal-meta" id="survey-modal-meta"></div>
-                </div>
-                <span id="survey-modal-status-badge" class="survey-modal-status-badge"></span>
-                <button class="survey-modal-close" onclick="closeSurveyModal(event)">&times;</button>
-            </div>
-            <div id="survey-modal-body" class="survey-modal-body"></div>
-        </div>
-    </div>
-
+    <!-- ===================== SCRIPTS ===================== -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="frontend/app.js?v=<?= time() ?>"></script>
 </body>
 </html>

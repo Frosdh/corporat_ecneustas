@@ -2184,3 +2184,17 @@ fieldset {
 .strat-conditioned > strong { color: #d97706 !important; }
 .strat-contrary > strong { color: #dc2626 !important; }
 .strat-sector > strong { color: #6F4E37 !important; }
+
+/* ── Barras de Sentimiento (Gauges) ── */
+.dg-sentiment-bar {
+    display: flex;
+    height: 6px;
+    width: 100%;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #e2e8f0;
+    margin-top: 4px;
+}
+.dg-sb-pos { background: #059669; }
+.dg-sb-neu { background: #d97706; }
+.dg-sb-neg { background: #dc2626; }

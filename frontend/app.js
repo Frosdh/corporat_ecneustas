@@ -405,7 +405,6 @@ function renderDashboard(dashboard) {
     setText('strategy-base', stBase > 0 ? `Base: ${stBase} encuestados respondieron esta pregunta` : '');
 
     renderDimGauges(dashboard.dimensiones_sentimiento || []);
-    renderDimGauges(dashboard.dimensiones_sentimiento || []);
     renderMap(dashboard.map_points || []);
     renderReports(dashboard);
 
@@ -414,88 +413,7 @@ function renderDashboard(dashboard) {
     }
 }
 
-function renderDimGauges(dims) {
-    const grid = document.getElementById('dash-gauge-grid');
-    if (!grid) return;
 
-    Object.values(state.dimGaugeCharts).forEach(ch => { try { ch.destroy(); } catch (e) {} });
-    state.dimGaugeCharts = {};
-
-    if (!dims || dims.length === 0) {
-        grid.innerHTML = '<p style="color:var(--muted);font-size:0.82rem">Sin datos suficientes aun.</p>';
-        return;
-    }
-
-    // Iconos SVG por dimension (mismo orden que lib.php)
-    const icons = [
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 8v4l3 3"/></svg>',
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
-    ];
-
-    grid.innerHTML = dims.map((d, i) => {
-        const color  = d.indice >= 15 ? '#0f9f6e' : d.indice <= -15 ? '#c43d45' : '#d97706';
-        const bgColor = d.indice >= 15 ? 'rgba(15,159,110,0.12)' : d.indice <= -15 ? 'rgba(196,61,69,0.11)' : 'rgba(217,119,6,0.11)';
-        const label  = d.indice >= 15 ? 'Favorable' : d.indice <= -15 ? 'Cr&iacute;tico' : 'Ambivalente';
-        const sign   = d.indice > 0 ? '+' : '';
-        const icon   = icons[i] || icons[0];
-        return `
-            <div class="dash-gauge-card-item">
-                <div class="dg-top">
-                    <span class="dg-icon" style="color:${color}">${icon}</span>
-                    <span class="dg-titulo">${escapeHtml(d.titulo).toUpperCase()}</span>
-                </div>
-                <div class="dg-circle-wrap">
-                    <canvas id="dg-${i}" width="160" height="160"></canvas>
-                    <div class="dg-center-val" style="color:${color}">
-                        <strong>${sign}${d.indice}</strong>
-                        <span>pts</span>
-                    </div>
-                </div>
-                <div class="dg-bottom">
-                    <span class="dg-badge" style="background:${bgColor};color:${color}">${label}</span>
-                    <span class="dg-n">${d.n > 0 ? d.n + ' resp.' : 'Sin datos'}</span>
-                </div>
-            </div>`;
-    }).join('');
-
-    dims.forEach((d, i) => {
-        const canvas = document.getElementById('dg-' + i);
-        if (!canvas || typeof Chart === 'undefined') return;
-
-        // 270° speedometer: start bottom-left (135°), sweep 270°, gap 90° at bottom
-        // index -100..+100 mapped to 0..270 degrees
-        const sweep    = 270;
-        const gap      = 90;
-        const filled   = Math.max(2, Math.min(sweep - 2, (d.indice + 100) / 200 * sweep));
-        const emptyArc = sweep - filled;
-        const color    = d.indice >= 15 ? '#0f9f6e' : d.indice <= -15 ? '#c43d45' : '#d97706';
-
-        state.dimGaugeCharts['g' + i] = new Chart(canvas, {
-            type: 'doughnut',
-            data: {
-                datasets: [{
-                    // filled arc | empty arc | transparent gap
-                    data: [filled, emptyArc, gap],
-                    backgroundColor: [color, '#ede0d0', 'transparent'],
-                    borderWidth: 0,
-                    hoverOffset: 0,
-                }],
-            },
-            options: {
-                rotation: 135,       // start at bottom-left
-                circumference: 360,  // full circle so gap renders as transparent
-                cutout: '72%',
-                plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                animation: { duration: 800, easing: 'easeOutQuart' },
-            },
-        });
-    });
-}
 
 
 function renderDimGauges(dims) {
@@ -524,8 +442,13 @@ function renderDimGauges(dims) {
         const color    = d.indice >= 15 ? '#0f9f6e' : d.indice <= -15 ? '#c43d45' : '#d97706';
         const bgColor  = d.indice >= 15 ? 'rgba(15,159,110,0.10)' : d.indice <= -15 ? 'rgba(196,61,69,0.09)' : 'rgba(217,119,6,0.09)';
         const label    = d.indice >= 15 ? 'Favorable' : d.indice <= -15 ? 'Cr&iacute;tico' : 'Ambivalente';
-        const sign     = d.indice > 0 ? '+' : '';
         const icon     = icons[i] || icons[0];
+        
+        // Ensure values are numbers and round properly
+        const pos = d.positivo_pct || 0;
+        const neu = d.neutro_pct || 0;
+        const neg = d.negativo_pct || 0;
+
         return `
             <div class="dash-gauge-card-item">
                 <div class="dg-top">
@@ -535,13 +458,27 @@ function renderDimGauges(dims) {
                 <div class="dg-circle-wrap">
                     <canvas id="dg-${i}" width="160" height="160"></canvas>
                     <div class="dg-center-val" style="color:${color}">
-                        <strong>${sign}${d.indice}</strong>
-                        <span>pts</span>
+                        <strong>${pos}%</strong>
+                        <span style="font-size:0.75rem;letter-spacing:0">Favorable</span>
                     </div>
                 </div>
-                <div class="dg-bottom">
-                    <span class="dg-badge" style="background:${bgColor};color:${color}">${label}</span>
-                    <span class="dg-n">${d.n > 0 ? d.n + ' resp.' : 'Sin datos'}</span>
+                <div class="dg-bottom" style="flex-direction:column;align-items:stretch;gap:8px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+                        <span class="dg-badge" style="background:${bgColor};color:${color}">${label}</span>
+                        <span class="dg-n">${d.n > 0 ? d.n + ' resp.' : 'Sin datos'}</span>
+                    </div>
+                    <div class="dg-sentiment-bar-wrap" style="margin-top:8px;">
+                        <div class="dg-sentiment-bar" style="height:6px;border-radius:3px;display:flex;overflow:hidden;background:rgba(255,255,255,0.05);">
+                            <div class="dg-sb-pos" style="width: ${pos}%; background:#0f9f6e; transition:width 0.5s;"></div>
+                            <div class="dg-sb-neu" style="width: ${neu}%; background:#a1a1aa; transition:width 0.5s;"></div>
+                            <div class="dg-sb-neg" style="width: ${neg}%; background:#c43d45; transition:width 0.5s;"></div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--muted); margin-top:4px;">
+                            <span style="color:#0f9f6e">${pos}% Pos</span>
+                            <span style="color:#a1a1aa">${neu}% Neu</span>
+                            <span style="color:#c43d45">${neg}% Neg</span>
+                        </div>
+                    </div>
                 </div>
             </div>`;
     }).join('');
@@ -550,7 +487,8 @@ function renderDimGauges(dims) {
         const canvas = document.getElementById('dg-' + i);
         if (!canvas || typeof Chart === 'undefined') return;
         const sweep  = 270;
-        const filled = Math.max(2, Math.min(sweep - 2, (d.indice + 100) / 200 * sweep));
+        const pctVal = d.positivo_pct || 0;
+        const filled = Math.max(2, Math.min(sweep - 2, (pctVal / 100) * sweep));
         const empty  = sweep - filled;
         const color  = d.indice >= 15 ? '#0f9f6e' : d.indice <= -15 ? '#c43d45' : '#d97706';
         state.dimGaugeCharts['g' + i] = new Chart(canvas, {
@@ -2014,6 +1952,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btn) btn.addEventListener('click', () => loadAnalisis(true));
     const sf = document.getElementById('analisis-sector-filter');
     if (sf) sf.addEventListener('change', () => loadAnalisis(true));
+    const pdfBtn = document.getElementById('analisis-pdf-btn');
+    if (pdfBtn) pdfBtn.addEventListener('click', () => generateAnalisisPDF());
 });
 
 async function loadAnalisis() {
@@ -2463,17 +2403,17 @@ function renderRadarDimensiones(dimensiones) {
     if (!ctx || !dimensiones || !dimensiones.length) return;
     if (radarDimChart) { radarDimChart.destroy(); radarDimChart = null; }
     const labels = dimensiones.map(d => d.titulo);
-    const vals   = dimensiones.map(d => Math.max(0, Math.min(100, 50 + d.sentimiento.indice / 2)));
+    const vals   = dimensiones.map(d => d.sentimiento.positivo_pct || 0);
     const pointColors = dimensiones.map(d => {
-        const indice = d.sentimiento.indice;
-        return indice >= 15 ? '#0f9f6e' : (indice <= -15 ? '#c43d45' : '#d97706');
+        const pct = d.sentimiento.positivo_pct || 0;
+        return pct >= 60 ? '#0f9f6e' : (pct <= 40 ? '#c43d45' : '#d97706');
     });
     radarDimChart = new Chart(ctx, {
         type: 'radar',
         data: {
             labels,
             datasets: [{
-                label: 'Sentimiento (%)',
+                label: 'Sentimiento Favorable (%)',
                 data: vals,
                 backgroundColor: 'rgba(56, 189, 248, 0.25)', // Nice modern blue with transparency
                 borderColor: '#38bdf8', // Modern bright blue border
@@ -2666,4 +2606,355 @@ function escHtml(str) {
         .replace(/</g,'&lt;')
         .replace(/>/g,'&gt;')
         .replace(/"/g,'&quot;');
+}
+
+
+
+// ============================================================
+//  GENERADOR DE REPORTE TÉCNICO EN PDF
+// ============================================================
+async function generateAnalisisPDF() {
+    const data = analisisState.data;
+    if (!data) { alert('Carga primero el análisis antes de exportar.'); return; }
+
+    const btn = document.getElementById('analisis-pdf-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Generando…'; }
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const W = 210, H = 297;
+        const margin = 15;
+        const contentW = W - margin * 2;
+
+        const sector = String(document.getElementById('analisis-sector-filter')?.selectedOptions[0]?.text || 'Todo San Bartolome');
+        const fecha = new Date().toLocaleDateString('es-EC', { year:'numeric', month:'long', day:'numeric' });
+        const r = data.resumen_ejecutivo || {};
+
+        // ── Helpers ──────────────────────────────────────────
+        function str(val) { return val === null || val === undefined ? '—' : String(val); }
+
+        function setFont(style, size, color) {
+            doc.setFont('helvetica', style || 'normal');
+            doc.setFontSize(size || 10);
+            doc.setTextColor(...(color || [30, 30, 30]));
+        }
+
+        function hline(y, color) {
+            doc.setDrawColor(...(color || [180, 180, 180]));
+            doc.setLineWidth(0.3);
+            doc.line(margin, y, W - margin, y);
+        }
+
+        function filledRect(x, y, w, h, r2, g, b) {
+            doc.setFillColor(r2, g, b);
+            doc.roundedRect(x, y, w, h, 2, 2, 'F');
+        }
+
+        function kpiBox(x, y, w, label, value, r2, g, b) {
+            filledRect(x, y, w, 22, r2, g, b);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.setTextColor(255, 255, 255);
+            doc.text(str(value), x + w / 2, y + 13, { align: 'center' });
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7.5);
+            doc.setTextColor(220, 220, 220);
+            doc.text(str(label), x + w / 2, y + 19, { align: 'center' });
+        }
+
+        async function captureCanvas(canvasId) {
+            const el = document.getElementById(canvasId);
+            if (!el) return null;
+            try {
+                const img = await html2canvas(el, { backgroundColor: '#1a1a2e', scale: 2, useCORS: true });
+                return img.toDataURL('image/png');
+            } catch { return null; }
+        }
+
+        function safeSign(val) {
+            const n = Number(val) || 0;
+            return (n > 0 ? '+' : '') + n + ' pts';
+        }
+
+        // ════════════════════════════════════════════
+        // PÁGINA 1 — PORTADA
+        // ════════════════════════════════════════════
+        filledRect(0, 0, W, 80, 14, 78, 176);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.setTextColor(255, 255, 255);
+        doc.text('REPORTE TECNICO DE ANALISIS', W / 2, 28, { align: 'center' });
+        doc.setFontSize(14);
+        doc.text('Encuestas Parroquiales — San Bartolome', W / 2, 40, { align: 'center' });
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Zona analizada: ' + sector, W / 2, 54, { align: 'center' });
+        doc.text('Fecha de emision: ' + fecha, W / 2, 62, { align: 'center' });
+        doc.text('Generado: ' + str(data.generado_en), W / 2, 70, { align: 'center' });
+
+        // Nivel sentimiento pill
+        const pillColors = { verde: [15, 159, 110], amarillo: [217, 119, 6], rojo: [196, 61, 69] };
+        const pc = pillColors[r.color_sentimiento] || [80, 80, 80];
+        filledRect(margin, 88, contentW, 18, ...pc);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(13);
+        doc.setTextColor(255, 255, 255);
+        doc.text('Nivel de Sentimiento: ' + str(r.nivel_sentimiento), W / 2, 100, { align: 'center' });
+
+        // KPI boxes row
+        const kpiY = 114;
+        const kw = (contentW - 6) / 4;
+        kpiBox(margin, kpiY, kw, 'Encuestas', str(r.total_encuestas), 14, 78, 176);
+        kpiBox(margin + kw + 2, kpiY, kw, 'Indice Neto', safeSign(r.indice_global), 15, 159, 110);
+        kpiBox(margin + (kw + 2) * 2, kpiY, kw, 'Positivo', str(r.positivo_global) + '%', 15, 159, 110);
+        kpiBox(margin + (kw + 2) * 3, kpiY, kw, 'Negativo', str(r.negativo_global) + '%', 196, 61, 69);
+
+        // Narrativa ejecutiva
+        setFont('bold', 11, [14, 78, 176]);
+        doc.text('Narrativa Ejecutiva', margin, kpiY + 30);
+        hline(kpiY + 32, [14, 78, 176]);
+        setFont('normal', 9, [50, 50, 50]);
+        const narText = str(r.narrativa);
+        const narLines = doc.splitTextToSize(narText, contentW);
+        doc.text(narLines, margin, kpiY + 38);
+        const narHeight = narLines.length * 4.5;
+
+        // Problemática
+        const probY = kpiY + 42 + narHeight;
+        setFont('bold', 10, [196, 61, 69]);
+        doc.text('Problematica Principal:', margin, probY);
+        setFont('normal', 10, [50, 50, 50]);
+        doc.text(str(r.problema_principal), margin + 48, probY);
+
+        // Tabla de sentimiento global
+        const sentY = Math.min(probY + 12, H - 55);
+        setFont('bold', 10, [30, 30, 30]);
+        doc.text('Sentimiento Global', margin, sentY);
+        hline(sentY + 2);
+        const sg = data.sentimiento_global || {};
+        const rows = [
+            ['Positivo', str(sg.positivo_pct) + '%', str(sg.positivo_n) + ' personas'],
+            ['Neutro',   str(sg.neutro_pct)   + '%', str(sg.neutro_n)   + ' personas'],
+            ['Negativo', str(sg.negativo_pct)  + '%', str(sg.negativo_n)  + ' personas'],
+        ];
+        const rowColors = [[15,159,110],[217,119,6],[196,61,69]];
+        rows.forEach(([label, pct, n], i) => {
+            const ry = sentY + 6 + i * 9;
+            if (ry < H - 10) {
+                filledRect(margin, ry, 4, 7, ...rowColors[i]);
+                setFont('normal', 9, [30, 30, 30]);
+                doc.text(str(label), margin + 7, ry + 5);
+                doc.text(str(pct), margin + 60, ry + 5);
+                doc.text(str(n), margin + 100, ry + 5);
+            }
+        });
+
+        // ════════════════════════════════════════════
+        // PÁGINA 2 — GRÁFICAS
+        // ════════════════════════════════════════════
+        doc.addPage();
+        filledRect(0, 0, W, 18, 14, 78, 176);
+        setFont('bold', 13, [255, 255, 255]);
+        doc.text('Analisis Grafico de Sentimiento', W / 2, 12, { align: 'center' });
+
+        let py = 24;
+
+        const donutImg = await captureCanvas('chart-sentimiento-global');
+        if (donutImg) {
+            setFont('bold', 10, [14, 78, 176]);
+            doc.text('Distribucion de Sentimiento', margin, py);
+            hline(py + 2, [14, 78, 176]);
+            doc.addImage(donutImg, 'PNG', W/2 - 35, py + 5, 70, 70);
+            py += 82;
+        }
+
+        const gaugeImg = await captureCanvas('chart-gauge');
+        if (gaugeImg) {
+            setFont('bold', 10, [14, 78, 176]);
+            doc.text('Gauge de Sentimiento Neto', margin, py);
+            hline(py + 2, [14, 78, 176]);
+            doc.addImage(gaugeImg, 'PNG', W/2 - 45, py + 5, 90, 55);
+            py += 65;
+        }
+
+        const radarImg = await captureCanvas('chart-radar-dimensiones');
+        if (radarImg) {
+            if (py + 85 > H - 20) { doc.addPage(); py = 20; }
+            setFont('bold', 10, [14, 78, 176]);
+            doc.text('Radar Comparativo por Dimension', margin, py);
+            hline(py + 2, [14, 78, 176]);
+            doc.addImage(radarImg, 'PNG', margin, py + 5, contentW, 80);
+            py += 90;
+        }
+
+        // ════════════════════════════════════════════
+        // PÁGINA 3 — DIMENSIONES
+        // ════════════════════════════════════════════
+        doc.addPage();
+        filledRect(0, 0, W, 18, 14, 78, 176);
+        setFont('bold', 13, [255, 255, 255]);
+        doc.text('Analisis Detallado por Dimension', W / 2, 12, { align: 'center' });
+
+        py = 26;
+        (data.dimensiones || []).forEach((dim) => {
+            if (py > H - 40) { doc.addPage(); py = 20; }
+            const dimSent = dim.sentimiento || {};
+            const indice = Number(dimSent.indice) || 0;
+            const sc = indice >= 15 ? [15,159,110] : indice <= -15 ? [196,61,69] : [217,119,6];
+            filledRect(margin, py, contentW, 8, ...sc);
+            setFont('bold', 10, [255, 255, 255]);
+            const dimLabel = indice >= 15 ? 'FAVORABLE' : indice <= -15 ? 'CRITICO' : 'AMBIVALENTE';
+            doc.text(str(dim.nombre), margin + 3, py + 5.5);
+            doc.text('Indice: ' + safeSign(indice) + '  |  ' + dimLabel, W - margin - 3, py + 5.5, { align: 'right' });
+            py += 10;
+
+            setFont('normal', 8, [50, 50, 50]);
+            doc.text('Positivo: ' + str(dimSent.positivo_pct) + '%   Neutro: ' + str(dimSent.neutro_pct) + '%   Negativo: ' + str(dimSent.negativo_pct) + '%', margin, py);
+            py += 5;
+
+            const items = (dim.distribucion?.items || []).slice(0, 6);
+            items.forEach(item => {
+                if (py > H - 20) { doc.addPage(); py = 20; }
+                const itemPct = Number(item.pct) || 0;
+                const barW = (itemPct / 100) * (contentW - 60);
+                filledRect(margin + 55, py - 3, Math.max(0.5, barW), 5, ...sc);
+                setFont('normal', 7.5, [60, 60, 60]);
+                const rawLabel = str(item.label);
+                const shortLabel = rawLabel.length > 28 ? rawLabel.substring(0, 27) + '...' : rawLabel;
+                doc.text(shortLabel, margin, py + 0.5);
+                doc.text(str(itemPct) + '%', margin + 52, py + 0.5, { align: 'right' });
+                py += 6;
+            });
+            py += 4;
+        });
+
+        // ════════════════════════════════════════════
+        // PÁGINA 4 — PERCEPCIONES MINERAS
+        // ════════════════════════════════════════════
+        doc.addPage();
+        filledRect(0, 0, W, 18, 14, 78, 176);
+        setFont('bold', 13, [255, 255, 255]);
+        doc.text('Percepciones sobre la Actividad Minera', W / 2, 12, { align: 'center' });
+
+        py = 26;
+
+        function renderBarSection(title, items, color) {
+            if (py > H - 30) { doc.addPage(); py = 20; }
+            setFont('bold', 10, color);
+            doc.text(str(title), margin, py);
+            hline(py + 2, color);
+            py += 7;
+            (items || []).slice(0, 8).forEach(item => {
+                if (py > H - 15) { doc.addPage(); py = 20; }
+                const itemPct = Number(item.pct) || 0;
+                const barW = (itemPct / 100) * (contentW - 55);
+                doc.setFillColor(...color);
+                doc.roundedRect(margin + 52, py - 3.5, Math.max(0.5, barW), 5, 1, 1, 'F');
+                setFont('normal', 7.5, [60, 60, 60]);
+                const rawLabel = str(item.label);
+                const shortLabel = rawLabel.length > 28 ? rawLabel.substring(0, 27) + '...' : rawLabel;
+                doc.text(shortLabel, margin, py + 0.5);
+                doc.text(str(itemPct) + '%  (n=' + str(item.n) + ')', margin + 50, py + 0.5, { align: 'right' });
+                py += 6.5;
+            });
+            py += 6;
+        }
+
+        renderBarSection('Beneficios Percibidos', data.beneficios_mineros, [15, 159, 110]);
+        renderBarSection('Riesgos Percibidos', data.riesgos_mineros, [196, 61, 69]);
+
+        // Conocimiento minero
+        if (py > H - 50) { doc.addPage(); py = 20; }
+        setFont('bold', 10, [14, 78, 176]);
+        doc.text('Nivel de Conocimiento sobre Mineria', margin, py);
+        hline(py + 2, [14, 78, 176]);
+        py += 7;
+        (data.conocimiento_minero || []).forEach(item => {
+            if (py > H - 15) { doc.addPage(); py = 20; }
+            const itemPct = Number(item.pct) || 0;
+            const tc = itemPct >= 60 ? [15,159,110] : itemPct >= 30 ? [217,119,6] : [196,61,69];
+            filledRect(margin, py - 3.5, 4, 5, ...tc);
+            setFont('normal', 8, [50, 50, 50]);
+            const rawLabel = str(item.label);
+            const shortLabel = rawLabel.length > 35 ? rawLabel.substring(0, 34) + '...' : rawLabel;
+            doc.text(shortLabel, margin + 6, py + 0.5);
+            doc.text(str(itemPct) + '%', W - margin, py + 0.5, { align: 'right' });
+            py += 6;
+        });
+
+        // ════════════════════════════════════════════
+        // PÁGINA 5 — CORRELACIONES Y TENDENCIA
+        // ════════════════════════════════════════════
+        doc.addPage();
+        filledRect(0, 0, W, 18, 14, 78, 176);
+        setFont('bold', 13, [255, 255, 255]);
+        doc.text('Correlaciones y Tendencia Temporal', W / 2, 12, { align: 'center' });
+
+        py = 26;
+        setFont('bold', 10, [14, 78, 176]);
+        doc.text('Correlaciones y Cruces Estrategicos', margin, py);
+        hline(py + 2, [14, 78, 176]);
+        py += 7;
+
+        (data.correlaciones || []).forEach(corr => {
+            if (py > H - 20) { doc.addPage(); py = 20; }
+            setFont('bold', 8.5, [30, 30, 30]);
+            doc.text(str(corr.titulo), margin, py);
+            setFont('normal', 7.5, [80, 80, 80]);
+            const lines = doc.splitTextToSize(str(corr.descripcion), contentW);
+            py += 4;
+            doc.text(lines, margin, py);
+            py += lines.length * 3.5 + 5;
+        });
+
+        // Tendencia
+        if (py > H - 70) { doc.addPage(); py = 20; }
+        const tendImg = await captureCanvas('chart-tendencia');
+        if (tendImg) {
+            setFont('bold', 10, [14, 78, 176]);
+            doc.text('Tendencia del Levantamiento (ultimos 14 dias)', margin, py);
+            hline(py + 2, [14, 78, 176]);
+            doc.addImage(tendImg, 'PNG', margin, py + 5, contentW, 55);
+            py += 65;
+        }
+
+        // Distribución por sector
+        if (py > H - 40) { doc.addPage(); py = 20; }
+        setFont('bold', 10, [14, 78, 176]);
+        doc.text('Distribucion por Sector', margin, py);
+        hline(py + 2, [14, 78, 176]);
+        py += 7;
+        (data.distribucion_por_sector || []).slice(0, 12).forEach(item => {
+            if (py > H - 15) { doc.addPage(); py = 20; }
+            const itemPct = Number(item.pct) || 0;
+            const barW = (itemPct / 100) * (contentW - 55);
+            filledRect(margin + 52, py - 3.5, Math.max(0.5, barW), 5, 14, 78, 176);
+            setFont('normal', 7.5, [60, 60, 60]);
+            const rawLabel = str(item.label);
+            const shortLabel = rawLabel.length > 28 ? rawLabel.substring(0, 27) + '...' : rawLabel;
+            doc.text(shortLabel, margin, py + 0.5);
+            doc.text(str(itemPct) + '%  (n=' + str(item.n) + ')', margin + 50, py + 0.5, { align: 'right' });
+            py += 6.5;
+        });
+
+        // ── Pie de página en todas las páginas ──
+        const totalPages = doc.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i);
+            hline(H - 10, [180, 180, 180]);
+            setFont('normal', 7, [130, 130, 130]);
+            doc.text('Reporte Tecnico - Encuestas Parroquiales San Bartolome  |  ' + fecha + '  |  Zona: ' + sector, margin, H - 6);
+            doc.text('Pagina ' + i + ' de ' + totalPages, W - margin, H - 6, { align: 'right' });
+        }
+
+        const safeSector = sector.replace(/[^a-zA-Z0-9]/g, '_');
+        doc.save('Reporte_IA_SanBartolome_' + safeSector + '_' + new Date().toISOString().slice(0,10) + '.pdf');
+
+    } catch (err) {
+        console.error('Error generando PDF:', err);
+        alert('Error al generar el PDF: ' + err.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '📄 PDF'; }
+    }
 }

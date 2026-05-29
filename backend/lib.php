@@ -1372,30 +1372,39 @@ function get_dashboard(string $sector = 'general'): array
     $dimsMaps = [
         ['campo' => 'political_climate',         'titulo' => 'Clima Politico',
          'mapa'  => ['positivo' => ['Estabilidad relativa'],
+                     'neutro'   => [],
                      'negativo' => ['Desconfianza institucional','Division comunitaria','Conflicto abierto entre actores']]],
         ['campo' => 'authority_trust',           'titulo' => 'Confianza Autoridades',
          'mapa'  => ['positivo' => ['Alta'],
+                     'neutro'   => ['Media'],
                      'negativo' => ['Baja']]],
         ['campo' => 'investment_acceptance',     'titulo' => 'Inversion Externa',
          'mapa'  => ['positivo' => ['Aceptacion amplia','Aceptación amplia'],
+                     'neutro'   => ['Aceptacion condicionada','Aceptación condicionada'],
                      'negativo' => ['Rechazo preventivo']]],
         ['campo' => 'mine_reopening_perception', 'titulo' => 'Reapertura Minera',
          'mapa'  => ['positivo' => ['Beneficiaria mucho','Beneficiaria algo'],
+                     'neutro'   => ['Beneficio dudoso'],
                      'negativo' => ['No beneficiaria']]],
         ['campo' => 'household_income',          'titulo' => 'Economia Familiar',
          'mapa'  => ['positivo' => ['Cubre con algo de holgura'],
+                     'neutro'   => ['Cubre apenas'],
                      'negativo' => ['No cubre la canasta']]],
         ['campo' => 'water_source',              'titulo' => 'Acceso al Agua',
          'mapa'  => ['positivo' => ['Red publica con tratamiento','Red pública con tratamiento'],
+                     'neutro'   => ['Vertiente comunal sin purificacion','Vertiente comunal sin purificación','Tanquero u otra compra'],
                      'negativo' => ['Rio o acequia','Río o acequia']]],
         ['campo' => 'has_sewer',                 'titulo' => 'Alcantarillado',
          'mapa'  => ['positivo' => ['Si tiene','Sí tiene'],
+                     'neutro'   => [],
                      'negativo' => ['No tiene']]],
         ['campo' => 'has_internet',              'titulo' => 'Acceso a Internet',
          'mapa'  => ['positivo' => ['Si estable','Sí estable'],
+                     'neutro'   => ['Intermitente'],
                      'negativo' => ['No tiene']]],
         ['campo' => 'road_status',               'titulo' => 'Estado Vial',
          'mapa'  => ['positivo' => ['Bueno'],
+                     'neutro'   => ['Regular'],
                      'negativo' => ['Malo']]],
     ];
     $dimsSentimiento = [];
@@ -1403,9 +1412,12 @@ function get_dashboard(string $sector = 'general'): array
         $dist = freq_dist($socialRows, $cfg['campo'], $cfg['mapa']);
         $sent = sentiment_index($dist);
         $dimsSentimiento[] = [
-            'titulo' => $cfg['titulo'],
-            'indice' => $sent['indice'],
-            'n'      => $sent['total'],
+            'titulo'       => $cfg['titulo'],
+            'indice'       => $sent['indice'],
+            'positivo_pct' => $sent['positivo_pct'],
+            'neutro_pct'   => $sent['neutro_pct'],
+            'negativo_pct' => $sent['negativo_pct'],
+            'n'            => $sent['total'],
         ];
     }
 
