@@ -395,7 +395,7 @@ header('Expires: 0');
                         </div>
                     </div>
                     <div class="inline-actions">
-                        <button id="apply-survey-filters-button" class="secondary-button" type="button">Aplicar filtros</button>
+                        <button id="clear-survey-filters-button" class="secondary-button" type="button">Limpiar filtros</button>
                         <button id="export-surveys-button" class="primary-button" type="button">Exportar CSV</button>
                     </div>
                 </div>

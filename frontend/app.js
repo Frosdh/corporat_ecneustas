@@ -52,7 +52,18 @@ function bindEvents() {
     document.getElementById('profile-continue-draft-button').addEventListener('click', restoreSurveyDraft);
     document.getElementById('export-applications-button').addEventListener('click', exportApplications);
 
-    document.getElementById('apply-survey-filters-button').addEventListener('click', loadSurveys);
+    ['survey-filter-sector', 'survey-filter-surveyor', 'survey-filter-date-from', 'survey-filter-date-to', 'survey-filter-status'].forEach(id => {
+        document.getElementById(id).addEventListener('change', loadSurveys);
+    });
+
+    document.getElementById('clear-survey-filters-button').addEventListener('click', () => {
+        document.getElementById('survey-filter-sector').value = 'general';
+        document.getElementById('survey-filter-surveyor').value = '';
+        document.getElementById('survey-filter-date-from').value = '';
+        document.getElementById('survey-filter-date-to').value = '';
+        document.getElementById('survey-filter-status').value = 'all';
+        loadSurveys();
+    });
     document.getElementById('export-surveys-button').addEventListener('click', exportSurveys);
     document.getElementById('apply-audit-filters-button').addEventListener('click', loadAuditLogs);
     document.getElementById('export-audit-button').addEventListener('click', exportAuditLogs);

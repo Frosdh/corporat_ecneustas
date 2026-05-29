@@ -1063,8 +1063,33 @@ function compute_json_option_counts(array $rows, string $field): array
 
 function normalize_sector_label(string $sector): string
 {
-    $sector = str_ireplace('Bartoloma', 'Bartolomé', $sector);
-    return ucfirst($sector);
+    $sector = trim($sector);
+    
+    // Remover acentos para normalizar la comparacion
+    $search = ['á','é','í','ó','ú','Á','É','Í','Ó','Ú'];
+    $replace = ['a','e','i','o','u','a','e','i','o','u'];
+    $lowerNorm = strtolower(str_replace($search, $replace, $sector));
+    
+    if (strpos($lowerNorm, 'bartoloma') !== false || strpos($lowerNorm, 'bartolome') !== false) {
+        return 'San Bartolomé';
+    }
+    if (strpos($lowerNorm, 'sigsig') !== false) {
+        return 'Sígsig';
+    }
+    if (strpos($lowerNorm, 'deleg') !== false) {
+        return 'La Deleg';
+    }
+    if ($lowerNorm === 'centro' || $lowerNorm === 'centro parroquial') {
+        return 'Centro Parroquial';
+    }
+    if (strpos($lowerNorm, 'sallac') !== false) {
+        return 'Sallac';
+    }
+    if (strpos($lowerNorm, 'pishio') !== false) {
+        return 'Pishio';
+    }
+    
+    return mb_convert_case($sector, MB_CASE_TITLE, 'UTF-8');
 }
 
 function build_label_total_rows(array $counts, int $limit = 0): array
@@ -1384,6 +1409,17 @@ function get_dashboard(string $sector = 'general'): array
         ];
     }
 
+    $aggregatedSectors = [];
+    foreach ($sectorRows as $row) {
+        $norm = normalize_sector_label((string) $row['sector']);
+        $aggregatedSectors[$norm] = ($aggregatedSectors[$norm] ?? 0) + (int) $row['total'];
+    }
+    arsort($aggregatedSectors);
+    $surveysBySector = [];
+    foreach ($aggregatedSectors as $label => $total) {
+        $surveysBySector[] = ['label' => $label, 'total' => $total];
+    }
+
     return [
         'summary' => [
             'total_surveys' => $total,
@@ -1404,12 +1440,7 @@ function get_dashboard(string $sector = 'general'): array
             'total_surveys' => $total,
             'coverage_pct' => $pct,
             'surveys_per_day' => $dailyRows,
-            'surveys_by_sector' => array_map(function (array $row): array {
-                return [
-                    'label' => normalize_sector_label((string) $row['sector']),
-                    'total' => (int) $row['total'],
-                ];
-            }, $sectorRows),
+            'surveys_by_sector' => $surveysBySector,
             'surveys_by_surveyor' => array_map(function (array $row): array {
                 return [
                     'label' => (string) $row['surveyor_name'],
