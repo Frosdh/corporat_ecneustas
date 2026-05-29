@@ -939,15 +939,6 @@ header('Expires: 0');
                         <div class="analisis-ejecutivo-left">
                             <div class="analisis-label-pill" id="analisis-nivel-badge">ANALIZANDO&hellip;</div>
                             <h3 id="analisis-narrativa" class="analisis-narrativa">Cargando análisis experto&hellip;</h3>
-                            <div class="analisis-gauge-wrap">
-                                <canvas id="chart-gauge" width="240" height="130"></canvas>
-                                <div class="analisis-gauge-labels">
-                                    <span>-100</span>
-                                    <span id="analisis-indice-global" class="gauge-center-val">—</span>
-                                    <span>+100</span>
-                                </div>
-                                <p class="analisis-gauge-label">Índice neto de sentimiento</p>
-                            </div>
                         </div>
                         <div class="analisis-ejecutivo-right">
                             <canvas id="chart-sentimiento-global" width="230" height="230"></canvas>

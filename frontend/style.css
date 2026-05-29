@@ -1796,24 +1796,20 @@ fieldset {
     background: rgba(111,78,55,.6);
     z-index: 9999;
     display: flex;
-    align-items: flex-start;
-    justify-content: center;
     padding: 1.5rem 1rem;
     backdrop-filter: blur(3px);
-    overflow-y: auto;       /* el overlay NO scrollea — el box tiene su propio scroll */
+    overflow-y: auto; /* Permite escrolear todo el fondo de la modal */
 }
 .survey-modal-box {
     background: var(--coffee-bg);
     border-radius: 20px;
     width: 100%;
     max-width: 760px;
-    height: calc(100vh - 3rem);   /* ocupa casi toda la pantalla */
+    margin: auto; /* Lo centra si es peque&ntilde;o, pero permite scrollear si es alto */
     display: flex;
     flex-direction: column;
     box-shadow: 0 24px 64px rgba(111,78,55,.3), 0 4px 16px rgba(0,0,0,.15);
     border: 1.5px solid var(--coffee-latte);
-    overflow: hidden;              /* el scroll lo maneja .survey-modal-body */
-    flex-shrink: 0;
 }
 
 /* Header */
@@ -1882,13 +1878,10 @@ fieldset {
 
 /* Body scroll */
 .survey-modal-body {
-    flex: 1;
-    overflow-y: auto;
     padding: .9rem 1rem 1.5rem;
     display: flex;
     flex-direction: column;
     gap: .6rem;
-    min-height: 0;
 }
 
 /* ── Accordion section ── */
@@ -1897,36 +1890,23 @@ fieldset {
     border-radius: 14px;
     background: var(--coffee-surface);
     overflow: hidden;
+    flex-shrink: 0;
 }
-.smd-section-toggle {
-    width: 100%;
-    display: flex !important;
+.smd-section-header {
+    display: flex;
     align-items: center;
     gap: .7rem;
     padding: .8rem 1rem;
-    background: none;
-    border: none;
-    cursor: pointer;
-    text-align: left;
-    transition: background .15s;
-    box-sizing: border-box;
+    border-bottom: 1px solid var(--coffee-latte);
+    background: rgba(166,124,82,.05);
 }
 .smd-section-title {
-    flex: 1;
     font-size: .92rem;
     font-weight: 700;
     color: var(--coffee-dark);
-    text-align: left;
     line-height: 1.3;
 }
-.smd-section-arrow {
-    font-size: .65rem;
-    color: var(--coffee-medium);
-    transition: transform .2s;
-    flex-shrink: 0;
-    margin-left: auto;
-}
-.smd-section-toggle:hover { background: rgba(166,124,82,.08); }
+.smd-section-toggle[aria-expanded="true"] .smd-section-arrow { transform: rotate(180deg); }
 .smd-section-icon {
     width: 32px;
     height: 32px;
@@ -1936,10 +1916,9 @@ fieldset {
     justify-content: center;
     flex-shrink: 0;
 }
-.smd-section-toggle[aria-expanded="true"] .smd-section-arrow { transform: rotate(180deg); }
 .smd-section-body {
-    padding: 0 1rem .9rem;
-    display: none;
+    padding: 0 1rem 1rem;
+    display: flex;
     flex-direction: column;
     gap: .5rem;
     border-top: 1px solid var(--coffee-latte);
