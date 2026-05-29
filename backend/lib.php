@@ -1120,7 +1120,6 @@ function get_dashboard(string $sector = 'general'): array
 
     $summarySql = "
         SELECT
-            COUNT(*) AS total_surveys,
             ROUND(AVG(CASE WHEN has_sewer = 'No tiene' OR water_source LIKE '%sin%' OR water_source LIKE '%acequia%' OR water_source LIKE '%vertiente%' THEN 100 ELSE 0 END), 1) AS structural_poverty,
             ROUND(AVG(CASE WHEN mine_reopening_perception IN ('Beneficiaria mucho', 'Beneficiaria algo') OR investment_acceptance IN ('Aceptacion condicionada', 'Aceptacion amplia') THEN 100 ELSE 0 END), 1) AS acceptance_rate
         FROM surveys
@@ -1129,6 +1128,10 @@ function get_dashboard(string $sector = 'general'): array
     $stmt = db()->prepare($summarySql);
     $stmt->execute($params);
     $summary = $stmt->fetch() ?: [];
+
+    // Conteo total igual que Analisis IA: COUNT(*) sobre toda la tabla surveys
+    $countSql = "SELECT COUNT(*) FROM surveys";
+    $summary['total_surveys'] = (int) db()->query($countSql)->fetchColumn();
 
     $climateSql = "
         SELECT political_climate

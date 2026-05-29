@@ -223,7 +223,15 @@ async function bootstrapApp() {
         renderSurveyorNotice();
         updateDraftButtons();
     }
-    if (payload.dashboard) renderDashboard(payload.dashboard);
+    if (payload.dashboard) {
+        // Obtener total real desde Analisis IA al arrancar
+        requestJson('analisis', { params: { sector: 'general' } }).then(ap => {
+            if (ap?.analisis?.total_encuestas) {
+                payload.dashboard.summary.total_surveys = ap.analisis.total_encuestas;
+            }
+            renderDashboard(payload.dashboard);
+        }).catch(() => renderDashboard(payload.dashboard));
+    }
     renderOfflineQueue();
     await syncPendingSurveys(false);
 }
@@ -346,8 +354,15 @@ async function loadSurveyorsField() {
 async function loadDashboard() {
     const sectorEl = document.getElementById('sector-filter');
     const sector = sectorEl ? sectorEl.value : 'general';
-    const payload = await requestJson('dashboard', { params: { sector } });
+    const [payload, analPayload] = await Promise.all([
+        requestJson('dashboard', { params: { sector } }),
+        requestJson('analisis', { params: { sector } }).catch(() => null),
+    ]);
     state.dashboard = payload.dashboard;
+    // Usar el total de Analisis IA (fuente de verdad) para encuestas registradas
+    if (analPayload?.analisis?.total_encuestas) {
+        payload.dashboard.summary.total_surveys = analPayload.analisis.total_encuestas;
+    }
     renderDashboard(payload.dashboard);
     loadDashboardSurveys(sector);
 }
@@ -361,16 +376,19 @@ function renderDashboard(dashboard) {
     const social = dashboard.social || {};
     const strategic = dashboard.strategic || {};
     const pendingCount = getPendingSurveys().length;
-    const totalRegistradas = summary.total_surveys;
+    const totalRegistradas = summary.total_surveys + pendingCount;
 
-    document.getElementById('kpi-total').textContent = totalRegistradas;
+    const kpiTotal = document.getElementById('kpi-total');
+    if (kpiTotal) kpiTotal.textContent = totalRegistradas;
+    const kpiBar = document.getElementById('kpi-total-bar');
+    if (kpiBar) {
+        const target = summary.target_surveys || 500;
+        const pct = target > 0 ? Math.min(100, Math.round((totalRegistradas / target) * 100)) : 0;
+        kpiBar.style.width = `${pct}%`;
+    }
     document.getElementById('kpi-poverty').textContent = `${summary.structural_poverty}%`;
     document.getElementById('kpi-acceptance').textContent = `${summary.acceptance_rate}%`;
     document.getElementById('kpi-climate').textContent = summary.political_climate;
-    
-    const target = summary.target_surveys || 500;
-    const pct = target > 0 ? Math.min(100, Math.round((totalRegistradas / target) * 100)) : 0;
-    document.getElementById('kpi-total-bar').style.width = `${pct}%`;
     
     updateMetric('metric-water', 'metric-water-bar', services.water_risk);
     updateMetric('metric-sewer', 'metric-sewer-bar', services.sewer_gap);
@@ -1971,6 +1989,12 @@ async function loadAnalisis() {
         }
         renderAnalisis(analisisState.data);
         setAnalisisUI('content');
+        // Actualizar el KPI del dashboard con el total real de la base
+        const totalReal = analisisState.data.total_encuestas ?? analisisState.data.total ?? 0;
+        if (totalReal > 0) {
+            const kpiEl = document.getElementById('kpi-total');
+            if (kpiEl) kpiEl.textContent = totalReal;
+        }
         const ts = document.getElementById('analisis-last-update');
         if (ts) ts.textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-EC');
         clearTimeout(analisisState.autoRefreshTimer);

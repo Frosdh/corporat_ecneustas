@@ -34,13 +34,9 @@ try {
             if (!user_can_access_dashboard()) {
                 respond(['ok' => false, 'message' => 'No tienes acceso al dashboard.'], 403);
             }
-            $dashSector = $_GET['sector'] ?? 'general';
-            $dashData   = get_dashboard($dashSector);
-            $analData   = get_analisis_experto($dashSector);
-            $dashData['summary']['total_surveys'] = $analData['total_encuestas'] ?? $dashData['summary']['total_surveys'];
             respond([
                 'ok' => true,
-                'dashboard' => $dashData,
+                'dashboard' => get_dashboard($_GET['sector'] ?? 'general'),
             ]);
 
         case 'register-application':
