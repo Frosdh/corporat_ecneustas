@@ -570,7 +570,7 @@ function renderDimGauges(dims) {
 }
 
 function populateSectorFilters(sectors) {
-    const filters = ['sector-filter', 'analisis-sector-filter', 'preguntas-sector-filter'];
+    const filters = ['sector-filter', 'analisis-sector-filter', 'preguntas-sector-filter', 'survey-filter-sector'];
     filters.forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
@@ -579,7 +579,11 @@ function populateSectorFilters(sectors) {
         el.innerHTML = '';
         const defaultOpt = document.createElement('option');
         defaultOpt.value = 'general';
-        defaultOpt.textContent = (id === 'analisis-sector-filter' || id === 'preguntas-sector-filter') ? 'Todo San Bartolom\u00e9' : 'Todo San Bartolome';
+        if (id === 'survey-filter-sector') {
+            defaultOpt.textContent = 'Todos';
+        } else {
+            defaultOpt.textContent = (id === 'analisis-sector-filter' || id === 'preguntas-sector-filter') ? 'Todo San Bartolomé' : 'Todo San Bartolome';
+        }
         el.appendChild(defaultOpt);
 
         sectors.forEach(item => {
