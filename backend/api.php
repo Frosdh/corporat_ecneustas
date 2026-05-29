@@ -162,6 +162,10 @@ try {
             require_admin();
             respond(['ok' => true, 'surveys' => get_surveys($_GET)]);
 
+        case 'get-survey':
+            require_auth();
+            respond(['ok' => true, 'survey' => get_survey_detail((int) ($_GET['id'] ?? 0))]);
+
         case 'update-survey-status':
             ensure_method('POST', $method);
             require_admin();

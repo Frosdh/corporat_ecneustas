@@ -1489,6 +1489,42 @@ function get_dashboard(string $sector = 'general'): array
     ];
 }
 
+function get_survey_detail(int $id): array
+{
+    require_auth();
+    if ($id <= 0) throw new InvalidArgumentException('ID de encuesta invalido.');
+
+    $stmt = db()->prepare("
+        SELECT
+            s.id, s.client_uuid, s.sector, s.community, s.survey_date, s.survey_status,
+            s.surveyor_id, COALESCE(s.surveyor_name, sv.full_name) AS surveyor_name,
+            s.respondent_name, s.respondent_last_name, s.respondent_id_document,
+            s.respondent_email, s.respondent_phone,
+            s.respondent_gender, s.age_range, s.education_level, s.occupation,
+            s.primary_problem, s.youth_path, s.women_roles,
+            s.water_source, s.has_sewer, s.has_septic, s.has_internet,
+            s.road_status, s.road_who_fixes, s.household_income,
+            s.political_climate, s.authority_trust, s.social_priority,
+            s.investment_acceptance, s.mine_reopening_perception,
+            s.mine_benefits, s.mine_risks,
+            s.knows_mining_types, s.knows_mining_benefits, s.knows_modern_mining,
+            s.knows_local_mines, s.knows_env_guarantees,
+            s.comments, s.latitude, s.longitude
+        FROM surveys s
+        LEFT JOIN surveyors sv ON sv.id = s.surveyor_id
+        WHERE s.id = :id
+    ");
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+    if (!$row) throw new InvalidArgumentException('Encuesta no encontrada.');
+
+    // Normalizar campos JSON
+    foreach (['women_roles', 'mine_benefits', 'mine_risks'] as $f) {
+        $row[$f] = $row[$f] ? json_decode((string)$row[$f], true) : [];
+    }
+    return $row;
+}
+
 function get_surveys(array $filters = []): array
 {
     $conditions = [];

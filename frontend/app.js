@@ -1055,12 +1055,248 @@ function renderSurveys() {
                     <div><strong>Estado:</strong> ${escapeHtml(item.survey_status)}</div>
                 </div>
                 <div class="inline-actions">
+                    <button class="primary-button" type="button" onclick="viewSurvey(${item.id})">Ver encuesta</button>
                     <button class="secondary-button" type="button" onclick="updateSurveyStatus(${item.id}, 'sincronizada')">Marcar sincronizada</button>
                     <button class="success-button" type="button" onclick="updateSurveyStatus(${item.id}, 'revisada')">Marcar revisada</button>
                     <button class="danger-button" type="button" onclick="updateSurveyStatus(${item.id}, 'observada')">Marcar observada</button>
                 </div>
             </article>
         `).join('');
+}
+
+// ── Helper: normaliza lista separada por | o array ──
+function normalizeSurveyList(value) {
+    if (!value || value === 'null' || value === '') return [];
+    if (Array.isArray(value)) return value.filter(Boolean);
+    return String(value).split('|').map((s) => s.trim()).filter(Boolean);
+}
+
+// ── Render section accordion (sin emojis, usa SVG) ──
+const SMD_ICONS = {
+    id:     '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><rect x="2" y="3" width="16" height="14" rx="3"/><path d="M6 7h8M6 10h5"/></svg>',
+    person: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><circle cx="10" cy="7" r="3"/><path d="M4 17c0-3.314 2.686-6 6-6s6 2.686 6 6"/></svg>',
+    social: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M3 10c0-3.866 3.134-7 7-7s7 3.134 7 7-3.134 7-7 7"/><path d="M10 3v14M3 10h14"/></svg>',
+    home:   '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M3 10L10 3l7 7v7H3z"/><rect x="7" y="13" width="6" height="4"/></svg>',
+    mine:   '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M5 15l3-6 4 2 3-6"/><circle cx="15" cy="5" r="1.5" fill="currentColor"/></svg>',
+    comment:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M4 4h12a1 1 0 011 1v8a1 1 0 01-1 1H7l-4 3V5a1 1 0 011-1z"/></svg>',
+    gps:    '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><circle cx="10" cy="10" r="3"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2"/></svg>',
+    cal:    '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M3 8h14M7 2v4M13 2v4"/></svg>',
+    user2:  '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><circle cx="10" cy="7" r="3"/><path d="M5 17c0-2.761 2.239-5 5-5s5 2.239 5 5"/></svg>',
+};
+
+function smdSection(iconKey, iconBg, iconColor, title, bodyHtml, openByDefault) {
+    const id = 'smd-' + Math.random().toString(36).slice(2);
+    return `
+    <div class="smd-section">
+        <button class="smd-section-toggle" aria-expanded="${openByDefault ? 'true' : 'false'}" onclick="toggleSmdSection(this,'${id}')">
+            <div class="smd-section-icon" style="background:${iconBg};color:${iconColor}">${SMD_ICONS[iconKey] || ''}</div>
+            <span class="smd-section-title">${title}</span>
+            <span class="smd-section-arrow">&#9660;</span>
+        </button>
+        <div id="${id}" class="smd-section-body${openByDefault ? ' open' : ''}">
+            ${bodyHtml}
+        </div>
+    </div>`;
+}
+
+function toggleSmdSection(btn, id) {
+    const body = document.getElementById(id);
+    const open = body.classList.toggle('open');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+// ── Campo simple ──
+function smdField(label, value) {
+    const empty = !value || value === 'null' || value === '';
+    return `<div class="smd-field">
+        <span class="smd-field-label">${label}</span>
+        <span class="smd-field-value${empty ? ' empty' : ''}">${empty ? '—' : escapeHtml(String(value))}</span>
+    </div>`;
+}
+
+// ── Pregunta de seleccion unica — muestra todas las opciones, marca la elegida ──
+function smdRadioQ(question, options, selected) {
+    const sel = (selected || '').trim();
+    const opts = options.map((opt) => {
+        const active = sel && sel.toLowerCase() === opt.toLowerCase();
+        return `<div class="smd-opt${active ? ' smd-opt-active' : ''}">
+            <span class="smd-opt-dot${active ? ' smd-opt-dot-active' : ''}"></span>
+            <span class="smd-opt-label">${escapeHtml(opt)}</span>
+        </div>`;
+    }).join('');
+    const noAnswer = !sel ? '<span class="smd-no-answer">Sin respuesta</span>' : '';
+    return `<div class="smd-question">
+        <div class="smd-q-label">${question}</div>
+        <div class="smd-opts">${opts}${noAnswer}</div>
+    </div>`;
+}
+
+// ── Pregunta de seleccion multiple — marca las elegidas ──
+function smdCheckQ(question, options, selected) {
+    const sel = normalizeSurveyList(selected).map((s) => s.toLowerCase());
+    const opts = options.map((opt) => {
+        const active = sel.includes(opt.toLowerCase());
+        return `<div class="smd-opt${active ? ' smd-opt-active' : ''}">
+            <span class="smd-opt-check${active ? ' smd-opt-check-active' : ''}">
+                ${active ? '<svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="#fff" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg>' : ''}
+            </span>
+            <span class="smd-opt-label">${escapeHtml(opt)}</span>
+        </div>`;
+    }).join('');
+    const noAnswer = sel.length === 0 ? '<span class="smd-no-answer">Sin respuesta</span>' : '';
+    return `<div class="smd-question">
+        <div class="smd-q-label">${question}</div>
+        <div class="smd-opts">${opts}${noAnswer}</div>
+    </div>`;
+}
+
+// ── Campo de texto libre ──
+function smdTextQ(question, value) {
+    const empty = !value || value === 'null' || value === '';
+    return `<div class="smd-question">
+        <div class="smd-q-label">${question}</div>
+        <div class="smd-text-answer${empty ? ' empty' : ''}">${empty ? 'Sin respuesta' : escapeHtml(String(value))}</div>
+    </div>`;
+}
+
+function viewSurvey(surveyId) {
+    window.open('ver_encuesta.php?id=' + surveyId, '_blank');
+}
+
+function viewSurveyOld(surveyId) {
+    const item = [...(state.surveys || []), ...(state.mySurveys || [])].find((s) => s.id === surveyId);
+    if (!item) return;
+
+    // Header
+    document.getElementById('survey-modal-title').textContent =
+        (item.community || '—') + ' — ' + (item.sector || '—');
+
+    const metaEl = document.getElementById('survey-modal-meta');
+    metaEl.innerHTML =
+        '<span>' + SMD_ICONS.cal + ' ' + escapeHtml(item.survey_date || '—') + '</span>' +
+        '<span>' + SMD_ICONS.user2 + ' ' + escapeHtml(item.surveyor_name || 'Sin nombre') + '</span>';
+
+    const badge = document.getElementById('survey-modal-status-badge');
+    const st = item.survey_status || 'sincronizada';
+    badge.textContent = st.charAt(0).toUpperCase() + st.slice(1);
+    badge.className = 'survey-modal-status-badge status-' + st;
+
+    const hasGps = item.latitude && item.longitude;
+    const gpsHtml = hasGps
+        ? `<div class="smd-gps-card">
+            <div class="smd-gps-dot"></div>
+            <div>
+                <div class="smd-gps-label">Coordenadas GPS registradas</div>
+                <div class="smd-gps-coords">Lat ${escapeHtml(String(item.latitude))} &nbsp;&middot;&nbsp; Lon ${escapeHtml(String(item.longitude))}</div>
+            </div>
+           </div>`
+        : `<div class="smd-no-gps">Sin coordenadas GPS registradas</div>`;
+
+    const sections = [];
+
+    // ── 1. IDENTIFICACION ──
+    sections.push(smdSection('id', 'rgba(166,124,82,.15)', '#6F4E37', 'Identificación y Contexto',
+        `<div class="smd-grid">
+            ${smdField('Sector', item.sector)}
+            ${smdField('Comunidad / Barrio', item.community)}
+            ${smdField('Fecha', item.survey_date)}
+            ${smdField('Encuestador', item.surveyor_name)}
+        </div>
+        ${gpsHtml}`,
+        true
+    ));
+
+    // ── 2. DATOS DEL ENCUESTADO ──
+    const respondentName = [item.respondent_name, item.respondent_last_name].filter(Boolean).join(' ');
+    sections.push(smdSection('person', 'rgba(224,169,109,.2)', '#A67C52', 'Datos del Encuestado',
+        `<div class="smd-grid">
+            ${respondentName ? smdField('Nombre completo', respondentName) : ''}
+            ${item.respondent_id_document ? smdField('Cédula', item.respondent_id_document) : ''}
+            ${item.respondent_phone ? smdField('Teléfono', item.respondent_phone) : ''}
+            ${item.respondent_email ? smdField('Correo', item.respondent_email) : ''}
+        </div>
+        ${smdRadioQ('Género del encuestado', ['Mujer', 'Hombre', 'Otro'], item.respondent_gender)}
+        ${smdRadioQ('Rango de edad', ['18-25', '26-35', '36-45', '46-60', '61 o mas'], item.age_range)}
+        ${smdRadioQ('Nivel de educación', ['Primaria', 'Secundaria', 'Tecnico', 'Universitario', 'Ninguno'], item.education_level)}
+        ${smdTextQ('Ocupación principal', item.occupation)}
+        ${smdRadioQ('Ingreso familiar mensual', ['No cubre la canasta', 'Cubre apenas', 'Cubre con algo de holgura'], item.household_income)}`,
+        true
+    ));
+
+    // ── 3. PROBLEMATICAS Y DINAMICA SOCIAL ──
+    sections.push(smdSection('social', 'rgba(239,68,68,.1)', '#dc2626', 'Problemáticas y Dinámica Social',
+        `${smdCheckQ('Problemáticas principales actuales (selección múltiple)',
+            ['Inseguridad', 'Falta de empleo', 'Agua y saneamiento', 'Vias en mal estado', 'Salud', 'Migracion juvenil'],
+            item.primary_problem)}
+        ${smdRadioQ('¿A qué se dedican los jóvenes al terminar sus estudios?',
+            ['Migracion por falta de oportunidades', 'Agricultura o trabajo informal', 'Continuan estudios superiores', 'Empleo local eventual', 'Otro'],
+            item.youth_path)}
+        ${smdCheckQ('Limitaciones económicas frecuentes para mujeres del sector (selección múltiple)',
+            ['Precios bajos por intermediarios', 'Sobrecarga de cuidados', 'Poco acceso a financiamiento', 'Mercados limitados por seleccion'],
+            item.women_roles)}
+        ${smdRadioQ('Clima político local',
+            ['Desconfianza institucional', 'Division comunitaria', 'Estabilidad relativa', 'Conflicto abierto entre actores'],
+            item.political_climate)}
+        ${smdRadioQ('Confianza en autoridades', ['Alta', 'Media', 'Baja'], item.authority_trust)}
+        ${smdCheckQ('Prioridad social (selección múltiple)',
+            ['Proteger agua y paramos', 'Generar empleo rapido', 'Mejorar vias y servicios', 'Fortalecer produccion local', 'Turismo', 'Viviendas', 'Mineria?'],
+            item.social_priority)}
+        ${smdRadioQ('Aceptación de inversión externa',
+            ['Rechazo preventivo', 'Aceptacion condicionada', 'Aceptacion amplia'],
+            item.investment_acceptance)}`,
+        true
+    ));
+
+    // ── 4. CONDICIONES DEL HOGAR ──
+    sections.push(smdSection('home', 'rgba(16,185,129,.1)', '#059669', 'Condiciones del Hogar',
+        `${smdRadioQ('Fuente principal de agua',
+            ['Red publica con tratamiento', 'Vertiente comunal sin purificacion', 'Rio o acequia', 'Tanquero u otra compra'],
+            item.water_source)}
+        ${smdRadioQ('Alcantarillado', ['Si tiene', 'No tiene'], item.has_sewer)}
+        ${smdRadioQ('Fosa séptica', ['Si tiene', 'No tiene'], item.has_septic)}
+        ${smdRadioQ('Internet', ['Si estable', 'Intermitente', 'No tiene'], item.has_internet)}
+        ${smdRadioQ('Estado de vías', ['Bueno', 'Regular', 'Malo'], item.road_status)}
+        ${smdRadioQ('¿Quién debería arreglar las vías?',
+            ['GAD Parroquial', 'GAD Cantonal', 'GAD Provincial'],
+            item.road_who_fixes)}`,
+        true
+    ));
+
+    // ── 5. PERCEPCION MINERA ──
+    sections.push(smdSection('mine', 'rgba(111,78,55,.12)', '#6F4E37', 'Percepción Minera',
+        `${smdRadioQ('Percepción sobre reapertura minera',
+            ['Beneficiaria mucho', 'Beneficiaria algo', 'Beneficio dudoso', 'No beneficiaria'],
+            item.mine_reopening_perception)}
+        ${smdCheckQ('Beneficios esperados de la minería (selección múltiple)',
+            ['Empleo juvenil', 'Movimiento comercial', 'Obras comunitarias', 'Pago de impuestos', 'Ninguno claro'],
+            item.mine_benefits)}
+        ${smdCheckQ('Riesgos percibidos de la minería (selección múltiple)',
+            ['Contaminacion del agua', 'Danos al suelo', 'Conflicto social', 'Poca transparencia'],
+            item.mine_risks)}
+        ${smdRadioQ('¿Conoce tipos de minería?', ['Si', 'No', 'Primera vez que escucho'], item.knows_mining_types)}
+        ${smdRadioQ('¿Conoce beneficios de la minería?', ['Si', 'No', 'Primera vez que escucho'], item.knows_mining_benefits)}
+        ${smdRadioQ('¿Conoce la minería moderna?', ['Si', 'No', 'Primera vez que escucho esto'], item.knows_modern_mining)}
+        ${smdRadioQ('¿Conoce las minas locales?', ['Si', 'No', 'Hay que investigar'], item.knows_local_mines)}
+        ${smdRadioQ('¿Cree que hay garantías ambientales?', ['Si', 'No', 'Asi deberia ser'], item.knows_env_guarantees)}`,
+        true
+    ));
+
+    // ── 6. OBSERVACIONES ──
+    if (item.comments && item.comments.trim()) {
+        sections.push(smdSection('comment', 'rgba(99,102,241,.12)', '#4f46e5', 'Observaciones',
+            `<div class="smd-comments-block">${escapeHtml(item.comments)}</div>`,
+            true
+        ));
+    }
+
+    document.getElementById('survey-modal-body').innerHTML = sections.join('');
+    document.getElementById('survey-detail-modal').style.display = 'flex';
+}
+
+function closeSurveyModal(event) {
+    if (event.target === document.getElementById('survey-detail-modal')) {
+        document.getElementById('survey-detail-modal').style.display = 'none';
+    }
 }
 
 function exportSurveys() {
@@ -1263,6 +1499,7 @@ function renderMySurveys() {
                 <div><strong>Problematica:</strong> ${escapeHtml(item.primary_problem)}</div>
             </div>
             <div class="inline-actions">
+                <button class="primary-button" type="button" onclick="viewSurvey(${item.id})">Ver encuesta</button>
                 ${renderOwnSurveyAction(item)}
             </div>
         </article>
