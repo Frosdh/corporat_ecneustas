@@ -1070,12 +1070,12 @@ header('Expires: 0');
     <div id="survey-detail-modal" class="survey-modal-overlay" style="display:none;" onclick="closeSurveyModal(event)">
         <div class="survey-modal-box">
             <div class="survey-modal-header">
-                <div class="survey-modal-header-left">
+                <div class="survey-modal-header-left" id="survey-modal-header-left">
                     <h2 id="survey-modal-title">Detalle de encuesta</h2>
                     <div class="survey-modal-meta" id="survey-modal-meta"></div>
                 </div>
                 <span id="survey-modal-status-badge" class="survey-modal-status-badge"></span>
-                <button class="survey-modal-close" onclick="document.getElementById('survey-detail-modal').style.display='none'">&times;</button>
+                <button class="survey-modal-close" onclick="closeSurveyModal(event)">&times;</button>
             </div>
             <div id="survey-modal-body" class="survey-modal-body"></div>
         </div>

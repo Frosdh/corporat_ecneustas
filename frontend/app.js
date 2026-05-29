@@ -1159,22 +1159,32 @@ function smdTextQ(question, value) {
     </div>`;
 }
 
-function viewSurvey(surveyId) {
-    window.open('ver_encuesta.php?id=' + surveyId, '_blank');
-}
+async function viewSurvey(surveyId) {
+    const modal = document.getElementById('survey-detail-modal');
+    document.getElementById('survey-modal-header-left').innerHTML =
+        '<h2>Cargando encuesta&hellip;</h2>';
+    document.getElementById('survey-modal-meta').innerHTML = '';
+    document.getElementById('survey-modal-status-badge').textContent = '';
+    document.getElementById('survey-modal-body').innerHTML =
+        '<div style="text-align:center;padding:3rem 1rem;color:#A67C52;font-size:.95rem;">Cargando...</div>';
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
 
-function viewSurveyOld(surveyId) {
-    const item = [...(state.surveys || []), ...(state.mySurveys || [])].find((s) => s.id === surveyId);
-    if (!item) return;
+    try {
+        const payload = await requestJson('get-survey', { params: { id: surveyId } });
+        const item = payload.survey;
+        if (!item) {
+            document.getElementById('survey-modal-body').innerHTML = '<div style="text-align:center; padding:2rem; color:red;">No se encontr&oacute; la encuesta</div>';
+            return;
+        }
 
-    // Header
-    document.getElementById('survey-modal-title').textContent =
-        (item.community || '—') + ' — ' + (item.sector || '—');
-
-    const metaEl = document.getElementById('survey-modal-meta');
-    metaEl.innerHTML =
-        '<span>' + SMD_ICONS.cal + ' ' + escapeHtml(item.survey_date || '—') + '</span>' +
-        '<span>' + SMD_ICONS.user2 + ' ' + escapeHtml(item.surveyor_name || 'Sin nombre') + '</span>';
+    // Header — innerHTML para que procese entidades HTML, sin caracteres multi-byte en literales
+    document.getElementById('survey-modal-header-left').innerHTML =
+        '<h2>' + escapeHtml(item.community || '-') + ' &mdash; ' + escapeHtml(item.sector || '-') + '</h2>' +
+        '<div class="survey-modal-meta" id="survey-modal-meta">' +
+        '<span>' + SMD_ICONS.cal + ' ' + escapeHtml(item.survey_date || '-') + '</span>' +
+        '<span>' + SMD_ICONS.user2 + ' ' + escapeHtml(item.surveyor_name || 'Sin nombre') + '</span>' +
+        '</div>';
 
     const badge = document.getElementById('survey-modal-status-badge');
     const st = item.survey_status || 'sincronizada';
@@ -1195,7 +1205,7 @@ function viewSurveyOld(surveyId) {
     const sections = [];
 
     // ── 1. IDENTIFICACION ──
-    sections.push(smdSection('id', 'rgba(166,124,82,.15)', '#6F4E37', 'Identificación y Contexto',
+    sections.push(smdSection('id', 'rgba(166,124,82,.15)', '#6F4E37', 'Identificaci&oacute;n y Contexto',
         `<div class="smd-grid">
             ${smdField('Sector', item.sector)}
             ${smdField('Comunidad / Barrio', item.community)}
@@ -1211,37 +1221,37 @@ function viewSurveyOld(surveyId) {
     sections.push(smdSection('person', 'rgba(224,169,109,.2)', '#A67C52', 'Datos del Encuestado',
         `<div class="smd-grid">
             ${respondentName ? smdField('Nombre completo', respondentName) : ''}
-            ${item.respondent_id_document ? smdField('Cédula', item.respondent_id_document) : ''}
-            ${item.respondent_phone ? smdField('Teléfono', item.respondent_phone) : ''}
+            ${item.respondent_id_document ? smdField('C&eacute;dula', item.respondent_id_document) : ''}
+            ${item.respondent_phone ? smdField('Tel&eacute;fono', item.respondent_phone) : ''}
             ${item.respondent_email ? smdField('Correo', item.respondent_email) : ''}
         </div>
-        ${smdRadioQ('Género del encuestado', ['Mujer', 'Hombre', 'Otro'], item.respondent_gender)}
+        ${smdRadioQ('G&eacute;nero del encuestado', ['Mujer', 'Hombre', 'Otro'], item.respondent_gender)}
         ${smdRadioQ('Rango de edad', ['18-25', '26-35', '36-45', '46-60', '61 o mas'], item.age_range)}
-        ${smdRadioQ('Nivel de educación', ['Primaria', 'Secundaria', 'Tecnico', 'Universitario', 'Ninguno'], item.education_level)}
-        ${smdTextQ('Ocupación principal', item.occupation)}
+        ${smdRadioQ('Nivel de educaci&oacute;n', ['Primaria', 'Secundaria', 'Tecnico', 'Universitario', 'Ninguno'], item.education_level)}
+        ${smdTextQ('Ocupaci&oacute;n principal', item.occupation)}
         ${smdRadioQ('Ingreso familiar mensual', ['No cubre la canasta', 'Cubre apenas', 'Cubre con algo de holgura'], item.household_income)}`,
         true
     ));
 
     // ── 3. PROBLEMATICAS Y DINAMICA SOCIAL ──
-    sections.push(smdSection('social', 'rgba(239,68,68,.1)', '#dc2626', 'Problemáticas y Dinámica Social',
-        `${smdCheckQ('Problemáticas principales actuales (selección múltiple)',
+    sections.push(smdSection('social', 'rgba(239,68,68,.1)', '#dc2626', 'Problem&aacute;ticas y Din&aacute;mica Social',
+        `${smdCheckQ('Problem&aacute;ticas principales actuales (selecci&oacute;n m&uacute;ltiple)',
             ['Inseguridad', 'Falta de empleo', 'Agua y saneamiento', 'Vias en mal estado', 'Salud', 'Migracion juvenil'],
             item.primary_problem)}
-        ${smdRadioQ('¿A qué se dedican los jóvenes al terminar sus estudios?',
+        ${smdRadioQ('&iquest;A qu&eacute; se dedican los j&oacute;venes al terminar sus estudios?',
             ['Migracion por falta de oportunidades', 'Agricultura o trabajo informal', 'Continuan estudios superiores', 'Empleo local eventual', 'Otro'],
             item.youth_path)}
-        ${smdCheckQ('Limitaciones económicas frecuentes para mujeres del sector (selección múltiple)',
+        ${smdCheckQ('Limitaciones econ&oacute;micas frecuentes para mujeres del sector (selecci&oacute;n m&uacute;ltiple)',
             ['Precios bajos por intermediarios', 'Sobrecarga de cuidados', 'Poco acceso a financiamiento', 'Mercados limitados por seleccion'],
             item.women_roles)}
-        ${smdRadioQ('Clima político local',
+        ${smdRadioQ('Clima pol&iacute;tico local',
             ['Desconfianza institucional', 'Division comunitaria', 'Estabilidad relativa', 'Conflicto abierto entre actores'],
             item.political_climate)}
         ${smdRadioQ('Confianza en autoridades', ['Alta', 'Media', 'Baja'], item.authority_trust)}
-        ${smdCheckQ('Prioridad social (selección múltiple)',
+        ${smdCheckQ('Prioridad social (selecci&oacute;n m&uacute;ltiple)',
             ['Proteger agua y paramos', 'Generar empleo rapido', 'Mejorar vias y servicios', 'Fortalecer produccion local', 'Turismo', 'Viviendas', 'Mineria?'],
             item.social_priority)}
-        ${smdRadioQ('Aceptación de inversión externa',
+        ${smdRadioQ('Aceptaci&oacute;n de inversi&oacute;n externa',
             ['Rechazo preventivo', 'Aceptacion condicionada', 'Aceptacion amplia'],
             item.investment_acceptance)}`,
         true
@@ -1253,31 +1263,31 @@ function viewSurveyOld(surveyId) {
             ['Red publica con tratamiento', 'Vertiente comunal sin purificacion', 'Rio o acequia', 'Tanquero u otra compra'],
             item.water_source)}
         ${smdRadioQ('Alcantarillado', ['Si tiene', 'No tiene'], item.has_sewer)}
-        ${smdRadioQ('Fosa séptica', ['Si tiene', 'No tiene'], item.has_septic)}
+        ${smdRadioQ('Fosa s&eacute;ptica', ['Si tiene', 'No tiene'], item.has_septic)}
         ${smdRadioQ('Internet', ['Si estable', 'Intermitente', 'No tiene'], item.has_internet)}
-        ${smdRadioQ('Estado de vías', ['Bueno', 'Regular', 'Malo'], item.road_status)}
-        ${smdRadioQ('¿Quién debería arreglar las vías?',
+        ${smdRadioQ('Estado de v&iacute;as', ['Bueno', 'Regular', 'Malo'], item.road_status)}
+        ${smdRadioQ('&iquest;Qui&eacute;n deber&iacute;a arreglar las v&iacute;as?',
             ['GAD Parroquial', 'GAD Cantonal', 'GAD Provincial'],
             item.road_who_fixes)}`,
         true
     ));
 
     // ── 5. PERCEPCION MINERA ──
-    sections.push(smdSection('mine', 'rgba(111,78,55,.12)', '#6F4E37', 'Percepción Minera',
-        `${smdRadioQ('Percepción sobre reapertura minera',
+    sections.push(smdSection('mine', 'rgba(111,78,55,.12)', '#6F4E37', 'Percepci&oacute;n Minera',
+        `${smdRadioQ('Percepci&oacute;n sobre reapertura minera',
             ['Beneficiaria mucho', 'Beneficiaria algo', 'Beneficio dudoso', 'No beneficiaria'],
             item.mine_reopening_perception)}
-        ${smdCheckQ('Beneficios esperados de la minería (selección múltiple)',
+        ${smdCheckQ('Beneficios esperados de la miner&iacute;a (selecci&oacute;n m&uacute;ltiple)',
             ['Empleo juvenil', 'Movimiento comercial', 'Obras comunitarias', 'Pago de impuestos', 'Ninguno claro'],
             item.mine_benefits)}
-        ${smdCheckQ('Riesgos percibidos de la minería (selección múltiple)',
+        ${smdCheckQ('Riesgos percibidos de la miner&iacute;a (selecci&oacute;n m&uacute;ltiple)',
             ['Contaminacion del agua', 'Danos al suelo', 'Conflicto social', 'Poca transparencia'],
             item.mine_risks)}
-        ${smdRadioQ('¿Conoce tipos de minería?', ['Si', 'No', 'Primera vez que escucho'], item.knows_mining_types)}
-        ${smdRadioQ('¿Conoce beneficios de la minería?', ['Si', 'No', 'Primera vez que escucho'], item.knows_mining_benefits)}
-        ${smdRadioQ('¿Conoce la minería moderna?', ['Si', 'No', 'Primera vez que escucho esto'], item.knows_modern_mining)}
-        ${smdRadioQ('¿Conoce las minas locales?', ['Si', 'No', 'Hay que investigar'], item.knows_local_mines)}
-        ${smdRadioQ('¿Cree que hay garantías ambientales?', ['Si', 'No', 'Asi deberia ser'], item.knows_env_guarantees)}`,
+        ${smdRadioQ('&iquest;Conoce tipos de miner&iacute;a?', ['Si', 'No', 'Primera vez que escucho'], item.knows_mining_types)}
+        ${smdRadioQ('&iquest;Conoce beneficios de la miner&iacute;a?', ['Si', 'No', 'Primera vez que escucho'], item.knows_mining_benefits)}
+        ${smdRadioQ('&iquest;Conoce la miner&iacute;a moderna?', ['Si', 'No', 'Primera vez que escucho esto'], item.knows_modern_mining)}
+        ${smdRadioQ('&iquest;Conoce las minas locales?', ['Si', 'No', 'Hay que investigar'], item.knows_local_mines)}
+        ${smdRadioQ('&iquest;Cree que hay garant&iacute;as ambientales?', ['Si', 'No', 'Asi deberia ser'], item.knows_env_guarantees)}`,
         true
     ));
 
@@ -1290,12 +1300,16 @@ function viewSurveyOld(surveyId) {
     }
 
     document.getElementById('survey-modal-body').innerHTML = sections.join('');
-    document.getElementById('survey-detail-modal').style.display = 'flex';
+    
+    } catch (error) {
+        document.getElementById('survey-modal-body').innerHTML = `<div style="text-align:center; padding:2rem; color:red;">Error al cargar la encuesta: ${escapeHtml(error.message)}</div>`;
+    }
 }
 
 function closeSurveyModal(event) {
-    if (event.target === document.getElementById('survey-detail-modal')) {
+    if (event.target === document.getElementById('survey-detail-modal') || event.target.closest('.survey-modal-close')) {
         document.getElementById('survey-detail-modal').style.display = 'none';
+        document.body.style.overflow = '';
     }
 }
 
