@@ -29,6 +29,11 @@ try {
                 'dashboard' => user_can_access_dashboard() ? get_dashboard($_GET['sector'] ?? 'general') : null,
             ]);
 
+        case 'total-surveys':
+            require_auth();
+            $total = (int) db()->query('SELECT COUNT(*) FROM surveys')->fetchColumn();
+            respond(['ok' => true, 'total' => $total]);
+
         case 'dashboard':
             require_auth();
             if (!user_can_access_dashboard()) {

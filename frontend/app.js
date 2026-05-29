@@ -13,6 +13,30 @@ const state = {
 };
 let mapInstance = null;
 let mapLayerGroup = null;
+// Total real de encuestas en la base — persiste en localStorage entre recargas
+let _totalEncuestasReal = parseInt(localStorage.getItem('_totalEncuestasReal') || '0', 10) || null;
+
+function setTotalEncuestasReal(n) {
+    if (n && n > 0) {
+        _totalEncuestasReal = n;
+        localStorage.setItem('_totalEncuestasReal', String(n));
+        const kpiEl = document.getElementById('kpi-total');
+        if (kpiEl) kpiEl.textContent = n;
+        const meta = 300;
+        const pct = Math.min(100, Math.round((n / meta) * 100));
+        const bar = document.getElementById('kpi-total-bar');
+        if (bar) bar.style.width = `${pct}%`;
+        const lbl = document.getElementById('kpi-total-pct-label');
+        if (lbl) lbl.textContent = `${pct}% de meta`;
+    }
+}
+
+async function fetchTotalEncuestas() {
+    try {
+        const r = await requestJson('total-surveys');
+        if (r?.total > 0) setTotalEncuestasReal(r.total);
+    } catch (_) {}
+}
 let formMapInstance = null;
 let formMapMarker = null;
 
@@ -224,13 +248,8 @@ async function bootstrapApp() {
         updateDraftButtons();
     }
     if (payload.dashboard) {
-        // Obtener total real desde Analisis IA al arrancar
-        requestJson('analisis', { params: { sector: 'general' } }).then(ap => {
-            if (ap?.analisis?.total_encuestas) {
-                payload.dashboard.summary.total_surveys = ap.analisis.total_encuestas;
-            }
-            renderDashboard(payload.dashboard);
-        }).catch(() => renderDashboard(payload.dashboard));
+        renderDashboard(payload.dashboard);
+        fetchTotalEncuestas(); // corrige el total con el valor real de la base
     }
     renderOfflineQueue();
     await syncPendingSurveys(false);
@@ -354,16 +373,10 @@ async function loadSurveyorsField() {
 async function loadDashboard() {
     const sectorEl = document.getElementById('sector-filter');
     const sector = sectorEl ? sectorEl.value : 'general';
-    const [payload, analPayload] = await Promise.all([
-        requestJson('dashboard', { params: { sector } }),
-        requestJson('analisis', { params: { sector } }).catch(() => null),
-    ]);
+    const payload = await requestJson('dashboard', { params: { sector } });
     state.dashboard = payload.dashboard;
-    // Usar el total de Analisis IA (fuente de verdad) para encuestas registradas
-    if (analPayload?.analisis?.total_encuestas) {
-        payload.dashboard.summary.total_surveys = analPayload.analisis.total_encuestas;
-    }
     renderDashboard(payload.dashboard);
+    fetchTotalEncuestas(); // siempre actualizar con el total real de la base
     loadDashboardSurveys(sector);
 }
 
@@ -376,15 +389,19 @@ function renderDashboard(dashboard) {
     const social = dashboard.social || {};
     const strategic = dashboard.strategic || {};
     const pendingCount = getPendingSurveys().length;
-    const totalRegistradas = summary.total_surveys + pendingCount;
+    // Nunca mostrar un total menor al que ya se conoce (evita que sync sobreescriba con dato viejo)
+    if (summary.total_surveys > (_totalEncuestasReal || 0)) _totalEncuestasReal = summary.total_surveys;
+    const totalRegistradas = _totalEncuestasReal || summary.total_surveys;
 
     const kpiTotal = document.getElementById('kpi-total');
     if (kpiTotal) kpiTotal.textContent = totalRegistradas;
     const kpiBar = document.getElementById('kpi-total-bar');
     if (kpiBar) {
-        const target = summary.target_surveys || 500;
-        const pct = target > 0 ? Math.min(100, Math.round((totalRegistradas / target) * 100)) : 0;
+        const meta = 300;
+        const pct = Math.min(100, Math.round((totalRegistradas / meta) * 100));
         kpiBar.style.width = `${pct}%`;
+        const lbl = document.getElementById('kpi-total-pct-label');
+        if (lbl) lbl.textContent = `${pct}% de meta`;
     }
     document.getElementById('kpi-poverty').textContent = `${summary.structural_poverty}%`;
     document.getElementById('kpi-acceptance').textContent = `${summary.acceptance_rate}%`;
@@ -1989,12 +2006,9 @@ async function loadAnalisis() {
         }
         renderAnalisis(analisisState.data);
         setAnalisisUI('content');
-        // Actualizar el KPI del dashboard con el total real de la base
+        // Sincronizar total con el dashboard
         const totalReal = analisisState.data.total_encuestas ?? analisisState.data.total ?? 0;
-        if (totalReal > 0) {
-            const kpiEl = document.getElementById('kpi-total');
-            if (kpiEl) kpiEl.textContent = totalReal;
-        }
+        setTotalEncuestasReal(totalReal);
         const ts = document.getElementById('analisis-last-update');
         if (ts) ts.textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-EC');
         clearTimeout(analisisState.autoRefreshTimer);

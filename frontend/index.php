@@ -179,16 +179,19 @@ header('Expires: 0');
                 </div>
 
                 <div class="kpi-grid">
-                    <div class="analisis-kpi-card" style="height: 100%;">
-                        <div class="kpi-icon-wrap kpi-blue">#</div>
-                        <div class="kpi-info" style="width: 100%;">
-                            <span class="kpi-label" style="text-transform: uppercase; font-size: 11px; font-weight: 700; color: var(--muted);">Total de Encuestas</span>
-                            <strong id="kpi-total" class="kpi-value" style="font-size: 32px; font-weight: 700; line-height: 1.1;">0</strong>
-                            <div class="progress" title="Avance hacia la meta de encuestas" style="margin-top: 10px;">
+                    <article class="card kpi-card">
+                        <span class="eyebrow">Total de encuestas</span>
+                        <h3 id="kpi-total">0</h3>
+                        <div style="margin-top:8px;">
+                            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px;">
+                                <span id="kpi-total-pct-label">0% de meta</span>
+                                <span>Meta: 300</span>
+                            </div>
+                            <div class="progress" title="Cumplimiento de meta (300 encuestas)">
                                 <div id="kpi-total-bar" class="progress-bar"></div>
                             </div>
                         </div>
-                    </div>
+                    </article>
                     <article class="card kpi-card">
                         <span class="eyebrow">Pobreza estructural</span>
                         <h3 id="kpi-poverty">0%</h3>
