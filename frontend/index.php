@@ -964,7 +964,7 @@ header('Expires: 0');
 
                     <!-- Radar de dimensiones -->
                     <div class="analisis-section-row">
-                        <div>
+                        <div class="premium-radar-header">
                             <h3 class="analisis-section-header">Vista Radar — Comparativa por Dimensión</h3>
                             <p class="analisis-section-desc">Cada eje evalúa el sentimiento mediante un <b>Índice Neto</b> (escala -100 a +100 puntos), calculado como: <i>% Positivo menos % Negativo</i>. Verde = favorable, rojo = crítico.</p>
                         </div>

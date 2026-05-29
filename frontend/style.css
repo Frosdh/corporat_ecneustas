@@ -1053,7 +1053,7 @@ fieldset {
     padding: 30px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
     margin-bottom: 30px;
-    height: 650px;
+    height: 800px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -1063,6 +1063,28 @@ fieldset {
 .analisis-radar-card canvas {
     max-width: 100%;
     max-height: 100%;
+}
+
+/* Premium Header for Radar */
+.premium-radar-header {
+    background: linear-gradient(135deg, rgba(111,78,55,0.05) 0%, rgba(111,78,55,0.15) 100%);
+    border-left: 5px solid var(--coffee-medium);
+    padding: 20px 25px;
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+}
+.premium-radar-header .analisis-section-header {
+    margin-bottom: 8px !important;
+    color: var(--coffee-dark) !important;
+    font-size: 1.25rem;
+    border: none;
+    padding-left: 0;
+}
+.premium-radar-header .analisis-section-desc {
+    margin-bottom: 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
 }
 
 
