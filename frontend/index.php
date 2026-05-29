@@ -180,8 +180,9 @@ header('Expires: 0');
 
                 <div class="kpi-grid">
                     <article class="card kpi-card">
-                        <span class="eyebrow">Encuestas registradas</span>
+                        <span class="eyebrow">Total de encuestas</span>
                         <h3 id="kpi-total">0</h3>
+                        <span class="kpi-sub" id="kpi-total-label">encuestas en la base</span>
                         <div class="progress" title="Avance hacia la meta de encuestas"><div id="kpi-total-bar" class="progress-bar"></div></div>
                     </article>
                     <article class="card kpi-card">

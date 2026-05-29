@@ -360,12 +360,18 @@ function renderDashboard(dashboard) {
     const management = dashboard.management || {};
     const social = dashboard.social || {};
     const strategic = dashboard.strategic || {};
+    const pendingCount = getPendingSurveys().length;
+    const totalRegistradas = summary.total_surveys;
 
-    document.getElementById('kpi-total').textContent = `${summary.total_surveys} encuesta${summary.total_surveys !== 1 ? 's' : ''}`;
+    document.getElementById('kpi-total').textContent = totalRegistradas;
     document.getElementById('kpi-poverty').textContent = `${summary.structural_poverty}%`;
     document.getElementById('kpi-acceptance').textContent = `${summary.acceptance_rate}%`;
     document.getElementById('kpi-climate').textContent = summary.political_climate;
-    document.getElementById('kpi-total-bar').style.width = `${summary.coverage_pct}%`;
+    
+    const target = summary.target_surveys || 500;
+    const pct = target > 0 ? Math.min(100, Math.round((totalRegistradas / target) * 100)) : 0;
+    document.getElementById('kpi-total-bar').style.width = `${pct}%`;
+    
     updateMetric('metric-water', 'metric-water-bar', services.water_risk);
     updateMetric('metric-sewer', 'metric-sewer-bar', services.sewer_gap);
     updateMetric('metric-income', 'metric-income-bar', services.income_pressure);
@@ -2605,7 +2611,20 @@ let _dashSurveys = [];
 async function loadDashboardSurveys(sector) {
     try {
         const payload = await requestJson('surveys', { params: { sector: sector || 'general', limit: 500 } });
-        _dashSurveys = payload.surveys || [];
+        let backendSurveys = payload.surveys || [];
+        
+        const pending = getPendingSurveys().map(p => ({
+            ...p,
+            survey_status: 'Pendiente (Offline)',
+            id: p.client_uuid || Math.random().toString(36).substring(7)
+        }));
+        
+        let allSurveys = [...pending, ...backendSurveys];
+        if (sector && sector !== 'general') {
+            allSurveys = allSurveys.filter(s => s.sector === sector);
+        }
+        
+        _dashSurveys = allSurveys;
         renderDashboardSurveys(_dashSurveys);
         const search = document.getElementById('dash-survey-search');
         if (search) {
@@ -2643,11 +2662,13 @@ function renderDashboardSurveys(surveys) {
         'sincronizada': '#0f9f6e',
         'revisada':     '#0e4eb0',
         'observada':    '#d97706',
+        'Pendiente (Offline)': '#6b7280'
     };
     const statusLabels = {
         'sincronizada': '✓ Sincronizada',
         'revisada':     '✓ Revisada',
         'observada':    '⚠ Observada',
+        'Pendiente (Offline)': '⌛ Pendiente'
     };
 
     tbody.innerHTML = surveys.map((s, i) => {
