@@ -1135,6 +1135,18 @@ header('Expires: 0');
         </main><!-- /app-main -->
     </div><!-- /app-shell -->
 
+    <!-- ===================== MODAL VER ENCUESTA ===================== -->
+    <div id="survey-detail-modal" class="survey-modal-overlay" style="display:none;" onclick="closeSurveyModal(event)">
+        <div class="survey-modal-box">
+            <div class="survey-modal-header">
+                <div id="survey-modal-header-left" class="survey-modal-header-left"></div>
+                <span id="survey-modal-status-badge" class="survey-modal-status-badge"></span>
+                <button class="survey-modal-close" type="button" onclick="closeSurveyModal(event)" aria-label="Cerrar">&times;</button>
+            </div>
+            <div id="survey-modal-body" class="survey-modal-body"></div>
+        </div>
+    </div>
+
     <!-- ===================== SCRIPTS ===================== -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>

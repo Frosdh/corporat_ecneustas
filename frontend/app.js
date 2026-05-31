@@ -2563,8 +2563,8 @@ function renderPreguntas(data) {
 
         const section = document.createElement('div');
         section.className = 'preguntas-grupo';
-        section.innerHTML = `<h3 class="preguntas-grupo-titulo">${escHtml(grupo.titulo)}</h3>
-            <div class="preguntas-grid" id="pg-${escHtml(grupo.id)}"></div>`;
+        section.innerHTML = `<h3 class="preguntas-grupo-titulo">${escapeHtml(grupo.titulo)}</h3>
+            <div class="preguntas-grid" id="pg-${escapeHtml(grupo.id)}"></div>`;
         container.appendChild(section);
 
         const grid = section.querySelector('.preguntas-grid');
@@ -2579,7 +2579,7 @@ function renderPreguntas(data) {
             const card = document.createElement('div');
             card.className = 'preguntas-card' + (preg.tipo === 'donut' ? ' preguntas-card-sm' : '');
             card.innerHTML = `
-                <p class="preguntas-card-q">${escHtml(preg.pregunta)}</p>
+                <p class="preguntas-card-q">${escapeHtml(preg.pregunta)}</p>
                 <span class="preguntas-n">${n} respuesta${n !== 1 ? 's' : ''}</span>
                 <div class="preguntas-chart-wrap">
                     <canvas id="${canvasId}"></canvas>

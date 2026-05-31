@@ -34,6 +34,10 @@ function ensure_schema_updates(PDO $pdo): void
             'knows_modern_mining' => 'VARCHAR(80)  NULL DEFAULT NULL',
             'knows_local_mines'   => 'VARCHAR(60)  NULL DEFAULT NULL',
             'knows_env_guarantees'=> 'VARCHAR(60)  NULL DEFAULT NULL',
+            'mine_benefits'       => "TEXT         NOT NULL DEFAULT ''",
+            'mine_risks'          => "TEXT         NOT NULL DEFAULT ''",
+            'women_roles'         => "TEXT         NOT NULL DEFAULT ''",
+            'occupation'          => "VARCHAR(120) NOT NULL DEFAULT ''",
         ];
 
         foreach ($newColumns as $col => $definition) {
@@ -1967,15 +1971,7 @@ function get_analisis_experto(string $sector = 'general'): array
     }
 
     $sql = "
-        SELECT respondent_gender, age_range, education_level, occupation,
-               primary_problem, youth_path, water_source, has_sewer,
-               has_septic, has_internet, road_status, road_who_fixes,
-               household_income, political_climate, authority_trust,
-               social_priority, investment_acceptance,
-               mine_reopening_perception, mine_benefits, mine_risks,
-               women_roles, sector, survey_date,
-               knows_mining_types, knows_mining_benefits,
-               knows_modern_mining, knows_local_mines, knows_env_guarantees
+        SELECT *
         FROM surveys $where
         ORDER BY survey_date DESC
     ";
@@ -2272,14 +2268,7 @@ function get_preguntas_data(string $sector = 'general'): array
     }
 
     $sql = "
-        SELECT primary_problem, social_priority, political_climate,
-               household_income, water_source, has_sewer, has_septic, has_internet,
-               road_status, road_who_fixes,
-               investment_acceptance, mine_reopening_perception, mine_benefits, mine_risks,
-               authority_trust, age_range, respondent_gender, education_level,
-               occupation, youth_path, women_roles,
-               knows_mining_types, knows_mining_benefits,
-               knows_modern_mining, knows_local_mines, knows_env_guarantees
+        SELECT *
         FROM surveys $where
     ";
     $stmt = db()->prepare($sql);
