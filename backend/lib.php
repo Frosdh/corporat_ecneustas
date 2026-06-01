@@ -2416,3 +2416,401 @@ function get_preguntas_data(string $sector = 'general'): array
     return ['total' => $n, 'grupos' => $grupos];
 }
 
+// ============================================================
+//  PLAN ESTRATÉGICO MINERO — Generado por IA (Gemini)
+// ============================================================
+function get_plan_minero_ia(string $sector = 'general'): array
+{
+    $cfg = require __DIR__ . '/config.php';
+    $apiKey = $cfg['gemini']['api_key'] ?? '';
+    $model  = $cfg['gemini']['model']  ?? 'gemini-1.5-flash';
+
+    if (empty($apiKey)) {
+        return ['ok' => false, 'error' => 'API key de Gemini no configurada. Agrégala en backend/config.php'];
+    }
+
+    // --- Recopilar datos reales de encuestas para el prompt ---
+    $analisis = get_analisis_experto($sector);
+    if (($analisis['total'] ?? 0) === 0) {
+        return ['ok' => false, 'error' => 'Sin datos de encuestas para generar el plan.'];
+    }
+
+    $r   = $analisis['resumen_ejecutivo']  ?? [];
+    $sg  = $analisis['sentimiento_global'] ?? [];
+    $dimMinera = null;
+    foreach (($analisis['dimensiones'] ?? []) as $d) {
+        if (stripos($d['nombre'] ?? $d['titulo'] ?? '', 'miner') !== false) {
+            $dimMinera = $d;
+            break;
+        }
+    }
+
+    $benList  = implode(', ', array_column(array_slice($analisis['beneficios_mineros'] ?? [], 0, 5), 'label'));
+    $rskList  = implode(', ', array_column(array_slice($analisis['riesgos_mineros']    ?? [], 0, 5), 'label'));
+    $conocList = implode(', ', array_map(fn($k) => "{$k['label']} ({$k['pct']}%)", array_slice($analisis['conocimiento_minero'] ?? [], 0, 4)));
+
+    $idxMin   = $dimMinera ? ($dimMinera['sentimiento']['indice']      ?? $r['indice_global'] ?? 0) : ($r['indice_global'] ?? 0);
+    $apoyoPct = $dimMinera ? ($dimMinera['sentimiento']['positivo_pct'] ?? $sg['positivo_pct'] ?? 0) : ($sg['positivo_pct'] ?? 0);
+    $rechPct  = $dimMinera ? ($dimMinera['sentimiento']['negativo_pct'] ?? $sg['negativo_pct'] ?? 0) : ($sg['negativo_pct'] ?? 0);
+    $totalEnc = $r['total_encuestas'] ?? $analisis['total'] ?? 0;
+    $nivelSent = $r['nivel_sentimiento'] ?? 'No determinado';
+    $probPrinc = $r['problema_principal'] ?? 'No identificado';
+
+    // Correlaciones relevantes
+    $corrTexto = '';
+    foreach (array_slice($analisis['correlaciones'] ?? [], 0, 3) as $c) {
+        $corrTexto .= "- {$c['titulo']}: {$c['descripcion']}\n";
+    }
+
+    $prompt = <<<PROMPT
+Eres un experto en planificación estratégica minera, desarrollo territorial sostenible y gestión comunitaria en Ecuador.
+
+Se te proporcionan los datos reales de {$totalEnc} encuestas comunitarias realizadas en la parroquia San Bartolomé, sector "{$sector}", sobre la percepción ciudadana de la actividad minera:
+
+DATOS DE ENCUESTAS:
+- Índice neto de sentimiento: {$idxMin} puntos (escala -100 a +100)
+- Nivel de sentimiento: {$nivelSent}
+- Apoyo a la actividad minera: {$apoyoPct}%
+- Rechazo a la actividad minera: {$rechPct}%
+- Problema principal identificado: {$probPrinc}
+- Beneficios reconocidos por la comunidad: {$benList}
+- Riesgos identificados por la comunidad: {$rskList}
+- Nivel de conocimiento sobre minería: {$conocList}
+- Correlaciones clave:
+{$corrTexto}
+
+INSTRUCCIÓN:
+Con base en estos datos reales, genera un Plan Estratégico Integral para la Reapertura de la Actividad Minera en el sector. El plan debe incluir exactamente estas secciones en formato JSON:
+
+{
+  "diagnostico": "Párrafo de diagnóstico situacional basado en los datos (3-4 oraciones, datos concretos)",
+  "factores_facilitadores": ["item1", "item2", "item3", "item4", "item5"],
+  "factores_limitantes": ["item1", "item2", "item3", "item4", "item5"],
+  "acciones_prioritarias": [
+    {"accion": "...", "responsable": "...", "plazo": "...", "prioridad": "ALTA|MEDIA|BAJA"},
+    ... (7 acciones)
+  ],
+  "requerimientos": {
+    "tecnicos": ["item1","item2","item3","item4"],
+    "legales": ["item1","item2","item3","item4"],
+    "ambientales": ["item1","item2","item3","item4"],
+    "sociales": ["item1","item2","item3","item4"]
+  },
+  "riesgos": [
+    {"riesgo": "...", "probabilidad": "Alta|Media|Baja", "impacto": "Alto|Medio|Bajo", "control": "..."},
+    ... (6 riesgos)
+  ],
+  "cronograma": [
+    {"fase": "Fase 1", "periodo": "Meses 1-2", "descripcion": "..."},
+    {"fase": "Fase 2", "periodo": "Meses 2-4", "descripcion": "..."},
+    {"fase": "Fase 3", "periodo": "Meses 3-6", "descripcion": "..."},
+    {"fase": "Fase 4", "periodo": "Meses 6-9", "descripcion": "..."},
+    {"fase": "Fase 5", "periodo": "Mes 9+", "descripcion": "..."}
+  ],
+  "indicadores": [
+    {"nombre": "...", "meta": "...", "medicion": "..."},
+    ... (6 indicadores)
+  ],
+  "beneficios_esperados": [
+    {"icono": "💰", "titulo": "...", "descripcion": "..."},
+    ... (5 beneficios)
+  ],
+  "conclusion": "Párrafo conclusivo estratégico basado en los datos reales (4-5 oraciones, concreto y orientado a acción)"
+}
+
+Usa los datos reales de las encuestas. Responde ÚNICAMENTE con el JSON válido, sin texto adicional.
+PROMPT;
+
+    // --- Llamada a Gemini API ---
+    $url     = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
+    $payload = json_encode([
+        'contents' => [['parts' => [['text' => $prompt]]]],
+        'generationConfig' => [
+            'temperature'     => 0.4,
+            'maxOutputTokens' => 4096,
+            'responseMimeType'=> 'application/json',
+        ],
+    ]);
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => $payload,
+        CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+        CURLOPT_TIMEOUT        => 30,
+    ]);
+    $resp   = curl_exec($ch);
+    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err    = curl_error($ch);
+    curl_close($ch);
+
+    if ($err || $status !== 200) {
+        return ['ok' => false, 'error' => "Error Gemini API (HTTP {$status}): {$err}"];
+    }
+
+    $body = json_decode($resp, true);
+    $text = $body['candidates'][0]['content']['parts'][0]['text'] ?? '';
+    if (empty($text)) {
+        return ['ok' => false, 'error' => 'Gemini no devolvió contenido.'];
+    }
+
+    // Limpiar posibles backticks si Gemini los incluyó
+    $text = trim(preg_replace('/^```json\s*/i', '', preg_replace('/\s*```$/', '', trim($text))));
+    $plan = json_decode($text, true);
+
+    if (!is_array($plan)) {
+        return ['ok' => false, 'error' => 'No se pudo parsear el JSON del plan generado por IA.'];
+    }
+
+    return ['ok' => true, 'plan' => $plan, 'sector' => $sector, 'total_encuestas' => $totalEnc];
+}
+
+// ============================================================
+//  IA MINERA — Clasificador Naive Bayes (PHP puro)
+//  Aprende de los datos de encuestas y predice aceptación
+// ============================================================
+function ia_minera_entrenar_y_analizar(string $sector = 'general'): array
+{
+    $params = [];
+    $where  = '';
+    if ($sector !== 'general') {
+        $where             = 'WHERE sector = :sector';
+        $params[':sector'] = $sector;
+    }
+
+    $stmt = db()->prepare("SELECT * FROM surveys $where ORDER BY survey_date DESC");
+    $stmt->execute($params);
+    $rows = $stmt->fetchAll();
+    $n    = count($rows);
+
+    if ($n === 0) {
+        return ['ok' => false, 'error' => 'Sin datos para entrenar el modelo.'];
+    }
+
+    // --- Definir clases objetivo ---
+    // mine_reopening_perception → Aceptación / Neutral / Rechazo
+    $claseMap = [
+        'Beneficiaria mucho' => 'Aceptacion',
+        'Beneficiaria algo'  => 'Aceptacion',
+        'Beneficio dudoso'   => 'Neutral',
+        'No beneficiaria'    => 'Rechazo',
+    ];
+    $clases = ['Aceptacion', 'Neutral', 'Rechazo'];
+
+    // --- Features (predictores) ---
+    $features = [
+        'political_climate'    => 'Clima Político',
+        'authority_trust'      => 'Confianza en Autoridades',
+        'investment_acceptance'=> 'Apertura a Inversión',
+        'household_income'     => 'Situación Económica',
+        'water_source'         => 'Fuente de Agua',
+        'has_internet'         => 'Acceso a Internet',
+        'road_status'          => 'Estado Vial',
+        'has_sewer'            => 'Alcantarillado',
+    ];
+
+    // --- Entrenamiento Naive Bayes ---
+    $conteoClase   = array_fill_keys($clases, 0);
+    $conteoFeat    = [];  // [clase][feature][valor] => count
+    $valoresFeat   = [];  // [feature] => set of values
+
+    foreach ($rows as $row) {
+        $claseRaw = trim($row['mine_reopening_perception'] ?? '');
+        $clase    = $claseMap[$claseRaw] ?? null;
+        if (!$clase) continue;
+
+        $conteoClase[$clase]++;
+
+        foreach (array_keys($features) as $feat) {
+            $val = trim($row[$feat] ?? '');
+            if ($val === '') $val = 'Sin dato';
+            $conteoFeat[$clase][$feat][$val] = ($conteoFeat[$clase][$feat][$val] ?? 0) + 1;
+            $valoresFeat[$feat][$val]         = true;
+        }
+    }
+
+    $totalEntrenados = array_sum($conteoClase);
+    if ($totalEntrenados === 0) {
+        return ['ok' => false, 'error' => 'No hay encuestas con percepción minera registrada.'];
+    }
+
+    // --- Probabilidades a priori P(clase) ---
+    $probClase = [];
+    foreach ($clases as $c) {
+        $probClase[$c] = ($conteoClase[$c] + 1) / ($totalEntrenados + count($clases)); // Laplace
+    }
+
+    // --- Importancia de cada feature (Information Gain simplificado) ---
+    $importancia = [];
+    foreach (array_keys($features) as $feat) {
+        $entropia_total = 0;
+        $freq_feat = [];
+        foreach ($rows as $row) {
+            $val = trim($row[$feat] ?? '') ?: 'Sin dato';
+            $freq_feat[$val] = ($freq_feat[$val] ?? 0) + 1;
+        }
+        $totalFeat = array_sum($freq_feat);
+        foreach ($freq_feat as $val => $cnt) {
+            $peso = $cnt / $totalFeat;
+            // Entropia condicional por valor
+            $e = 0;
+            foreach ($clases as $c) {
+                $p = (($conteoFeat[$c][$feat][$val] ?? 0) + 1) / ($conteoClase[$c] + count($valoresFeat[$feat]));
+                if ($p > 0) $e -= $p * log($p, 2);
+            }
+            $entropia_total += $peso * $e;
+        }
+        $importancia[$feat] = round(max(0, log(count($clases), 2) - $entropia_total), 4);
+    }
+    arsort($importancia);
+
+    // --- Predicciones por perfil: promediar sobre todos los rows ---
+    $sumProbs = array_fill_keys($clases, 0.0);
+    $contPred = 0;
+    $prediccionesPorSector = [];
+
+    foreach ($rows as $row) {
+        $logProbs = [];
+        foreach ($clases as $c) {
+            $lp = log($probClase[$c]);
+            foreach (array_keys($features) as $feat) {
+                $val       = trim($row[$feat] ?? '') ?: 'Sin dato';
+                $numValores = count($valoresFeat[$feat] ?? []) + 1;
+                $p         = (($conteoFeat[$c][$feat][$val] ?? 0) + 1) / ($conteoClase[$c] + $numValores);
+                $lp       += log($p);
+            }
+            $logProbs[$c] = $lp;
+        }
+        // Softmax para convertir log-probs a probabilidades
+        $maxLP = max($logProbs);
+        $exp   = [];
+        $sumE  = 0;
+        foreach ($logProbs as $c => $lp) {
+            $exp[$c] = exp($lp - $maxLP);
+            $sumE   += $exp[$c];
+        }
+        foreach ($clases as $c) {
+            $sumProbs[$c] += $exp[$c] / $sumE;
+        }
+        $contPred++;
+
+        // Predicción por sector
+        $sec = $row['sector'] ?? 'General';
+        if (!isset($prediccionesPorSector[$sec])) {
+            $prediccionesPorSector[$sec] = array_fill_keys($clases, 0.0);
+            $prediccionesPorSector[$sec]['_n'] = 0;
+        }
+        foreach ($clases as $c) {
+            $prediccionesPorSector[$sec][$c] += $exp[$c] / $sumE;
+        }
+        $prediccionesPorSector[$sec]['_n']++;
+    }
+
+    // Probabilidades globales promedio
+    $probGlobal = [];
+    foreach ($clases as $c) {
+        $probGlobal[$c] = $contPred > 0 ? round(($sumProbs[$c] / $contPred) * 100, 1) : 0;
+    }
+
+    // Probabilidades por sector
+    $sectorResults = [];
+    foreach ($prediccionesPorSector as $sec => $vals) {
+        $ns = $vals['_n'];
+        $item = ['sector' => $sec, 'n' => $ns];
+        foreach ($clases as $c) {
+            $item[$c] = $ns > 0 ? round(($vals[$c] / $ns) * 100, 1) : 0;
+        }
+        $sectorResults[] = $item;
+    }
+    usort($sectorResults, fn($a,$b) => $b['Aceptacion'] <=> $a['Aceptacion']);
+
+    // --- Perfiles de alto/bajo rechazo ---
+    $perfil_rechazo = [];
+    foreach (array_keys($importancia) as $feat) {
+        $valores_rechazo = $conteoFeat['Rechazo'][$feat] ?? [];
+        if (empty($valores_rechazo)) continue;
+        arsort($valores_rechazo);
+        $top = array_key_first($valores_rechazo);
+        $pct = $conteoClase['Rechazo'] > 0 ? round(($valores_rechazo[$top] / $conteoClase['Rechazo']) * 100, 1) : 0;
+        if ($pct >= 20) {
+            $perfil_rechazo[] = [
+                'factor'   => $features[$feat],
+                'valor'    => $top,
+                'pct'      => $pct,
+            ];
+        }
+    }
+
+    $perfil_aceptacion = [];
+    foreach (array_keys($importancia) as $feat) {
+        $valores_acept = $conteoFeat['Aceptacion'][$feat] ?? [];
+        if (empty($valores_acept)) continue;
+        arsort($valores_acept);
+        $top = array_key_first($valores_acept);
+        $pct = $conteoClase['Aceptacion'] > 0 ? round(($valores_acept[$top] / $conteoClase['Aceptacion']) * 100, 1) : 0;
+        if ($pct >= 20) {
+            $perfil_aceptacion[] = [
+                'factor' => $features[$feat],
+                'valor'  => $top,
+                'pct'    => $pct,
+            ];
+        }
+    }
+
+    // --- Recomendaciones automáticas basadas en el modelo ---
+    $recomendaciones = [];
+    $featureLabels = array_values($features);
+    $impKeys = array_keys($importancia);
+
+    if (!empty($impKeys)) {
+        $top1 = $impKeys[0];
+        $top2 = $impKeys[1] ?? null;
+        $recomendaciones[] = "El factor más influyente en la predicción es «{$features[$top1]}» — priorizar intervenciones en esta dimensión.";
+        if ($top2) {
+            $recomendaciones[] = "«{$features[$top2]}» es el segundo factor más determinante — incluirlo en la estrategia de socialización.";
+        }
+    }
+    if ($probGlobal['Rechazo'] > 40) {
+        $recomendaciones[] = "Alta probabilidad de rechazo ({$probGlobal['Rechazo']}%) — se recomienda proceso de consulta previa intensivo antes de cualquier operación.";
+    } elseif ($probGlobal['Aceptacion'] > 50) {
+        $recomendaciones[] = "Mayoría predictiva favorable ({$probGlobal['Aceptacion']}%) — condiciones favorables para iniciar diálogo formal de reapertura.";
+    } else {
+        $recomendaciones[] = "Escenario ambivalente — la comunidad requiere información objetiva y espacios de participación para consolidar una postura.";
+    }
+    if (!empty($perfil_rechazo)) {
+        $fr = $perfil_rechazo[0];
+        $recomendaciones[] = "El perfil con mayor probabilidad de rechazo se caracteriza por «{$fr['factor']}: {$fr['valor']}» ({$fr['pct']}% del grupo de rechazo).";
+    }
+    $recomendaciones[] = "Implementar monitoreo continuo con encuestas periódicas para reentrenar el modelo conforme evolucione el sentimiento comunitario.";
+
+    // --- Métricas del modelo ---
+    $precision_modelo = round(($totalEntrenados / $n) * 100, 1); // % de encuestas con clase válida
+    $clasePredichaGlobal = array_search(max($probGlobal), $probGlobal);
+
+    return [
+        'ok'                    => true,
+        'modelo'                => 'Naive Bayes Multinomial con suavizado de Laplace',
+        'total_encuestas'       => $n,
+        'encuestas_entrenadas'  => $totalEntrenados,
+        'cobertura_datos'       => $precision_modelo,
+        'sector'                => $sector,
+        'prediccion_global'     => $clasePredichaGlobal,
+        'probabilidades_globales'=> $probGlobal,
+        'distribucion_clases'   => $conteoClase,
+        'importancia_factores'  => array_map(
+            fn($feat, $score) => [
+                'factor' => $features[$feat] ?? $feat,
+                'campo'  => $feat,
+                'score'  => $score,
+                'score_pct' => $importancia ? round(($score / max(array_values($importancia))) * 100, 1) : 0,
+            ],
+            array_keys($importancia),
+            array_values($importancia)
+        ),
+        'perfil_aceptacion'     => array_slice($perfil_aceptacion, 0, 4),
+        'perfil_rechazo'        => array_slice($perfil_rechazo, 0, 4),
+        'prediccion_por_sector' => array_slice($sectorResults, 0, 10),
+        'recomendaciones_ia'    => $recomendaciones,
+    ];
+}

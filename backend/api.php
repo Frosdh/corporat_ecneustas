@@ -163,6 +163,13 @@ try {
                 'preguntas'=> get_preguntas_data($_GET['sector'] ?? 'general'),
             ]);
 
+        case 'ia_minera':
+            require_auth();
+            if (!user_can_access_dashboard()) {
+                respond(['ok' => false, 'message' => 'No tienes acceso.'], 403);
+            }
+            respond(ia_minera_entrenar_y_analizar($_GET['sector'] ?? 'general'));
+
         case 'surveys':
             require_admin();
             respond(['ok' => true, 'surveys' => get_surveys($_GET)]);

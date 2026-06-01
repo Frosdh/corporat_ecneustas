@@ -2206,3 +2206,239 @@ fieldset {
 .dg-sb-pos { background: #059669; }
 .dg-sb-neu { background: #d97706; }
 .dg-sb-neg { background: #dc2626; }
+
+/* ══════════════════════════════════════════
+   AUDIT LOG — diseño timeline
+   ══════════════════════════════════════════ */
+#audit-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+.audit-entry {
+    display: flex;
+    gap: 0;
+    position: relative;
+}
+.audit-icon-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 52px;
+    flex-shrink: 0;
+}
+.audit-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,.1);
+    z-index: 1;
+    margin-top: 18px;
+}
+.audit-timeline-line {
+    width: 2px;
+    flex: 1;
+    background: var(--coffee-latte, #D7BFA4);
+    opacity: .35;
+    margin: 4px 0;
+}
+.audit-entry:last-child .audit-timeline-line {
+    display: none;
+}
+.audit-body {
+    flex: 1;
+    background: var(--panel, #FFFDF7);
+    border: 1.5px solid #ede4d6;
+    border-radius: 12px;
+    padding: .85rem 1.1rem;
+    margin: 10px 0 10px 0;
+    min-width: 0;
+    box-shadow: 0 1px 3px rgba(111,78,55,.06);
+    transition: box-shadow .15s;
+}
+.audit-body:hover {
+    box-shadow: 0 4px 12px rgba(111,78,55,.12);
+}
+.audit-header { margin-bottom: .55rem; }
+.audit-title-row {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    flex-wrap: wrap;
+    margin-bottom: .3rem;
+}
+.audit-action-label {
+    font-size: .95rem;
+    font-weight: 700;
+    letter-spacing: -.2px;
+}
+.audit-entity-badge {
+    font-size: .68rem;
+    font-weight: 700;
+    padding: .18rem .55rem;
+    border-radius: 999px;
+    background: #f5ede0;
+    color: #6F4E37;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    border: 1px solid #D7BFA4;
+}
+.audit-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .3rem .9rem;
+    font-size: .78rem;
+    color: var(--muted, #8D6E63);
+}
+.audit-actor, .audit-time, .audit-id {
+    display: flex;
+    align-items: center;
+    gap: .25rem;
+}
+.audit-id {
+    font-family: monospace;
+    font-size: .72rem;
+    background: #f5ede0;
+    padding: .1rem .4rem;
+    border-radius: 4px;
+    color: #6F4E37;
+}
+.audit-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem .8rem;
+    border-top: 1px solid #ede4d6;
+    padding-top: .5rem;
+    margin-top: .1rem;
+}
+.audit-detail-item {
+    display: flex;
+    align-items: baseline;
+    gap: .3rem;
+    font-size: .8rem;
+}
+.audit-detail-key {
+    font-weight: 600;
+    color: #6F4E37;
+    text-transform: capitalize;
+    white-space: nowrap;
+}
+.audit-detail-key::after { content: ':'; }
+.audit-detail-val {
+    color: var(--ink, #3E2723);
+    word-break: break-all;
+}
+@media (max-width: 520px) {
+    .audit-icon-col { width: 36px; }
+    .audit-icon { width: 30px; height: 30px; font-size: .82rem; }
+    .audit-body { padding: .65rem .8rem; }
+}
+
+/* ============================================================
+   IA MINERA — Estilos del modelo predictivo
+   ============================================================ */
+.ia-loading {
+    display: flex; align-items: center; gap: 12px;
+    padding: 20px 24px; background: #f8fafc;
+    border: 1px solid #e2e8f0; border-radius: 10px;
+    color: #475569; font-size: 0.95rem;
+}
+.ia-spinner {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 3px solid #e2e8f0; border-top-color: #0e4eb0;
+    animation: ia-spin 0.8s linear infinite; flex-shrink: 0;
+}
+@keyframes ia-spin { to { transform: rotate(360deg); } }
+.ia-error {
+    padding: 14px 20px; background: #fef2f2;
+    border: 1px solid #fca5a5; border-radius: 8px;
+    color: #991b1b; font-size: 0.9rem;
+}
+.ia-minera-card {
+    background: #fff; border: 1px solid #e2e8f0;
+    border-radius: 12px; overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.ia-header {
+    background: linear-gradient(135deg, #0a2a6e, #1155bb);
+    color: #fff; padding: 18px 24px;
+    display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.ia-header h3 { font-size: 1.05rem; font-weight: 800; margin: 0 0 4px; }
+.ia-header p  { font-size: 0.82rem; opacity: 0.8; margin: 0; }
+.ia-pred-pill {
+    padding: 8px 18px; border-radius: 24px; font-size: 0.9rem;
+    font-weight: 700; white-space: nowrap; color: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.ia-probs {
+    display: flex; gap: 0; border-bottom: 1px solid #f1f5f9;
+}
+.ia-prob-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    padding: 16px 8px; border-right: 1px solid #f1f5f9; gap: 6px;
+}
+.ia-prob-item:last-child { border-right: none; }
+.ia-prob-bar-wrap {
+    width: 40px; height: 80px; background: #f1f5f9; border-radius: 6px;
+    display: flex; align-items: flex-end; overflow: hidden;
+}
+.ia-prob-bar { width: 100%; border-radius: 6px 6px 0 0; transition: height 0.6s ease; }
+.ia-prob-val   { font-size: 1.1rem; font-weight: 800; }
+.ia-prob-label { font-size: 0.78rem; color: #64748b; font-weight: 600; }
+.ia-sub {
+    font-size: 0.9rem; font-weight: 700; color: #0e4eb0;
+    padding: 14px 20px 6px; margin: 0; border-top: 1px solid #f1f5f9;
+}
+.ia-factores { padding: 0 20px 14px; }
+.ia-factor-row {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 7px; font-size: 0.88rem;
+}
+.ia-factor-label { width: 180px; flex-shrink: 0; color: #334155; font-weight: 500; }
+.ia-factor-bar-wrap {
+    flex: 1; height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden;
+}
+.ia-factor-bar { height: 100%; border-radius: 5px; transition: width 0.5s ease; }
+.ia-factor-score { width: 40px; text-align: right; font-weight: 700; color: #475569; font-size: 0.82rem; }
+.ia-sector-tbl {
+    width: calc(100% - 40px); margin: 0 20px 14px; border-collapse: collapse; font-size: 0.88rem;
+}
+.ia-sector-tbl th {
+    background: #f1f5f9; color: #475569; padding: 7px 12px;
+    font-weight: 700; text-align: left; font-size: 0.8rem;
+}
+.ia-sector-tbl td { padding: 7px 12px; border-bottom: 1px solid #f1f5f9; }
+.ia-recs {
+    padding: 0 20px 14px 36px; color: #334155;
+}
+.ia-recs li { margin-bottom: 8px; font-size: 0.9rem; line-height: 1.6; }
+.ia-perfiles {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    padding: 0 20px 20px; border-top: 1px solid #f1f5f9; margin-top: 4px; padding-top: 14px;
+}
+.ia-perfil { border-radius: 8px; padding: 14px 16px; }
+.ia-perfil h5 { font-size: 0.88rem; font-weight: 700; margin: 0 0 10px; }
+.ia-perfil-acept { background: #f0fdf4; border: 1px solid #bbf7d0; }
+.ia-perfil-acept h5 { color: #166534; }
+.ia-perfil-rec   { background: #fef2f2; border: 1px solid #fecaca; }
+.ia-perfil-rec h5 { color: #991b1b; }
+.ia-perf-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.83rem; margin-bottom: 6px; color: #475569;
+}
+.ia-perf-row span { flex: 1; }
+.ia-perf-row strong { font-weight: 700; color: #1e293b; }
+.ia-perf-row em { font-style: normal; font-size: 0.78rem; color: #64748b; margin-left: auto; }
+@media (max-width: 640px) {
+    .ia-perfiles { grid-template-columns: 1fr; }
+    .ia-factor-label { width: 120px; }
+    .ia-probs { flex-wrap: wrap; }
+    .ia-prob-item { min-width: 80px; }
+}

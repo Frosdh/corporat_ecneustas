@@ -1040,8 +1040,8 @@ header('Expires: 0');
                     <!-- Radar de dimensiones -->
                     <div class="analisis-section-row">
                         <div class="premium-radar-header">
-                            <h3 class="analisis-section-header">Vista Radar â€” Comparativa por Dimension</h3>
-                            <p class="analisis-section-desc">Cada eje evalua el sentimiento mediante un <b>Andice Neto</b> (escala -100 a +100 puntos), calculado como: <i>% Positivo menos % Negativo</i>. Verde = favorable, rojo = critico.</p>
+                            <h3 class="analisis-section-header">Vista Radar &ndash; Comparativa por Dimensi&oacute;n</h3>
+                            <p class="analisis-section-desc">Cada eje eval&uacute;a el sentimiento mediante un <b>&Iacute;ndice Neto</b> (escala -100 a +100 puntos), calculado como: <i>% Positivo menos % Negativo</i>. Verde = favorable, rojo = cr&iacute;tico. Los datos se actualizan autom&aacute;ticamente desde la base de datos con cada recarga.</p>
                         </div>
                     </div>
                     <div class="card analisis-radar-card">
@@ -1106,16 +1106,6 @@ header('Expires: 0');
                         <canvas id="chart-tendencia" height="320"></canvas>
                     </div>
 
-                    <!-- Gauge de sentimiento -->
-                    <div class="analisis-section-row">
-                        <div>
-                            <h3 class="analisis-section-header">Gauge de Sentimiento Neto</h3>
-                            <p class="analisis-section-desc">Semicirculo de &minus;100 a +100 puntos. Verde = favorable, rojo = critico.</p>
-                        </div>
-                    </div>
-                    <div class="card analisis-chart-card" style="max-width:420px;margin:0 auto;">
-                        <canvas id="chart-gauge" height="180"></canvas>
-                    </div>
 
                     <!-- Distribucion por sector -->
                     <div class="analisis-section-row">
@@ -1127,6 +1117,9 @@ header('Expires: 0');
                     <div class="card analisis-chart-card">
                         <div id="analisis-sector-dist" class="analisis-bar-list"></div>
                     </div>
+
+                    <!-- IA MINERA -->
+                    <div id="ia-minera-box" class="hidden" style="margin-top:24px"></div>
 
                 </div><!-- /analisis-content -->
 
@@ -1154,6 +1147,3 @@ header('Expires: 0');
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="frontend/app.js?v=<?= time() ?>" charset="utf-8"></script>
 </body>
-</html>
-
-
