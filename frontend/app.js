@@ -3268,7 +3268,7 @@ async function generateAnalisisPDF() {
             const met = iaData.metodologia;
             const modelos = (met.fase_clasificacion?.modelos || []).map(m =>
               `<tr><td><strong>${esc(m.nombre)}</strong></td><td>${esc(m.arquitectura || '')}</td>
-               <td style="text-align:center">${m.precision ? m.precision + '%' : '—'}</td>
+               <td style="text-align:center">${m.precision ? m.precision + '%' : 'N/A'}</td>
                <td>${esc(m.uso)}</td></tr>`
             ).join('');
             const componentes = (met.fase_analisis?.componentes || []).map(c =>
@@ -4117,10 +4117,29 @@ ${p9_html}
 </body>
 </html>`;
 
+        // Limpiar acentos y eñes para evitar corrupción de caracteres (mojibake) en el PDF
+        const cleanHtml = html
+            .replace(/á/g, '&aacute;')
+            .replace(/é/g, '&eacute;')
+            .replace(/í/g, '&iacute;')
+            .replace(/ó/g, '&oacute;')
+            .replace(/ú/g, '&uacute;')
+            .replace(/ñ/g, '&ntilde;')
+            .replace(/Á/g, '&Aacute;')
+            .replace(/É/g, '&Eacute;')
+            .replace(/Í/g, '&Iacute;')
+            .replace(/Ó/g, '&Oacute;')
+            .replace(/Ú/g, '&Uacute;')
+            .replace(/Ñ/g, '&Ntilde;')
+            .replace(/—/g, '&mdash;')
+            .replace(/–/g, '&ndash;')
+            .replace(/α/g, '&alpha;');
+
         // Abrir en nueva ventana e imprimir
         const win = window.open('', '_blank');
         if (win) {
-            win.document.write(html);
+            win.document.open('text/html;charset=utf-8', 'replace');
+            win.document.write(cleanHtml);
             win.document.close();
             win.focus();
             setTimeout(() => win.print(), 800);
