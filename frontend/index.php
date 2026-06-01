@@ -1102,8 +1102,10 @@ header('Expires: 0');
                             <p class="analisis-section-desc">Barras: encuestas por dia &nbsp;&middot;&nbsp; Linea: % de apertura a inversion minera.</p>
                         </div>
                     </div>
-                    <div class="card analisis-chart-card">
-                        <canvas id="chart-tendencia" height="320"></canvas>
+                    <div class="card analisis-chart-card" style="max-width:520px;margin:0 auto;padding:12px 16px">
+                        <div style="position:relative;height:180px">
+                          <canvas id="chart-tendencia"></canvas>
+                        </div>
                     </div>
 
 
@@ -1120,6 +1122,8 @@ header('Expires: 0');
 
                     <!-- IA MINERA -->
                     <div id="ia-minera-box" class="hidden" style="margin-top:24px"></div>
+                    <!-- Plan Gemini -->
+                    <div id="gemini-plan-box" class="hidden" style="margin-top:24px"></div>
 
                 </div><!-- /analisis-content -->
 
@@ -1140,10 +1144,9 @@ header('Expires: 0');
         </div>
     </div>
 
-    <!-- ===================== SCRIPTS ===================== -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="frontend/app.js?v=<?= time() ?>" charset="utf-8"></script>
 </body>
+</html>
+                                                                                                                                                                                                                                                 

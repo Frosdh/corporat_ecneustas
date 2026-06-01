@@ -170,6 +170,13 @@ try {
             }
             respond(ia_minera_entrenar_y_analizar($_GET['sector'] ?? 'general'));
 
+        case 'plan_gemini':
+            require_auth();
+            if (!user_can_access_dashboard()) {
+                respond(['ok' => false, 'message' => 'No tienes acceso.'], 403);
+            }
+            respond(get_plan_gemini($_GET['sector'] ?? 'general'));
+
         case 'surveys':
             require_admin();
             respond(['ok' => true, 'surveys' => get_surveys($_GET)]);

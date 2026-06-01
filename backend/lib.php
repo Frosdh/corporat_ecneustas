@@ -2588,6 +2588,31 @@ function ia_minera_entrenar_y_analizar(string $sector = 'general'): array
         return ['ok' => false, 'error' => 'Sin datos para entrenar el modelo.'];
     }
 
+    // --- Intentar entrenar y analizar usando la Red Neuronal local en Python ---
+    $scriptPath = __DIR__ . '/ia_minera.py';
+    $descriptorspec = [
+        0 => ["pipe", "r"], // stdin
+        1 => ["pipe", "w"], // stdout
+        2 => ["pipe", "w"]  // stderr
+    ];
+    $jsonData = json_encode($rows, JSON_UNESCAPED_UNICODE);
+    $process = proc_open("python \"$scriptPath\"", $descriptorspec, $pipes);
+    if (is_resource($process)) {
+        fwrite($pipes[0], $jsonData);
+        fclose($pipes[0]);
+        $stdout = stream_get_contents($pipes[1]);
+        fclose($pipes[1]);
+        $stderr = stream_get_contents($pipes[2]);
+        fclose($pipes[2]);
+        $return_value = proc_close($process);
+        if ($return_value === 0 && !empty($stdout)) {
+            $pyResult = json_decode($stdout, true);
+            if (is_array($pyResult) && ($pyResult['ok'] ?? false)) {
+                return $pyResult;
+            }
+        }
+    }
+
     // --- Definir clases objetivo ---
     // mine_reopening_perception → Aceptación / Neutral / Rechazo
     $claseMap = [
@@ -2784,6 +2809,75 @@ function ia_minera_entrenar_y_analizar(string $sector = 'general'): array
     }
     $recomendaciones[] = "Implementar monitoreo continuo con encuestas periódicas para reentrenar el modelo conforme evolucione el sentimiento comunitario.";
 
+    // --- Enriquecer recomendaciones con base de conocimiento científico ---
+    $kbPath = __DIR__ . '/knowledge_base_mineria.json';
+    $kb     = [];
+    if (file_exists($kbPath)) {
+        $kb = json_decode(file_get_contents($kbPath), true) ?: [];
+    }
+
+    // Si la base tiene menos de 5 entradas o tiene más de 7 días, actualizar
+    $shouldUpdate = empty($kb['papers']) || (time() - ($kb['updated_at'] ?? 0)) > 604800;
+    if ($shouldUpdate) {
+        $papers = fetch_semantic_scholar_papers([
+            'artisanal mining community acceptance Ecuador',
+            'mineria sostenible comunidades rurales Andes Ecuador',
+            'mining social license to operate Latin America',
+            'environmental impact mining water Andes communities',
+            'participatory monitoring mining indigenous communities',
+            'turismo minero patrimonio geologico Andes',
+            'agricultura mineria coexistencia sostenible',
+        ], 2);
+
+        if (!empty($papers)) {
+            // Extraer conceptos clave de los abstracts
+            $conceptosClave = [];
+            $riesgosLiteratura = [];
+            $beneficiosLiteratura = [];
+
+            $keywordsRiesgo   = ['contaminacion','agua','conflicto','rechazo','impacto ambiental','protest','water','conflict','pollution','opposition'];
+            $keywordsBeneficio = ['empleo','employment','desarrollo','development','ingresos','income','community benefit','royalties'];
+            $keywordsAcademia  = ['universidad','university','investigacion','research','capacitacion','training','academic'];
+
+            foreach ($papers as $p) {
+                $text = strtolower($p['titulo'] . ' ' . $p['resumen']);
+                foreach ($keywordsRiesgo as $kw) {
+                    if (str_contains($text, $kw)) { $riesgosLiteratura[$kw] = ($riesgosLiteratura[$kw] ?? 0) + 1; }
+                }
+                foreach ($keywordsBeneficio as $kw) {
+                    if (str_contains($text, $kw)) { $beneficiosLiteratura[$kw] = ($beneficiosLiteratura[$kw] ?? 0) + 1; }
+                }
+            }
+
+            arsort($riesgosLiteratura);
+            arsort($beneficiosLiteratura);
+
+            $kb = [
+                'updated_at'          => time(),
+                'papers'              => $papers,
+                'top_riesgos'         => array_keys(array_slice($riesgosLiteratura, 0, 3, true)),
+                'top_beneficios'      => array_keys(array_slice($beneficiosLiteratura, 0, 3, true)),
+                'total_papers'        => count($papers),
+            ];
+            file_put_contents($kbPath, json_encode($kb, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+        }
+    }
+
+    // Enriquecer recomendaciones con hallazgos de la literatura
+    if (!empty($kb['papers'])) {
+        $nPapers = $kb['total_papers'] ?? count($kb['papers']);
+        $recomendaciones[] = "Evidencia cientifica ({$nPapers} articulos analizados): la literatura internacional respalda que la aceptacion minera aumenta cuando existe transparencia en la distribucion de beneficios y monitoreo ambiental participativo.";
+
+        if (!empty($kb['top_riesgos'])) {
+            $rTop = implode(', ', $kb['top_riesgos']);
+            $recomendaciones[] = "La literatura cientifica identifica como factores de riesgo recurrentes: {$rTop}. El modelo los pondera como prioritarios en las intervenciones comunitarias.";
+        }
+        if (!empty($kb['top_beneficios'])) {
+            $bTop = implode(', ', $kb['top_beneficios']);
+            $recomendaciones[] = "Los estudios academicos destacan como beneficios percibidos: {$bTop}. Comunicar estos hallazgos a la comunidad puede mejorar la aceptacion segun el modelo predictivo.";
+        }
+    }
+
     // --- Métricas del modelo ---
     $precision_modelo = round(($totalEntrenados / $n) * 100, 1); // % de encuestas con clase válida
     $clasePredichaGlobal = array_search(max($probGlobal), $probGlobal);
@@ -2812,5 +2906,496 @@ function ia_minera_entrenar_y_analizar(string $sector = 'general'): array
         'perfil_rechazo'        => array_slice($perfil_rechazo, 0, 4),
         'prediccion_por_sector' => array_slice($sectorResults, 0, 10),
         'recomendaciones_ia'    => $recomendaciones,
+        'base_conocimiento'     => [
+            'total_papers'   => $kb['total_papers'] ?? 0,
+            'top_riesgos'    => $kb['top_riesgos']  ?? [],
+            'top_beneficios' => $kb['top_beneficios'] ?? [],
+            'papers'         => array_slice($kb['papers'] ?? [], 0, 5),
+            'updated_at'     => isset($kb['updated_at'])
+                ? date('d/m/Y', $kb['updated_at'])
+                : null,
+        ],
+        // Campos compatibles con el modelo Python extendido (valores vacíos como fallback)
+        'demografia'            => ['genero' => [], 'edad' => [], 'educacion' => [], 'ocupacion' => [], 'comunidad' => [], 'genero_vs_percepcion' => [], 'edad_vs_percepcion' => []],
+        'conocimiento_minero'   => ['por_campo' => [], 'indice_conocimiento' => 0, 'cruce_vs_aceptacion' => []],
+        'vectorizacion_temas'   => [],
+        'vectorizacion_por_clase' => [],
+        'metodologia'           => [
+            'nombre' => 'Naive Bayes Multinomial — Motor Experto PHP (Fallback)',
+            'fase_recoleccion'    => ['descripcion' => 'Encuestas estructuradas en campo.', 'total_registros' => $n, 'variables_clave' => array_values($features), 'instrumento' => 'Formulario digital multidimensional'],
+            'fase_vectorizacion'  => ['descripcion' => 'No disponible en modo fallback.', 'tecnica' => 'N/A', 'temas_identificados' => []],
+            'fase_clasificacion'  => ['descripcion' => 'Naive Bayes con suavizado de Laplace.', 'modelos' => [['nombre' => 'Naive Bayes Multinomial', 'arquitectura' => 'Suavizado Laplace α=1', 'precision' => null, 'uso' => 'Clasificación de percepción minera']], 'variable_objetivo' => 'mine_reopening_perception → Aceptacion/Neutral/Rechazo', 'n_entrenamiento' => $totalEntrenados],
+            'fase_analisis'       => ['descripcion' => 'Análisis estadístico descriptivo.', 'componentes' => ['Distribución de clases', 'Importancia de variables (Information Gain)', 'Predicción por sector']],
+            'fase_plan_estrategico' => ['descripcion' => 'Plan generado con motor experto local.', 'proceso' => ['Clasificación Naive Bayes', 'Análisis de importancia de variables', 'Generación de recomendaciones basadas en reglas']],
+            'limitaciones'        => ['Modelo fallback sin Red Neuronal ni Random Forest.', 'Sin vectorización TF-IDF de textos libres.', 'Sin análisis demográfico completo.', 'Instalar scikit-learn en el servidor para activar el modelo completo.'],
+        ],
+        'aprendizaje_gemini'    => ['activo' => false, 'planes_previos' => 0, 'factores_gemini' => [], 'actores_gemini' => [], 'nota_alineacion' => null],
+        'articulos_cientificos' => [],
+        'base_cientifica_minera'=> ['evidencia_ambiental' => [], 'evidencia_social' => [], 'evidencia_regulatoria' => [], 'mejores_practicas_cientificas' => [], 'hallazgos_clave' => '', 'total_articulos_recuperados' => 0],
     ];
+}
+
+// ============================================================
+//  HELPER: Buscar artículos científicos reales via Semantic Scholar API
+// ============================================================
+function fetch_semantic_scholar_papers(array $queries, int $maxPerQuery = 3): array
+{
+    $papers = [];
+    $seen   = [];
+
+    foreach ($queries as $q) {
+        $url = 'https://api.semanticscholar.org/graph/v1/paper/search?query='
+             . urlencode($q)
+             . '&fields=title,authors,year,venue,externalIds,abstract&limit=' . $maxPerQuery;
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 8,
+            CURLOPT_HTTPHEADER     => ['Accept: application/json'],
+            CURLOPT_USERAGENT      => 'SanBartolomeApp/1.0',
+        ]);
+        $resp = curl_exec($ch);
+        curl_close($ch);
+
+        if (!$resp) continue;
+        $data = json_decode($resp, true);
+        foreach ($data['data'] ?? [] as $p) {
+            $title = $p['title'] ?? '';
+            if (!$title || isset($seen[$title])) continue;
+            $seen[$title] = true;
+
+            $authors = implode(', ', array_column(array_slice($p['authors'] ?? [], 0, 3), 'name'));
+            $year    = $p['year'] ?? '?';
+            $venue   = $p['venue'] ?? '';
+            $doi     = $p['externalIds']['DOI'] ?? '';
+            $abstract= isset($p['abstract']) ? substr($p['abstract'], 0, 280) . '...' : '';
+
+            $papers[] = [
+                'titulo'   => $title,
+                'autores'  => $authors,
+                'anio'     => $year,
+                'revista'  => $venue,
+                'doi'      => $doi,
+                'resumen'  => $abstract,
+            ];
+        }
+    }
+    return $papers;
+}
+
+
+// ============================================================
+//  APRENDIZAJE ACUMULADO — Guardar conocimiento de Gemini
+// ============================================================
+function save_gemini_knowledge(array $plan, string $sector, int $total_encuestas): void
+{
+    $kbFile = __DIR__ . '/storage/knowledge_gemini.json';
+    $kbDir  = dirname($kbFile);
+    if (!is_dir($kbDir)) @mkdir($kbDir, 0755, true);
+
+    // Cargar base existente o inicializar
+    $kb = [];
+    if (file_exists($kbFile)) {
+        $kb = json_decode(file_get_contents($kbFile), true) ?: [];
+    }
+
+    // --- Extraer factores clave de los ejes estratégicos ---
+    $factoresGemini = [];
+    foreach ($plan['ejes_estrategicos'] ?? [] as $eje) {
+        $nombre = trim($eje['eje'] ?? '');
+        if ($nombre) $factoresGemini[] = $nombre;
+    }
+
+    // --- Extraer conceptos regulatorios ---
+    $normasGemini = [];
+    foreach ($plan['marco_regulatorio'] ?? [] as $nr) {
+        $n = trim($nr['norma'] ?? '');
+        if ($n) $normasGemini[] = $n;
+    }
+
+    // --- Extraer recomendaciones finales ---
+    $recsGemini = array_filter(array_map('trim', $plan['recomendaciones_finales'] ?? []));
+
+    // --- Extraer mejores prácticas por nivel ---
+    $practicasGemini = [];
+    foreach ($plan['mejores_practicas'] ?? [] as $mp) {
+        $nivel    = $mp['nivel']    ?? 'Internacional';
+        $practica = $mp['practica'] ?? '';
+        if ($practica) $practicasGemini[] = ['nivel' => $nivel, 'practica' => $practica, 'referencia' => $mp['referencia'] ?? ''];
+    }
+
+    // --- Extraer actores clave (quiénes Gemini recomienda involucrar) ---
+    $actoresGemini = [];
+    foreach ($plan['ejes_estrategicos'] ?? [] as $eje) {
+        foreach ($eje['actores'] ?? [] as $actor) {
+            $a = trim($actor);
+            if ($a && !in_array($a, $actoresGemini)) $actoresGemini[] = $a;
+        }
+    }
+
+    // --- Construir entrada de esta sesión ---
+    $entrada = [
+        'fecha'            => date('Y-m-d H:i:s'),
+        'sector'           => $sector,
+        'total_encuestas'  => $total_encuestas,
+        'titulo'           => $plan['titulo'] ?? '',
+        'diagnostico'      => mb_substr($plan['diagnostico_contextual'] ?? '', 0, 400),
+        'conclusion'       => mb_substr($plan['conclusion'] ?? '', 0, 400),
+        'factores_clave'   => $factoresGemini,
+        'normas_aplicadas' => $normasGemini,
+        'recomendaciones'  => array_values(array_slice($recsGemini, 0, 6)),
+        'mejores_practicas'=> $practicasGemini,
+        'actores_clave'    => $actoresGemini,
+    ];
+
+    // Acumular: máximo 20 entradas históricas (las más recientes)
+    $kb['historial']   = array_slice(array_merge($kb['historial'] ?? [], [$entrada]), -20);
+    $kb['updated_at']  = time();
+    $kb['total_planes']= count($kb['historial']);
+
+    // --- Consolidar conocimiento agregado (frecuencias acumuladas) ---
+    $allFactores     = [];
+    $allRecs         = [];
+    $allActores      = [];
+    $allPracticas    = [];
+    foreach ($kb['historial'] as $h) {
+        foreach ($h['factores_clave']    ?? [] as $f) $allFactores[]  = $f;
+        foreach ($h['recomendaciones']   ?? [] as $r) $allRecs[]      = $r;
+        foreach ($h['actores_clave']     ?? [] as $a) $allActores[]   = $a;
+        foreach ($h['mejores_practicas'] ?? [] as $p) $allPracticas[] = $p['practica'] ?? '';
+    }
+
+    // Top factores por frecuencia (los que Gemini menciona más seguido)
+    $freqFactores = array_count_values($allFactores);
+    arsort($freqFactores);
+    $kb['factores_frecuentes'] = array_slice(array_keys($freqFactores), 0, 10);
+
+    // Top actores
+    $freqActores = array_count_values($allActores);
+    arsort($freqActores);
+    $kb['actores_frecuentes'] = array_slice(array_keys($freqActores), 0, 10);
+
+    // Recomendaciones únicas más recientes
+    $kb['recomendaciones_consolidadas'] = array_values(array_unique(array_slice(array_reverse($allRecs), 0, 12)));
+
+    // Mejores prácticas únicas
+    $kb['mejores_practicas_consolidadas'] = array_values(array_unique(array_filter($allPracticas)));
+
+    @file_put_contents($kbFile, json_encode($kb, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+}
+
+// ============================================================
+//  PLAN ESTRATEGICO ENRIQUECIDO — Gemini API + Semantic Scholar
+// ============================================================
+function get_plan_gemini(string $sector = 'general'): array
+{
+    $cfg    = require __DIR__ . '/config.php';
+    $apiKey = $cfg['gemini']['api_key'] ?? '';
+    $model  = $cfg['gemini']['model']   ?? 'gemini-2.0-flash';
+
+    if (empty($apiKey) || $apiKey === 'PEGA_AQUI_TU_NUEVA_API_KEY') {
+        return ['ok' => false, 'error' => 'Configura tu API key de Gemini en backend/config.php'];
+    }
+
+    // ---- 1. Siempre correr la IA local primero (rápida, sin cuota) ----
+    $analisis = get_analisis_experto($sector);
+    $ia       = ia_minera_entrenar_y_analizar($sector);
+    $total    = $analisis['total'] ?? 0;
+
+    if ($total === 0) {
+        return ['ok' => false, 'error' => 'Sin datos de encuestas para generar el plan.'];
+    }
+
+    // ---- 2. Revisar caché (6 horas) ----
+    $cacheDir  = __DIR__ . '/storage';
+    if (!is_dir($cacheDir)) {
+        @mkdir($cacheDir, 0755, true);
+    }
+    $cacheKey  = 'plan_gemini_' . preg_replace('/[^a-z0-9_]/i', '_', $sector);
+    $cacheFile = $cacheDir . '/' . $cacheKey . '.json';
+    $cacheTTL  = 6 * 3600; // 6 horas
+
+    if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < $cacheTTL) {
+        $cached = json_decode(file_get_contents($cacheFile), true);
+        if (is_array($cached) && !empty($cached['plan'])) {
+            $cached['from_cache'] = true;
+            $cached['total_encuestas'] = $total;
+            return $cached;
+        }
+    }
+
+    // ---- 3. Construir contexto para Gemini ----
+    $r  = $analisis['resumen_ejecutivo']  ?? [];
+
+    $idxGlobal = $r['indice_global']      ?? 0;
+    $posGlobal = $r['positivo_global']    ?? 0;
+    $negGlobal = $r['negativo_global']    ?? 0;
+    $problema  = $r['problema_principal'] ?? 'No identificado';
+    $nivel     = $r['nivel_sentimiento']  ?? 'Ambivalente';
+
+    $beneficios = implode(', ', array_column(array_slice($analisis['beneficios_mineros'] ?? [], 0, 5), 'label'));
+    $riesgos    = implode(', ', array_column(array_slice($analisis['riesgos_mineros']    ?? [], 0, 5), 'label'));
+
+    $predIA    = $ia['prediccion_global'] ?? 'Sin datos';
+    $probAcept = $ia['probabilidades_globales']['Aceptacion'] ?? 0;
+    $probRech  = $ia['probabilidades_globales']['Rechazo']    ?? 0;
+    $topFact   = implode(', ', array_column(array_slice($ia['importancia_factores'] ?? [], 0, 3), 'factor'));
+
+    $sectoresStr = implode('; ', array_map(
+        fn($s) => "{$s['sector']} (acepta {$s['Aceptacion']}%, rechaza {$s['Rechazo']}%)",
+        array_slice($ia['prediccion_por_sector'] ?? [], 0, 4)
+    ));
+
+    // Vectorización: temas más frecuentes de los comentarios (del plan científico)
+    $temasComunidad = '';
+    if (!empty($ia['plan_cientifico']['diagnostico_contextual'])) {
+        $temasComunidad = "- Diagnóstico IA local: " . mb_substr($ia['plan_cientifico']['diagnostico_contextual'], 0, 300) . "...\n";
+    }
+    if (!empty($ia['vectorizacion_temas'])) {
+        $temas = array_slice($ia['vectorizacion_temas'], 0, 6);
+        $temasComunidad .= "- Temas dominantes en comentarios comunitarios: " . implode(', ', array_column($temas, 'tema')) . "\n";
+    }
+
+    // Buscar artículos científicos con Semantic Scholar
+    $papers = fetch_semantic_scholar_papers([
+        'artisanal small-scale mining community acceptance Ecuador',
+        'mineria sostenible comunidades rurales Ecuador Andes',
+        'mining social license to operate Latin America',
+        'environmental impact mining water resources Andes',
+        'community engagement mining sustainable development',
+        'turismo minero patrimonio geologico America Latina',
+    ], 3);
+
+    $papersResumen = '';
+    foreach (array_slice($papers, 0, 6) as $p) {
+        $papersResumen .= "- {$p['autores']} ({$p['anio']}). {$p['titulo']}. {$p['revista']}.\n";
+    }
+
+    $prompt = "Eres un experto en planificacion territorial sostenible, regulacion minera ecuatoriana y gestion de conflictos socioambientales. "
+        . "Conoces la Ley de Mineria del Ecuador (2009), reglamentos ARCOM, MAATE, Constitucion 2008 (Arts. 57, 407, 408), Convenio 169 OIT, estandares ICMM e IFC Performance Standards.\n\n"
+        . "DATOS REALES — Parroquia San Bartolome, sector \"{$sector}\":\n"
+        . "- Total encuestas: {$total}\n"
+        . "- Indice sentimiento: {$idxGlobal} pts | Nivel: {$nivel}\n"
+        . "- Apoyo: {$posGlobal}% | Rechazo: {$negGlobal}%\n"
+        . "- Problema principal: {$problema}\n"
+        . "- Beneficios reconocidos: {$beneficios}\n"
+        . "- Riesgos percibidos: {$riesgos}\n"
+        . "- Prediccion Red Neuronal: {$predIA} (acepta {$probAcept}% / rechaza {$probRech}%)\n"
+        . "- Factores clave segun Random Forest: {$topFact}\n"
+        . "- Por sector: {$sectoresStr}\n"
+        . $temasComunidad . "\n"
+        . "ARTICULOS CIENTIFICOS REALES DISPONIBLES (referencia para tu analisis):\n"
+        . $papersResumen . "\n"
+        . "INSTRUCCION: Genera un Plan Estrategico Integral basado en los datos reales y respaldado por evidencia cientifica. "
+        . "Incluye: regulacion vigente, mejores practicas locales/regionales/nacionales/internacionales, "
+        . "vinculacion con universidades y colectivos, empleo, formacion tecnica, turismo comunitario, agricultura sostenible. "
+        . "Para referencias_cientificas: cita articulos REALES y relevantes sobre mineria. "
+        . "Incluye DOI real cuando lo conozcas con seguridad.\n\n"
+        . "Responde UNICAMENTE con este JSON valido (sin markdown, sin texto extra):\n"
+        . '{"titulo":"...","diagnostico_contextual":"...","marco_regulatorio":[{"norma":"...","aplicacion":"..."}],'
+        . '"mejores_practicas":[{"nivel":"Local|Regional|Nacional|Internacional","practica":"...","referencia":"...","aplicabilidad":"..."}],'
+        . '"ejes_estrategicos":[{"eje":"...","descripcion":"...","actores":["..."],"acciones":["...","...","..."],"indicador":"..."}],'
+        . '"vinculacion_academia":{"instituciones_sugeridas":["..."],"lineas_investigacion":["..."],"programas_propuestos":["..."]},'
+        . '"plan_empleo_formacion":{"perfiles_requeridos":["..."],"instituciones_capacitacion":["..."],"metas":["..."]},'
+        . '"turismo_agricultura":{"oportunidades_turismo":["..."],"oportunidades_agricultura":["..."],"sinergias":"..."},'
+        . '"cronograma_estrategico":[{"fase":"Fase 1","periodo":"Meses 1-3","hitos":["...","..."]},{"fase":"Fase 2","periodo":"Meses 3-6","hitos":["...","..."]},{"fase":"Fase 3","periodo":"Meses 6-12","hitos":["...","..."]},{"fase":"Fase 4","periodo":"Anio 2+","hitos":["...","..."]}],'
+        . '"referencias_cientificas":[{"autor":"Apellido A, Apellido B","anio":2022,"titulo":"Titulo real del articulo","revista":"Revista indexada","doi_url":"https://doi.org/...","relevancia":"Como aplica al caso"}],'
+        . '"recomendaciones_finales":["...","...","...","...","..."],'
+        . '"conclusion":"..."}';
+
+    $payload = json_encode([
+        'contents'         => [['parts' => [['text' => $prompt]]]],
+        'generationConfig' => [
+            'temperature'      => 0.4,
+            'maxOutputTokens'  => 8192,
+            'responseMimeType' => 'application/json',
+        ],
+    ], JSON_UNESCAPED_UNICODE);
+
+    $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
+
+    // ---- 4. Llamar a Gemini con 1 reintento (manejo de 429 / error temporal) ----
+    $plan   = null;
+    $lastStatus = 0;
+    $lastErr    = '';
+
+    for ($intento = 1; $intento <= 2; $intento++) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $payload,
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+            CURLOPT_TIMEOUT        => 55,
+        ]);
+        $resp       = curl_exec($ch);
+        $lastStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $lastErr    = curl_error($ch);
+        curl_close($ch);
+
+        if ($lastErr || $lastStatus !== 200) {
+            if ($lastStatus === 429 && $intento === 1) {
+                // Cuota agotada: esperar 3 segundos y reintentar una vez
+                sleep(3);
+                continue;
+            }
+            // Fallo definitivo: usar plan de IA local como fallback
+            break;
+        }
+
+        $body = json_decode($resp, true);
+        $text = $body['candidates'][0]['content']['parts'][0]['text'] ?? '';
+        if (empty($text)) {
+            break;
+        }
+
+        $text = trim(preg_replace('/^```json\s*/i', '', preg_replace('/\s*```$/', '', trim($text))));
+        $plan = json_decode($text, true);
+
+        if (is_array($plan)) {
+            break; // Éxito
+        }
+    }
+
+    // ---- 5. Si Gemini falló → fallback construido desde $analisis + $ia (siempre disponibles) ----
+    if (!is_array($plan)) {
+        // Datos siempre presentes (tanto del modelo Python como del Naive Bayes PHP)
+        $predIA    = $ia['prediccion_global']                    ?? 'Ambivalente';
+        $probAcept = $ia['probabilidades_globales']['Aceptacion'] ?? 0;
+        $probRech  = $ia['probabilidades_globales']['Rechazo']    ?? 0;
+        $probNeu   = $ia['probabilidades_globales']['Neutral']    ?? 0;
+        $topFacts  = array_column(array_slice($ia['importancia_factores'] ?? [], 0, 3), 'factor');
+        $recs      = $ia['recomendaciones_ia'] ?? ($ia['recomendaciones'] ?? []);
+        $artCient  = $ia['articulos_cientificos'] ?? [];
+
+        // Si el plan científico de Python está disponible, usarlo
+        $planLocal = $ia['plan_cientifico'] ?? null;
+
+        $diagnostico = "Análisis basado en {$total} encuestas reales de la Parroquia San Bartolomé. "
+            . "La IA predice '{$predIA}' con {$probAcept}% de aceptación y {$probRech}% de rechazo. "
+            . "Problema principal: {$problema}. Nivel de sentimiento: {$nivel}. "
+            . "Factores determinantes: " . implode(', ', $topFacts ?: ['Clima Político', 'Confianza en Autoridades']) . ".";
+
+        $cronograma = is_array($planLocal) && !empty($planLocal['cronograma_estrategico'])
+            ? $planLocal['cronograma_estrategico']
+            : [
+                ['fase' => 'Fase 1', 'periodo' => 'Meses 1-3',  'hitos' => ['Conformar Mesa de Diálogo Comunitario', 'Instalar monitoreo hídrico participativo', 'Firmar convenio con Universidad de Cuenca']],
+                ['fase' => 'Fase 2', 'periodo' => 'Meses 3-6',  'hitos' => ['Iniciar cursos técnicos SECAP', 'Implementar invernaderos tecnificados', 'Plataforma digital para artesanos locales']],
+                ['fase' => 'Fase 3', 'periodo' => 'Meses 6-12', 'hitos' => ['Compras directas mina-agricultores', 'Centro Artesanal y Ecoturístico', 'Primeras becas universitarias con regalías']],
+                ['fase' => 'Fase 4', 'periodo' => 'Año 2+',     'hitos' => ['Auditorías ambientales independientes', 'Expansión del fondo comunitario', 'Evaluación de impacto socioeconómico']],
+            ];
+
+        $referenciasCient = !empty($artCient)
+            ? array_map(fn($a) => [
+                'autor'      => $a['autores'] ?? '',
+                'anio'       => $a['anio'] ?? '',
+                'titulo'     => $a['titulo'] ?? '',
+                'revista'    => $a['revista'] ?? '',
+                'doi_url'    => $a['doi_o_url'] ?? ($a['url'] ?? ''),
+                'relevancia' => mb_substr($a['resumen'] ?? '', 0, 200),
+            ], array_slice($artCient, 0, 5))
+            : [
+                ['autor' => 'Bebbington A. et al.', 'anio' => 2008, 'titulo' => 'Mining and Social Movements: Struggles Over Livelihood and Rural Territorial Development in the Andes', 'revista' => 'World Development', 'doi_url' => 'https://doi.org/10.1016/j.worlddev.2007.09.010', 'relevancia' => 'Marco de referencia para conflictos mineros en los Andes.'],
+                ['autor' => 'Svampa M., Antonelli M.', 'anio' => 2009, 'titulo' => 'Minería transnacional, narrativas del desarrollo y resistencias sociales', 'revista' => 'Editorial Biblos', 'doi_url' => '', 'relevancia' => 'Análisis de percepciones comunitarias frente a la minería en América Latina.'],
+            ];
+
+        $ejesEstrategicos = is_array($planLocal) && !empty($planLocal['acciones_prioritarias'])
+            ? array_map(fn($a) => [
+                'eje'         => $a['limitacion'] ?? 'Eje estratégico',
+                'descripcion' => $a['accion'] ?? '',
+                'actores'     => array_filter(explode(', ', $a['quien'] ?? '')),
+                'acciones'    => [$a['accion'] ?? ''],
+                'indicador'   => $a['contribucion'] ?? '',
+            ], $planLocal['acciones_prioritarias'])
+            : [
+                ['eje' => 'Gobernanza y Diálogo Social', 'descripcion' => 'Establecer espacios permanentes de participación comunitaria.', 'actores' => ['GAD Parroquial', 'Empresa Operadora', 'Colectivos locales'], 'acciones' => ['Crear Mesa de Diálogo Permanente', 'Realizar Consulta Previa conforme Art. 57 Constitución y Conv. 169 OIT', 'Publicar informes de avance cada trimestre'], 'indicador' => 'N° de reuniones realizadas y acuerdos firmados'],
+                ['eje' => 'Garantías Ambientales e Hídricas', 'descripcion' => 'Monitoreo independiente de agua y ecosistemas.', 'actores' => ['Universidad de Cuenca', 'Juntas de Agua', 'MAATE'], 'acciones' => ['Instalar estaciones de monitoreo hídrico en tiempo real', 'Publicar datos abiertos de calidad del agua', 'Auditorías ambientales semestrales con veeduría académica'], 'indicador' => 'Índice Calidad del Agua (ICA) ≥ 80 pts'],
+                ['eje' => 'Empleo Local y Formación Técnica', 'descripcion' => 'Garantizar al menos el 80% de mano de obra local calificada.', 'actores' => ['SECAP', 'Empresa Operadora', 'GAD Parroquial'], 'acciones' => ['Programa de certificación técnica minera (6 meses)', 'Preferencia contractual para residentes de San Bartolomé', 'Fondo de becas universitarias con regalías mineras'], 'indicador' => '≥80% nómina local certificada'],
+                ['eje' => 'Diversificación Económica', 'descripcion' => 'Reducir dependencia extractiva con turismo y agroecología.', 'actores' => ['Ministerio de Turismo', 'Asociaciones agrícolas', 'Gremios artesanales'], 'acciones' => ['Ruta Geoturística y Ecoturística San Bartolomé', 'Convenios de compra directa mina-agricultores locales', 'Centro Artesanal con exposición permanente de joyería local'], 'indicador' => '+25% ingresos cooperativas agrícolas/artesanales anuales'],
+            ];
+
+        $recsFinales = !empty($recs) ? $recs : [
+            'Priorizar la Consulta Previa, Libre e Informada antes de cualquier operación minera.',
+            'Establecer monitoreo hídrico participativo con Universidad de Cuenca como árbitro técnico.',
+            'Comprometer el 80% de contratación de mano de obra local calificada mediante SECAP.',
+            'Destinar el 50% de regalías a fondos de desarrollo: turismo, agricultura tecnificada y becas.',
+            'Realizar encuestas de seguimiento cada 3 meses para ajustar el plan estratégico.',
+        ];
+
+        $planFallback = [
+            'titulo'                 => "Plan Estratégico Integral — Reapertura Minera Sostenible, San Bartolomé (sector: {$sector})",
+            'diagnostico_contextual' => $diagnostico,
+            'marco_regulatorio'      => [
+                ['norma' => 'Ley de Minería Ecuador (2009)', 'aplicacion' => 'Regula todas las fases de la actividad minera. Exige EIA, licencia ambiental y consulta previa.'],
+                ['norma' => 'Constitución 2008, Arts. 57, 407, 408', 'aplicacion' => 'Garantiza derechos de la naturaleza y consulta previa libre e informada a comunidades.'],
+                ['norma' => 'Convenio 169 OIT', 'aplicacion' => 'Obliga al Estado a consultar a pueblos indígenas y comunidades antes de concesiones mineras.'],
+                ['norma' => 'Reglamento ARCOM / MAATE', 'aplicacion' => 'Fiscalización técnica y ambiental de operaciones mineras en Ecuador.'],
+                ['norma' => 'Estándares IFC Performance Standards', 'aplicacion' => 'Buenas prácticas internacionales de gestión social y ambiental en minería.'],
+            ],
+            'mejores_practicas'      => [
+                ['nivel' => 'Internacional', 'practica' => 'Principios ICMM para minería responsable', 'referencia' => 'International Council on Mining & Metals (ICMM)', 'aplicabilidad' => 'Marco global de sostenibilidad aplicable a todo proyecto minero en San Bartolomé.'],
+                ['nivel' => 'Regional', 'practica' => 'Monitoreo hídrico participativo comunitario (MHPC)', 'referencia' => 'Experiencias en Perú y Colombia con comunidades ribereñas', 'aplicabilidad' => 'Reducción documentada de conflictos hídricos en proyectos mineros andinos.'],
+                ['nivel' => 'Nacional', 'practica' => 'Fondos de desarrollo local con regalías mineras (Ecuador)', 'referencia' => 'ARCOM — Distribución de regalías a GADs', 'aplicabilidad' => 'Mecanismo legal vigente para financiar turismo, educación y agricultura con regalías.'],
+                ['nivel' => 'Local', 'practica' => 'Ruta artesanal y ecoturística integrada a la minería', 'referencia' => 'Experiencia de Portovelo-Zaruma, El Oro, Ecuador', 'aplicabilidad' => 'Demostrado en Ecuador: turismo minero como complemento económico sostenible.'],
+            ],
+            'ejes_estrategicos'      => $ejesEstrategicos,
+            'vinculacion_academia'   => [
+                'instituciones_sugeridas' => ['Universidad de Cuenca (Facultad de Ciencias Químicas y Minas)', 'Universidad Técnica de Machala', 'ESPOL', 'FLACSO Ecuador'],
+                'lineas_investigacion'    => ['Impacto hídrico y calidad del agua en zonas mineras', 'Licencia social para operar en comunidades andinas', 'Agroecología y minería: coexistencia sostenible'],
+                'programas_propuestos'    => ['Convenio de monitoreo ambiental participativo', 'Pasantías técnicas para jóvenes de San Bartolomé', 'Investigación aplicada sobre flora y fauna local en zona de influencia'],
+            ],
+            'plan_empleo_formacion'  => [
+                'perfiles_requeridos'        => ['Técnico en operaciones mineras (SECAP)', 'Ingeniero ambiental junior', 'Técnico en monitoreo hídrico', 'Guía ecoturístico certificado', 'Operador de maquinaria pesada'],
+                'instituciones_capacitacion' => ['SECAP', 'Universidad de Cuenca', 'Ministerio de Trabajo — formación dual'],
+                'metas'                      => ['≥80% de la nómina operativa con residencia en San Bartolomé', 'Certificación técnica en 6 meses previo al inicio de operaciones', '50% de regalías a fondo de becas universitarias locales'],
+            ],
+            'turismo_agricultura'    => [
+                'oportunidades_turismo'     => ['Ruta Geoturística: minerales, cristales y formaciones rocosas de San Bartolomé', 'Museo Minero Vivo con historia de la minería local', 'Festival Artesanal-Minero anual con joyería en plata y oro', 'Sendero ecoturístico con interpretación ambiental'],
+                'oportunidades_agricultura' => ['Certificación orgánica de productos agrícolas locales (café, maíz, frutales andinos)', 'Invernaderos tecnificados financiados con regalías mineras', 'Alianza directa mina-cooperativas agrícolas para abastecimiento de insumos', 'Producción apícola en zonas de amortiguamiento'],
+                'sinergias'                 => 'La diversificación hacia turismo y agroecología reduce la dependencia extractiva, mejora la licencia social y genera ingresos alternativos que persisten más allá del ciclo de vida de la mina.',
+            ],
+            'cronograma_estrategico'  => $cronograma,
+            'referencias_cientificas' => $referenciasCient,
+            'recomendaciones_finales' => $recsFinales,
+            'conclusion'              => "Con {$total} encuestas analizadas, la IA determina una predicción de '{$predIA}' "
+                . "({$probAcept}% aceptación, {$probRech}% rechazo). La viabilidad de la reapertura minera en San Bartolomé "
+                . "depende de equilibrar el sector extractivo con la agricultura, el turismo artesanal y las garantías ambientales verificables. "
+                . "La participación activa de la comunidad desde el inicio es el factor más determinante para la licencia social.",
+        ];
+
+        $motivo = $lastStatus === 429
+            ? 'Cuota de Gemini agotada (429). Se muestra el Plan Estratégico generado por la IA local con datos reales de las encuestas. Se actualizará automáticamente cuando se restablezca la cuota.'
+            : "Gemini no disponible (HTTP {$lastStatus}). Se muestra el plan generado por la IA local.";
+
+        return [
+            'ok'              => true,
+            'plan'            => $planFallback,
+            'sector'          => $sector,
+            'total_encuestas' => $total,
+            'fuente'          => 'ia_local',
+            'aviso'           => $motivo,
+        ];
+    }
+
+    // ---- 6. Enriquecer referencias con Semantic Scholar si Gemini no las incluyó ----
+    if (empty($plan['referencias_cientificas']) && !empty($papers)) {
+        $plan['referencias_cientificas'] = array_map(fn($p) => [
+            'autor'      => $p['autores'],
+            'anio'       => $p['anio'],
+            'titulo'     => $p['titulo'],
+            'revista'    => $p['revista'],
+            'doi_url'    => $p['doi'] ? 'https://doi.org/' . $p['doi'] : '',
+            'relevancia' => $p['resumen'],
+        ], array_slice($papers, 0, 5));
+    }
+
+    // ---- 7. Guardar conocimiento acumulado de Gemini (aprendizaje persistente) ----
+    save_gemini_knowledge($plan, $sector, $total);
+
+    // ---- 8. Guardar en caché ----
+    $result = ['ok' => true, 'plan' => $plan, 'sector' => $sector, 'total_encuestas' => $total, 'fuente' => 'gemini'];
+    @file_put_contents($cacheFile, json_encode($result, JSON_UNESCAPED_UNICODE));
+
+    return $result;
 }

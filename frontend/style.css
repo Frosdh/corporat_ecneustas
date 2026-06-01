@@ -2442,3 +2442,76 @@ fieldset {
     .ia-probs { flex-wrap: wrap; }
     .ia-prob-item { min-width: 80px; }
 }
+
+/* ============================================================
+   GEMINI PLAN ESTRATÉGICO — Estilos
+   ============================================================ */
+.gm-card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.05); }
+.gm-header { background:linear-gradient(135deg,#1a73e8,#0d47a1); color:#fff; padding:18px 24px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+.gm-header h3 { font-size:1.05rem; font-weight:800; margin:0 0 4px; }
+.gm-header p  { font-size:0.82rem; opacity:.85; margin:0; }
+.gm-badge { background:rgba(255,255,255,.2); border:1px solid rgba(255,255,255,.4); color:#fff; padding:5px 14px; border-radius:20px; font-size:0.78rem; font-weight:700; white-space:nowrap; }
+.gm-narr { background:#eff6ff; border-left:5px solid #1a73e8; padding:16px 22px; margin:20px 20px 0; border-radius:0 8px 8px 0; font-size:0.95rem; line-height:1.75; color:#1e3a5f; }
+.gm-section-title { font-size:0.92rem; font-weight:800; color:#1a73e8; padding:16px 20px 6px; border-top:1px solid #f1f5f9; margin-top:8px; }
+.gm-reg-list { padding:0 20px 10px; }
+.gm-reg-item { background:#f8fafc; border-left:3px solid #1a73e8; border-radius:0 6px 6px 0; padding:10px 14px; margin-bottom:8px; }
+.gm-reg-item strong { font-size:0.9rem; color:#0d47a1; display:block; margin-bottom:4px; }
+.gm-reg-item p { font-size:0.87rem; color:#475569; margin:0; line-height:1.6; }
+.gm-prac-list { padding:0 20px 10px; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.gm-prac-item { border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px; background:#fff; }
+.gm-nivel { display:inline-block; color:#fff; font-size:0.72rem; font-weight:700; padding:2px 10px; border-radius:12px; margin-bottom:6px; text-transform:uppercase; letter-spacing:.5px; }
+.gm-prac-item strong { display:block; font-size:0.88rem; color:#1e293b; margin-bottom:4px; }
+.gm-prac-item em { display:block; font-size:0.8rem; color:#64748b; font-style:normal; margin-bottom:6px; }
+.gm-prac-item p { font-size:0.84rem; color:#475569; margin:0; line-height:1.55; }
+.gm-eje { border:1px solid #e2e8f0; border-radius:10px; margin:0 20px 12px; overflow:hidden; }
+.gm-eje-header { background:#1a73e8; color:#fff; padding:10px 16px; font-size:0.95rem; font-weight:700; }
+.gm-eje-desc { padding:10px 16px 4px; font-size:0.88rem; color:#475569; margin:0; line-height:1.6; }
+.gm-eje-body { padding:6px 16px 12px; }
+.gm-eje-body div { font-size:0.85rem; color:#334155; margin-bottom:6px; }
+.gm-eje-body ul { padding-left:18px; margin:6px 0; }
+.gm-eje-body ul li { font-size:0.87rem; color:#334155; margin-bottom:4px; line-height:1.55; }
+.gm-lbl { font-weight:700; color:#0d47a1; }
+.gm-indicador { background:#eff6ff; border-radius:6px; padding:6px 12px; font-size:0.84rem; color:#1e3a5f; margin-top:8px; }
+.gm-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 20px; }
+.gm-sub-box { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px; }
+.gm-sub-box h5 { font-size:0.85rem; font-weight:700; color:#0d47a1; margin:0 0 8px; }
+.gm-sub-box ul { padding-left:16px; margin:0; }
+.gm-sub-box ul li { font-size:0.85rem; color:#334155; margin-bottom:4px; line-height:1.5; }
+.gm-sinergia { padding:10px 20px 0; font-size:0.88rem; color:#334155; line-height:1.65; }
+.gm-cron-row { display:grid; grid-template-columns:150px 1fr; gap:10px; margin:0 20px 8px; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; }
+.gm-cron-lbl { background:#0d47a1; color:#fff; padding:10px 14px; font-size:0.88rem; font-weight:700; display:flex; flex-direction:column; justify-content:center; }
+.gm-cron-lbl small { font-weight:400; opacity:.8; font-size:0.78rem; }
+.gm-cron-row ul { padding:10px 14px 10px 28px; margin:0; }
+.gm-cron-row ul li { font-size:0.87rem; color:#334155; margin-bottom:4px; line-height:1.55; }
+.gm-recs { padding:4px 20px 14px 36px; color:#334155; }
+.gm-recs li { margin-bottom:8px; font-size:0.9rem; line-height:1.65; }
+.gm-conclusion { background:linear-gradient(135deg,#0d47a1,#1a73e8); color:#fff; margin:12px 20px 20px; border-radius:10px; padding:20px 24px; font-size:0.95rem; line-height:1.8; }
+@media (max-width:640px) {
+    .gm-prac-list { grid-template-columns:1fr; }
+    .gm-grid2 { grid-template-columns:1fr; }
+    .gm-cron-row { grid-template-columns:1fr; }
+}
+
+/* Referencias científicas */
+.gm-refs-list { padding: 0 20px 14px; }
+.gm-ref-item { display: flex; gap: 14px; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; background: #fafbff; }
+.gm-ref-num { background: #1a73e8; color: #fff; border-radius: 50%; width: 26px; height: 26px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800; margin-top: 2px; }
+.gm-ref-body { flex: 1; font-size: 0.87rem; color: #334155; line-height: 1.6; }
+.gm-ref-titulo { color: #1e293b; margin: 0 4px; }
+.gm-ref-body em { color: #475569; font-style: italic; }
+.gm-ref-doi { display: block; color: #1a73e8; font-size: 0.8rem; word-break: break-all; margin-top: 4px; text-decoration: underline; }
+.gm-ref-rel { font-size: 0.83rem; color: #64748b; margin: 6px 0 0; line-height: 1.5; }
+
+/* Base de conocimiento científico en IA Minera */
+.kb-box { margin: 16px 0 4px; border: 1px solid #c7d2fe; border-radius: 10px; overflow: hidden; }
+.kb-header { background: #3730a3; color: #fff; padding: 10px 16px; font-size: 0.88rem; font-weight: 700; }
+.kb-body { padding: 12px 16px; background: #f5f3ff; }
+.kb-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.kb-tag { padding: 3px 12px; border-radius: 14px; font-size: 0.78rem; font-weight: 600; }
+.kb-tag-rsk { background: #fee2e2; color: #991b1b; }
+.kb-tag-ben { background: #dcfce7; color: #166534; }
+.kb-papers { display: flex; flex-direction: column; gap: 6px; }
+.kb-paper { display: flex; gap: 10px; align-items: flex-start; font-size: 0.83rem; color: #334155; padding: 6px 8px; background: #fff; border-radius: 6px; border: 1px solid #e0e7ff; }
+.kb-num { background: #3730a3; color: #fff; border-radius: 50%; width: 20px; height: 20px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800; margin-top: 1px; }
+.kb-titulo { color: #1e1b4b; }
+.kb-paper em { color: #6366f1; font-style: italic; }

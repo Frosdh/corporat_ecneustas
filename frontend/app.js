@@ -35,7 +35,7 @@ async function fetchTotalEncuestas() {
     try {
         const r = await requestJson('total-surveys');
         if (r?.total > 0) setTotalEncuestasReal(r.total);
-    } catch (_) {}
+    } catch (_) { }
 }
 let formMapInstance = null;
 let formMapMarker = null;
@@ -406,7 +406,7 @@ function renderDashboard(dashboard) {
     document.getElementById('kpi-poverty').textContent = `${summary.structural_poverty}%`;
     document.getElementById('kpi-acceptance').textContent = `${summary.acceptance_rate}%`;
     document.getElementById('kpi-climate').textContent = summary.political_climate;
-    
+
     updateMetric('metric-water', 'metric-water-bar', services.water_risk);
     updateMetric('metric-sewer', 'metric-sewer-bar', services.sewer_gap);
     updateMetric('metric-income', 'metric-income-bar', services.income_pressure);
@@ -436,14 +436,14 @@ function renderDashboard(dashboard) {
     setText('social-top-investment', social.investment_acceptance_top || 'Sin datos');
     setText('social-top-reopening', social.reopening_perception_top || 'Sin datos');
 
-    setText('strategy-favorable',  `${strategic.favorable_pct ?? 0}%`);
+    setText('strategy-favorable', `${strategic.favorable_pct ?? 0}%`);
     setText('strategy-conditioned', `${strategic.conditioned_pct ?? 0}%`);
-    setText('strategy-contrary',   `${strategic.contrary_pct ?? 0}%`);
+    setText('strategy-contrary', `${strategic.contrary_pct ?? 0}%`);
     setText('strategy-open-sector', strategic.top_open_sector || 'Sin datos');
     const stBase = strategic.stance_total ?? 0;
-    setText('strategy-favorable-count',  `${strategic.favorable_count ?? 0} de ${stBase} respuestas`);
-    setText('strategy-conditioned-count',`${strategic.conditioned_count ?? 0} de ${stBase} respuestas`);
-    setText('strategy-contrary-count',   `${strategic.contrary_count ?? 0} de ${stBase} respuestas`);
+    setText('strategy-favorable-count', `${strategic.favorable_count ?? 0} de ${stBase} respuestas`);
+    setText('strategy-conditioned-count', `${strategic.conditioned_count ?? 0} de ${stBase} respuestas`);
+    setText('strategy-contrary-count', `${strategic.contrary_count ?? 0} de ${stBase} respuestas`);
     setText('strategy-base', stBase > 0 ? `Base: ${stBase} encuestados respondieron esta pregunta` : '');
 
     renderDimGauges(dashboard.dimensiones_sentimiento || []);
@@ -462,7 +462,7 @@ function renderDimGauges(dims) {
     const grid = document.getElementById('dash-gauge-grid');
     if (!grid) return;
 
-    Object.values(state.dimGaugeCharts).forEach(ch => { try { ch.destroy(); } catch (e) {} });
+    Object.values(state.dimGaugeCharts).forEach(ch => { try { ch.destroy(); } catch (e) { } });
     state.dimGaugeCharts = {};
 
     if (!dims || dims.length === 0) {
@@ -481,11 +481,11 @@ function renderDimGauges(dims) {
     ];
 
     grid.innerHTML = dims.map((d, i) => {
-        const color    = d.indice >= 15 ? '#0f9f6e' : d.indice <= -15 ? '#c43d45' : '#d97706';
-        const bgColor  = d.indice >= 15 ? 'rgba(15,159,110,0.10)' : d.indice <= -15 ? 'rgba(196,61,69,0.09)' : 'rgba(217,119,6,0.09)';
-        const label    = d.indice >= 15 ? 'Favorable' : d.indice <= -15 ? 'Cr&iacute;tico' : 'Ambivalente';
-        const icon     = icons[i] || icons[0];
-        
+        const color = d.indice >= 15 ? '#0f9f6e' : d.indice <= -15 ? '#c43d45' : '#d97706';
+        const bgColor = d.indice >= 15 ? 'rgba(15,159,110,0.10)' : d.indice <= -15 ? 'rgba(196,61,69,0.09)' : 'rgba(217,119,6,0.09)';
+        const label = d.indice >= 15 ? 'Favorable' : d.indice <= -15 ? 'Cr&iacute;tico' : 'Ambivalente';
+        const icon = icons[i] || icons[0];
+
         // Ensure values are numbers and round properly
         const pos = d.positivo_pct || 0;
         const neu = d.neutro_pct || 0;
@@ -528,11 +528,11 @@ function renderDimGauges(dims) {
     dims.forEach((d, i) => {
         const canvas = document.getElementById('dg-' + i);
         if (!canvas || typeof Chart === 'undefined') return;
-        const sweep  = 270;
+        const sweep = 270;
         const pctVal = d.positivo_pct || 0;
         const filled = Math.max(2, Math.min(sweep - 2, (pctVal / 100) * sweep));
-        const empty  = sweep - filled;
-        const color  = d.indice >= 15 ? '#0f9f6e' : d.indice <= -15 ? '#c43d45' : '#d97706';
+        const empty = sweep - filled;
+        const color = d.indice >= 15 ? '#0f9f6e' : d.indice <= -15 ? '#c43d45' : '#d97706';
         state.dimGaugeCharts['g' + i] = new Chart(canvas, {
             type: 'doughnut',
             data: {
@@ -1054,22 +1054,22 @@ function normalizeSurveyList(value) {
 
 // Iconos SVG (solo ASCII)
 const SMD_ICONS = {
-    id:     '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><rect x="2" y="3" width="16" height="14" rx="3"/><path d="M6 7h8M6 10h5"/></svg>',
+    id: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><rect x="2" y="3" width="16" height="14" rx="3"/><path d="M6 7h8M6 10h5"/></svg>',
     person: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><circle cx="10" cy="7" r="3"/><path d="M4 17c0-3.314 2.686-6 6-6s6 2.686 6 6"/></svg>',
     social: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 2"/></svg>',
-    home:   '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M3 10L10 3l7 7v7H3z"/><rect x="7" y="13" width="6" height="4"/></svg>',
-    mine:   '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M5 15l3-6 4 2 3-6"/><circle cx="15" cy="5" r="1.5" fill="currentColor"/></svg>',
-    comment:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M4 4h12a1 1 0 011 1v8a1 1 0 01-1 1H7l-4 3V5a1 1 0 011-1z"/></svg>',
-    cal:    '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M3 8h14M7 2v4M13 2v4"/></svg>',
-    user2:  '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><circle cx="10" cy="7" r="3"/><path d="M5 17c0-2.761 2.239-5 5-5s5 2.239 5 5"/></svg>',
+    home: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M3 10L10 3l7 7v7H3z"/><rect x="7" y="13" width="6" height="4"/></svg>',
+    mine: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M5 15l3-6 4 2 3-6"/><circle cx="15" cy="5" r="1.5" fill="currentColor"/></svg>',
+    comment: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M4 4h12a1 1 0 011 1v8a1 1 0 01-1 1H7l-4 3V5a1 1 0 011-1z"/></svg>',
+    cal: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M3 8h14M7 2v4M13 2v4"/></svg>',
+    user2: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><circle cx="10" cy="7" r="3"/><path d="M5 17c0-2.761 2.239-5 5-5s5 2.239 5 5"/></svg>',
 };
 
 // Seccion siempre abierta (sin accordion)
 function smdSection(iconKey, iconBg, iconColor, title, bodyHtml) {
     return '<div class="smd-section">' +
         '<div class="smd-section-header">' +
-            '<div class="smd-section-icon" style="background:' + iconBg + ';color:' + iconColor + '">' + (SMD_ICONS[iconKey] || '') + '</div>' +
-            '<span class="smd-section-title">' + title + '</span>' +
+        '<div class="smd-section-icon" style="background:' + iconBg + ';color:' + iconColor + '">' + (SMD_ICONS[iconKey] || '') + '</div>' +
+        '<span class="smd-section-title">' + title + '</span>' +
         '</div>' +
         '<div class="smd-section-body">' + bodyHtml + '</div>' +
         '</div>';
@@ -1088,7 +1088,7 @@ function smdField(label, value) {
 function smdRadioQ(question, options, selected) {
     var sel = (selected || '').trim().toLowerCase();
     var matched = false;
-    var opts = options.map(function(opt) {
+    var opts = options.map(function (opt) {
         var active = false;
         var displayOpt = opt;
         if (sel !== '') {
@@ -1105,11 +1105,11 @@ function smdRadioQ(question, options, selected) {
             '<span class="smd-opt-dot' + (active ? ' smd-opt-dot-active' : '') + '"></span>' +
             escapeHtml(displayOpt) + '</span>';
     });
-    
+
     if (sel !== '' && !matched) {
         opts.push('<span class="smd-opt smd-opt-active"><span class="smd-opt-dot smd-opt-dot-active"></span>' + escapeHtml(selected) + '</span>');
     }
-    
+
     var none = sel === '' ? '<span class="smd-no-answer">Sin respuesta</span>' : '';
     return '<div class="smd-question">' +
         '<div class="smd-q-label">' + question + '</div>' +
@@ -1120,11 +1120,11 @@ function smdRadioQ(question, options, selected) {
 // Pregunta checkbox (multiple)
 var CHECK_SVG = '<svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="#fff" stroke-width="2.2"><path d="M2 6l3 3 5-5"/></svg>';
 function smdCheckQ(question, options, selected) {
-    var sel = normalizeSurveyList(selected).map(function(s) { return s.toLowerCase(); });
+    var sel = normalizeSurveyList(selected).map(function (s) { return s.toLowerCase(); });
     var selOriginal = normalizeSurveyList(selected);
     var matchedIndices = [];
-    
-    var opts = options.map(function(opt) {
+
+    var opts = options.map(function (opt) {
         var idx = sel.indexOf(opt.toLowerCase());
         var active = idx !== -1;
         if (active) matchedIndices.push(idx);
@@ -1132,13 +1132,13 @@ function smdCheckQ(question, options, selected) {
             '<span class="smd-opt-check' + (active ? ' smd-opt-check-active' : '') + '">' + (active ? CHECK_SVG : '') + '</span>' +
             escapeHtml(opt) + '</span>';
     });
-    
+
     for (var i = 0; i < selOriginal.length; i++) {
         if (matchedIndices.indexOf(i) === -1 && selOriginal[i].trim() !== '') {
             opts.push('<span class="smd-opt smd-opt-active"><span class="smd-opt-check smd-opt-check-active">' + CHECK_SVG + '</span>' + escapeHtml(selOriginal[i]) + '</span>');
         }
     }
-    
+
     var none = sel.length === 0 ? '<span class="smd-no-answer">Sin respuesta</span>' : '';
     return '<div class="smd-question">' +
         '<div class="smd-q-label">' + question + '</div>' +
@@ -1188,9 +1188,9 @@ async function viewSurvey(surveyId) {
         var hasGps = item.latitude && item.longitude;
         var gpsHtml = hasGps
             ? '<div class="smd-gps-card"><div class="smd-gps-dot"></div><div>' +
-              '<div class="smd-gps-label">Coordenadas GPS</div>' +
-              '<div class="smd-gps-coords">Lat ' + escapeHtml(String(item.latitude)) + ' &middot; Lon ' + escapeHtml(String(item.longitude)) + '</div>' +
-              '</div></div>'
+            '<div class="smd-gps-label">Coordenadas GPS</div>' +
+            '<div class="smd-gps-coords">Lat ' + escapeHtml(String(item.latitude)) + ' &middot; Lon ' + escapeHtml(String(item.longitude)) + '</div>' +
+            '</div></div>'
             : '<div class="smd-no-gps">Sin coordenadas GPS</div>';
 
         var respondentName = [item.respondent_name, item.respondent_last_name].filter(Boolean).join(' ');
@@ -1199,10 +1199,10 @@ async function viewSurvey(surveyId) {
         // 1. Identificacion
         sections.push(smdSection('id', 'rgba(166,124,82,.15)', '#6F4E37', 'Identificaci&oacute;n y Contexto',
             '<div class="smd-grid">' +
-                smdField('Sector', item.sector) +
-                smdField('Comunidad / Barrio', item.community) +
-                smdField('Fecha', item.survey_date) +
-                smdField('Encuestador', item.surveyor_name) +
+            smdField('Sector', item.sector) +
+            smdField('Comunidad / Barrio', item.community) +
+            smdField('Fecha', item.survey_date) +
+            smdField('Encuestador', item.surveyor_name) +
             '</div>' + gpsHtml
         ));
 
@@ -1212,7 +1212,7 @@ async function viewSurvey(surveyId) {
                 (item.respondent_id_document ? smdField('C&eacute;dula', item.respondent_id_document) : '') +
                 (item.respondent_phone ? smdField('Tel&eacute;fono', item.respondent_phone) : '') +
                 (item.respondent_email ? smdField('Correo', item.respondent_email) : '') +
-            '</div>' : '') +
+                '</div>' : '') +
             smdRadioQ('G&eacute;nero del encuestado', ['Mujer', 'Hombre', 'Otro'], item.respondent_gender) +
             smdRadioQ('Rango de edad', ['18-25', '26-35', '36-45', '46-60', '61 o mas'], item.age_range) +
             smdRadioQ('Nivel de educaci&oacute;n', ['Primaria', 'Secundaria', 'Tecnico', 'Universitario', 'Ninguno'], item.education_level) +
@@ -1333,14 +1333,14 @@ function renderAuditLogs() {
     }
 
     const ACTION_META = {
-        login:                  { icon: '🔐', label: 'Inicio de sesión',       color: '#3b82f6', bg: '#eff6ff' },
-        logout:                 { icon: '🚪', label: 'Cierre de sesión',        color: '#6b7280', bg: '#f9fafb' },
-        save_survey:            { icon: '📋', label: 'Encuesta guardada',        color: '#059669', bg: '#ecfdf5' },
-        register_application:   { icon: '📝', label: 'Postulación registrada',   color: '#7c3aed', bg: '#f5f3ff' },
-        review_application:     { icon: '🔍', label: 'Postulación revisada',     color: '#d97706', bg: '#fffbeb' },
-        update_surveyor_profile:{ icon: '✏️',  label: 'Perfil actualizado',       color: '#0284c7', bg: '#e0f2fe' },
-        update_surveyor_status: { icon: '🔄', label: 'Estado actualizado',       color: '#ea580c', bg: '#fff7ed' },
-        reset_password:         { icon: '🔑', label: 'Clave restablecida',       color: '#be185d', bg: '#fdf2f8' },
+        login: { icon: '🔐', label: 'Inicio de sesión', color: '#3b82f6', bg: '#eff6ff' },
+        logout: { icon: '🚪', label: 'Cierre de sesión', color: '#6b7280', bg: '#f9fafb' },
+        save_survey: { icon: '📋', label: 'Encuesta guardada', color: '#059669', bg: '#ecfdf5' },
+        register_application: { icon: '📝', label: 'Postulación registrada', color: '#7c3aed', bg: '#f5f3ff' },
+        review_application: { icon: '🔍', label: 'Postulación revisada', color: '#d97706', bg: '#fffbeb' },
+        update_surveyor_profile: { icon: '✏️', label: 'Perfil actualizado', color: '#0284c7', bg: '#e0f2fe' },
+        update_surveyor_status: { icon: '🔄', label: 'Estado actualizado', color: '#ea580c', bg: '#fff7ed' },
+        reset_password: { icon: '🔑', label: 'Clave restablecida', color: '#be185d', bg: '#fdf2f8' },
     };
 
     list.innerHTML = state.auditLogs.map((item) => {
@@ -1350,7 +1350,7 @@ function renderAuditLogs() {
         const detailHtml = detailEntries.length
             ? detailEntries.map(([k, v]) => `
                 <div class="audit-detail-item">
-                    <span class="audit-detail-key">${escapeHtml(k.replace(/_/g,' '))}</span>
+                    <span class="audit-detail-key">${escapeHtml(k.replace(/_/g, ' '))}</span>
                     <span class="audit-detail-val">${escapeHtml(String(v))}</span>
                 </div>`).join('')
             : '<div class="audit-detail-item"><span class="audit-detail-val" style="color:var(--muted)">Sin detalles</span></div>';
@@ -2046,6 +2046,20 @@ async function loadAnalisis() {
                 renderIAMinera(iaPayload);
             })
             .catch(err => console.warn('IA minera no disponible:', err));
+        // Cargar plan Gemini en paralelo
+        const geminiBox = document.getElementById('gemini-plan-box');
+        if (geminiBox) {
+            geminiBox.classList.remove('hidden');
+            geminiBox.innerHTML = '<div class="ia-loading"><span class="ia-spinner"></span> Gemini est&aacute; analizando regulaci&oacute;n, mejores pr&aacute;cticas y generando el plan estrat&eacute;gico...</div>';
+            requestJson('plan_gemini', { params: { sector } })
+                .then(gPayload => {
+                    analisisState.planGemini = gPayload;
+                    renderPlanGemini(gPayload);
+                })
+                .catch(err => {
+                    geminiBox.innerHTML = '<div class="ia-error">&#9888; Plan Gemini no disponible: ' + err.message + '</div>';
+                });
+        }
         // Sincronizar total con el dashboard
         const totalReal = analisisState.data.total_encuestas ?? analisisState.data.total ?? 0;
         setTotalEncuestasReal(totalReal);
@@ -2135,7 +2149,7 @@ function renderIAMinera(payload) {
 
     const d = payload;
     const claseColor = { 'Aceptacion': '#0f9f6e', 'Neutral': '#d97706', 'Rechazo': '#c43d45' };
-    const claseIcon  = { 'Aceptacion': '&#10003;', 'Neutral': '&#9888;', 'Rechazo': '&#10007;' };
+    const claseIcon = { 'Aceptacion': '&#10003;', 'Neutral': '&#9888;', 'Rechazo': '&#10007;' };
     const pred = d.prediccion_global;
     const probs = d.probabilidades_globales || {};
 
@@ -2158,7 +2172,7 @@ function renderIAMinera(payload) {
         </tr>`).join('');
 
     const recsHtml = (d.recomendaciones_ia || []).map((r, i) =>
-        `<li><strong>R${i+1}:</strong> ${r}</li>`).join('');
+        `<li><strong>R${i + 1}:</strong> ${r}</li>`).join('');
 
     box.innerHTML = `
     <div class="ia-minera-card">
@@ -2199,13 +2213,202 @@ function renderIAMinera(payload) {
         <div class="ia-perfiles">
             <div class="ia-perfil ia-perfil-acept">
                 <h5>&#10003; Perfil de Aceptaci&oacute;n</h5>
-                ${(d.perfil_aceptacion||[]).map(p=>`<div class="ia-perf-row"><span>${p.factor}:</span><strong>${p.valor}</strong><em>${p.pct}%</em></div>`).join('') || '<p>Sin datos suficientes</p>'}
+                ${(d.perfil_aceptacion || []).map(p => `<div class="ia-perf-row"><span>${p.factor}:</span><strong>${p.valor}</strong><em>${p.pct}%</em></div>`).join('') || '<p>Sin datos suficientes</p>'}
             </div>
             <div class="ia-perfil ia-perfil-rec">
                 <h5>&#10007; Perfil de Rechazo</h5>
-                ${(d.perfil_rechazo||[]).map(p=>`<div class="ia-perf-row"><span>${p.factor}:</span><strong>${p.valor}</strong><em>${p.pct}%</em></div>`).join('') || '<p>Sin datos suficientes</p>'}
+                ${(d.perfil_rechazo || []).map(p => `<div class="ia-perf-row"><span>${p.factor}:</span><strong>${p.valor}</strong><em>${p.pct}%</em></div>`).join('') || '<p>Sin datos suficientes</p>'}
             </div>
         </div>
+
+        ${(() => {
+            const kb = d.base_conocimiento;
+            if (!kb || !kb.total_papers) return '';
+            const papersHtml = (kb.papers || []).map((p,i) =>
+                `<div class="kb-paper"><span class="kb-num">${i+1}</span><div>
+                    <strong>${p.autores||''} (${p.anio||'?'})</strong>
+                    <span class="kb-titulo"> ${p.titulo||''}</span>
+                    <em> ${p.revista||''}</em>
+                </div></div>`).join('');
+            return `<div class="kb-box">
+                <div class="kb-header">Base de Conocimiento Cient&iacute;fico &mdash; ${kb.total_papers} art&iacute;culos analizados
+                    ${kb.updated_at ? `<small style="opacity:.7;font-weight:400"> &middot; actualizada: ${kb.updated_at}</small>` : ''}
+                </div>
+                <div class="kb-body">
+                    <div class="kb-tags">
+                        ${(kb.top_riesgos||[]).map(r=>`<span class="kb-tag kb-tag-rsk">${r}</span>`).join('')}
+                        ${(kb.top_beneficios||[]).map(b=>`<span class="kb-tag kb-tag-ben">${b}</span>`).join('')}
+                    </div>
+                    <div class="kb-papers">${papersHtml}</div>
+                </div>
+            </div>`;
+        })()}
+    </div>`;
+}
+
+function renderPlanGemini(payload) {
+    const box = document.getElementById('gemini-plan-box');
+    if (!box) return;
+
+    if (!payload?.ok) {
+        box.innerHTML = `<div class="ia-error">&#9888; Plan Gemini: ${payload?.error || 'No disponible'}</div>`;
+        return;
+    }
+
+    const p = payload.plan;
+    const esc = s => String(s ?? '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    // Marco regulatorio
+    const regHtml = (p.marco_regulatorio || []).map(r =>
+        `<div class="gm-reg-item"><strong>${esc(r.norma)}</strong><p>${esc(r.aplicacion)}</p></div>`
+    ).join('');
+
+    // Mejores prácticas
+    const pracHtml = (p.mejores_practicas || []).map(pr => {
+        const col = pr.nivel === 'Internacional' ? '#0e4eb0' : pr.nivel === 'Nacional' ? '#0f9f6e' : pr.nivel === 'Regional' ? '#7c3aed' : '#d97706';
+        return `<div class="gm-prac-item">
+            <span class="gm-nivel" style="background:${col}">${esc(pr.nivel)}</span>
+            <strong>${esc(pr.practica)}</strong>
+            <em>${esc(pr.referencia)}</em>
+            <p>${esc(pr.aplicabilidad)}</p>
+        </div>`;
+    }).join('');
+
+    // Ejes estratégicos
+    const ejesHtml = (p.ejes_estrategicos || []).map(e =>
+        `<div class="gm-eje">
+            <div class="gm-eje-header"><strong>${esc(e.eje)}</strong></div>
+            <p class="gm-eje-desc">${esc(e.descripcion)}</p>
+            <div class="gm-eje-body">
+                <div><span class="gm-lbl">Actores:</span> ${(e.actores||[]).map(esc).join(', ')}</div>
+                <ul>${(e.acciones||[]).map(a => `<li>${esc(a)}</li>`).join('')}</ul>
+                <div class="gm-indicador"><strong>Indicador:</strong> ${esc(e.indicador)}</div>
+            </div>
+        </div>`
+    ).join('');
+
+    // Academia
+    const ac = p.vinculacion_academia || {};
+    const acadHtml = `
+        <div class="gm-grid2">
+            <div class="gm-sub-box">
+                <h5>Instituciones sugeridas</h5>
+                <ul>${(ac.instituciones_sugeridas||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul>
+            </div>
+            <div class="gm-sub-box">
+                <h5>L&iacute;neas de investigaci&oacute;n</h5>
+                <ul>${(ac.lineas_investigacion||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul>
+            </div>
+        </div>
+        <div class="gm-sub-box" style="margin-top:10px">
+            <h5>Programas propuestos</h5>
+            <ul>${(ac.programas_propuestos||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul>
+        </div>`;
+
+    // Empleo y formación
+    const emp = p.plan_empleo_formacion || {};
+    const empHtml = `
+        <div class="gm-grid2">
+            <div class="gm-sub-box">
+                <h5>Perfiles requeridos</h5>
+                <ul>${(emp.perfiles_requeridos||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul>
+            </div>
+            <div class="gm-sub-box">
+                <h5>Instituciones de capacitaci&oacute;n</h5>
+                <ul>${(emp.instituciones_capacitacion||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul>
+            </div>
+        </div>
+        <div class="gm-sub-box" style="margin-top:10px">
+            <h5>Metas</h5>
+            <ul>${(emp.metas||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul>
+        </div>`;
+
+    // Turismo y agricultura
+    const ta = p.turismo_agricultura || {};
+    const taHtml = `
+        <div class="gm-grid2">
+            <div class="gm-sub-box">
+                <h5>Turismo comunitario</h5>
+                <ul>${(ta.oportunidades_turismo||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul>
+            </div>
+            <div class="gm-sub-box">
+                <h5>Agricultura sostenible</h5>
+                <ul>${(ta.oportunidades_agricultura||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul>
+            </div>
+        </div>
+        <p class="gm-sinergia"><strong>Sinergia:</strong> ${esc(ta.sinergias)}</p>`;
+
+    // Cronograma
+    const cronHtml = (p.cronograma_estrategico || []).map(f =>
+        `<div class="gm-cron-row">
+            <div class="gm-cron-lbl">${esc(f.fase)}<br><small>${esc(f.periodo)}</small></div>
+            <ul>${(f.hitos||[]).map(h=>`<li>${esc(h)}</li>`).join('')}</ul>
+        </div>`
+    ).join('');
+
+    // Recomendaciones finales
+    const recsHtml = (p.recomendaciones_finales || []).map((r,i) =>
+        `<li><strong>R${i+1}:</strong> ${esc(r)}</li>`).join('');
+
+    const motor = payload.motor || 'Gemini API';
+    const isLocal = motor === 'Local Expert Engine';
+    const mainTitle = isLocal ? 'IA Local &mdash; Plan Estrat&eacute;gico Parroquial' : 'Gemini IA &mdash; Plan Estrat&eacute;gico Integral';
+    const badgeText = isLocal ? 'Motor Experto Local (Offline)' : 'Powered by Gemini';
+    const headerBg = isLocal ? 'linear-gradient(135deg,#6f4e37,#a67c52)' : 'linear-gradient(135deg,#1a73e8,#0d47a1)';
+
+    box.innerHTML = `
+    <div class="gm-card">
+        <div class="gm-header" style="background:${headerBg}">
+            <div>
+                <h3>${mainTitle}</h3>
+                <p>${esc(p.titulo || '')} &middot; ${payload.total_encuestas} encuestas &middot; Sector: ${esc(payload.sector)}</p>
+            </div>
+            <span class="gm-badge">${esc(badgeText)}</span>
+        </div>
+
+        <div class="gm-narr">${esc(p.diagnostico_contextual)}</div>
+
+        <div class="gm-section-title">&#128196; Marco Regulatorio Aplicable</div>
+        <div class="gm-reg-list">${regHtml}</div>
+
+        <div class="gm-section-title">&#127758; Mejores Pr&aacute;cticas Mineras</div>
+        <div class="gm-prac-list">${pracHtml}</div>
+
+        <div class="gm-section-title">&#127919; Ejes Estrat&eacute;gicos</div>
+        ${ejesHtml}
+
+        <div class="gm-section-title">&#127979; Vinculaci&oacute;n con la Academia</div>
+        ${acadHtml}
+
+        <div class="gm-section-title">&#128188; Empleo y Formaci&oacute;n T&eacute;cnica</div>
+        ${empHtml}
+
+        <div class="gm-section-title">&#127968; Turismo y Agricultura</div>
+        ${taHtml}
+
+        <div class="gm-section-title">&#128197; Cronograma Estrat&eacute;gico</div>
+        ${cronHtml}
+
+        <div class="gm-section-title">&#128161; Recomendaciones Finales</div>
+        <ul class="gm-recs">${recsHtml}</ul>
+
+        ${(p.referencias_cientificas||[]).length ? `
+        <div class="gm-section-title">&#128218; Referencias Cient&iacute;ficas</div>
+        <div class="gm-refs-list">
+            ${(p.referencias_cientificas||[]).map((ref,i) => `
+            <div class="gm-ref-item">
+                <div class="gm-ref-num">${i+1}</div>
+                <div class="gm-ref-body">
+                    <strong>${esc(ref.autor)} (${esc(String(ref.anio))}).</strong>
+                    <span class="gm-ref-titulo">${esc(ref.titulo)}.</span>
+                    <em>${esc(ref.revista)}</em>
+                    ${ref.doi_url ? `<a class="gm-ref-doi" href="${esc(ref.doi_url)}" target="_blank" rel="noopener">${esc(ref.doi_url)}</a>` : ''}
+                    ${ref.relevancia ? `<p class="gm-ref-rel"><strong>Relevancia:</strong> ${esc(ref.relevancia)}</p>` : ''}
+                </div>
+            </div>`).join('')}
+        </div>` : ''}
+
+        <div class="gm-conclusion">${esc(p.conclusion)}</div>
     </div>`;
 }
 
@@ -2358,8 +2561,8 @@ function renderConocimiento(conocimiento) {
         const pct = posItem ? posItem.pct : 0;
         const col = pct >= 60 ? '#0f9f6e' : pct >= 30 ? '#d97706' : '#c43d45';
         const lbl = pct >= 60 ? 'Buen nivel de conocimiento'
-                  : pct >= 30 ? 'Conocimiento parcial &mdash; requiere refuerzo'
-                  : 'Bajo conocimiento &mdash; socializaci&oacute;n urgente';
+            : pct >= 30 ? 'Conocimiento parcial &mdash; requiere refuerzo'
+                : 'Bajo conocimiento &mdash; socializaci&oacute;n urgente';
         return `
             <div class="analisis-conoc-item">
                 <div class="analisis-conoc-header">
@@ -2411,7 +2614,7 @@ function renderTendencia(tendencia) {
     destroyChart('tendencia');
 
     const ctx = canvas.getContext('2d');
-    
+
     // Gradiente para las barras
     const gradientBar = ctx.createLinearGradient(0, 0, 0, 400);
     gradientBar.addColorStop(0, 'rgba(14, 78, 176, 0.9)');
@@ -2464,19 +2667,20 @@ function renderTendencia(tendencia) {
             ],
         },
         options: {
+            maintainAspectRatio: false,
             interaction: {
                 mode: 'index',
                 intersect: false,
             },
             plugins: {
-                legend: { 
+                legend: {
                     position: 'top',
                     align: 'end',
                     labels: {
                         usePointStyle: true,
                         boxWidth: 8,
-                        padding: 20,
-                        font: { size: 12, weight: '500' }
+                        padding: 12,
+                        font: { size: 11, weight: '500' }
                     }
                 },
                 tooltip: {
@@ -2489,7 +2693,7 @@ function renderTendencia(tendencia) {
                     boxPadding: 4,
                     usePointStyle: true,
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             let label = context.dataset.label || '';
                             if (label) {
                                 label += ': ';
@@ -2507,23 +2711,23 @@ function renderTendencia(tendencia) {
                     grid: { display: false, drawBorder: false },
                     ticks: { color: '#6B7280', font: { size: 11 } }
                 },
-                y: { 
-                    position: 'left', 
-                    title: { display: true, text: 'Nº Encuestas', font: { size: 11, weight: '600' }, color: '#6B7280' }, 
+                y: {
+                    position: 'left',
+                    title: { display: true, text: 'Nº Encuestas', font: { size: 11, weight: '600' }, color: '#6B7280' },
                     grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false, borderDash: [4, 4] },
                     ticks: { color: '#6B7280', font: { size: 11 } },
                     beginAtZero: true
                 },
-                y2: { 
-                    position: 'right', 
-                    max: 100, 
-                    title: { display: true, text: 'Apertura (%)', font: { size: 11, weight: '600' }, color: '#6B7280' }, 
-                    grid: { display: false, drawBorder: false }, 
+                y2: {
+                    position: 'right',
+                    max: 100,
+                    title: { display: true, text: 'Apertura (%)', font: { size: 11, weight: '600' }, color: '#6B7280' },
+                    grid: { display: false, drawBorder: false },
                     ticks: { callback: v => v + '%', color: '#6B7280', font: { size: 11 } },
                     beginAtZero: true
                 },
             },
-            animation: { 
+            animation: {
                 duration: 1000,
                 easing: 'easeOutQuart'
             },
@@ -2577,7 +2781,7 @@ function renderRadarDimensiones(dimensiones) {
     if (radarDimChart) { radarDimChart.destroy(); radarDimChart = null; }
     const labels = dimensiones.map(d => d.titulo);
     // Usar índice neto (-100 a +100) para concordar con el resto de gráficas
-    const vals   = dimensiones.map(d => d.sentimiento.indice ?? 0);
+    const vals = dimensiones.map(d => d.sentimiento.indice ?? 0);
     const pointColors = dimensiones.map(d => {
         const idx = d.sentimiento.indice ?? 0;
         return idx >= 10 ? '#0f9f6e' : (idx <= -10 ? '#c43d45' : '#d97706');
@@ -2667,10 +2871,10 @@ function setPreguntasUI(mode) {
 
 // Paleta amplia y variada — se rota aleatoriamente en cada render
 const _PALETA_BASE = [
-    '#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6',
-    '#06B6D4','#F97316','#84CC16','#EC4899','#14B8A6',
-    '#6366F1','#A855F7','#22C55E','#FB923C','#E11D48',
-    '#0EA5E9','#D97706','#16A34A','#7C3AED','#DC2626',
+    '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
+    '#06B6D4', '#F97316', '#84CC16', '#EC4899', '#14B8A6',
+    '#6366F1', '#A855F7', '#22C55E', '#FB923C', '#E11D48',
+    '#0EA5E9', '#D97706', '#16A34A', '#7C3AED', '#DC2626',
 ];
 let _paletaOffset = 0;
 
@@ -2750,7 +2954,7 @@ function renderPreguntas(data) {
                 });
             } else {
                 // Horizontal bar — ASCII labels only for Chart.js canvas
-                const safeLabels = labels.map(l => l.normalize('NFD').replace(/[\u0300-\u036f]/g,'').substring(0, 30));
+                const safeLabels = labels.map(l => l.normalize('NFD').replace(/[\u0300-\u036f]/g, '').substring(0, 30));
                 preguntasCharts[preg.campo] = new Chart(ctx, {
                     type: 'bar',
                     data: {
@@ -2789,18 +2993,18 @@ async function loadDashboardSurveys(sector) {
     try {
         const payload = await requestJson('surveys', { params: { sector: sector || 'general', limit: 500 } });
         let backendSurveys = payload.surveys || [];
-        
+
         const pending = getPendingSurveys().map(p => ({
             ...p,
             survey_status: 'Pendiente (Offline)',
             id: p.client_uuid || Math.random().toString(36).substring(7)
         }));
-        
+
         let allSurveys = [...pending, ...backendSurveys];
         if (sector && sector !== 'general') {
             allSurveys = allSurveys.filter(s => s.sector === sector);
         }
-        
+
         _dashSurveys = allSurveys;
         renderDashboardSurveys(_dashSurveys);
         const search = document.getElementById('dash-survey-search');
@@ -2809,11 +3013,11 @@ async function loadDashboardSurveys(sector) {
                 const q = search.value.toLowerCase().trim();
                 const filtered = q
                     ? _dashSurveys.filter(s =>
-                        (s.sector||'').toLowerCase().includes(q) ||
-                        (s.community||'').toLowerCase().includes(q) ||
-                        (s.surveyor_name||'').toLowerCase().includes(q) ||
-                        (s.occupation||'').toLowerCase().includes(q) ||
-                        (s.primary_problem||'').toLowerCase().includes(q))
+                        (s.sector || '').toLowerCase().includes(q) ||
+                        (s.community || '').toLowerCase().includes(q) ||
+                        (s.surveyor_name || '').toLowerCase().includes(q) ||
+                        (s.occupation || '').toLowerCase().includes(q) ||
+                        (s.primary_problem || '').toLowerCase().includes(q))
                     : _dashSurveys;
                 renderDashboardSurveys(filtered);
             };
@@ -2837,14 +3041,14 @@ function renderDashboardSurveys(surveys) {
 
     const statusColors = {
         'sincronizada': '#0f9f6e',
-        'revisada':     '#0e4eb0',
-        'observada':    '#d97706',
+        'revisada': '#0e4eb0',
+        'observada': '#d97706',
         'Pendiente (Offline)': '#6b7280'
     };
     const statusLabels = {
         'sincronizada': '✓ Sincronizada',
-        'revisada':     '✓ Revisada',
-        'observada':    '⚠ Observada',
+        'revisada': '✓ Revisada',
+        'observada': '⚠ Observada',
         'Pendiente (Offline)': '⌛ Pendiente'
     };
 
@@ -2856,17 +3060,17 @@ function renderDashboardSurveys(surveys) {
         return `<tr style="background:${rowBg};border-bottom:1px solid #f0e8db;">
             <td style="padding:7px 10px;color:#888;font-size:.78rem;">${s.id}</td>
             <td style="padding:7px 10px;white-space:nowrap;">${escapeHtml(fecha)}</td>
-            <td style="padding:7px 10px;font-weight:600;color:#5a3e28;">${escapeHtml(s.sector||'—')}</td>
-            <td style="padding:7px 10px;">${escapeHtml(s.community||'—')}</td>
-            <td style="padding:7px 10px;">${escapeHtml(s.surveyor_name||'—')}</td>
-            <td style="padding:7px 10px;">${escapeHtml(s.respondent_gender||'—')}</td>
-            <td style="padding:7px 10px;">${escapeHtml(s.age_range||'—')}</td>
-            <td style="padding:7px 10px;">${escapeHtml(s.occupation||'—')}</td>
+            <td style="padding:7px 10px;font-weight:600;color:#5a3e28;">${escapeHtml(s.sector || '—')}</td>
+            <td style="padding:7px 10px;">${escapeHtml(s.community || '—')}</td>
+            <td style="padding:7px 10px;">${escapeHtml(s.surveyor_name || '—')}</td>
+            <td style="padding:7px 10px;">${escapeHtml(s.respondent_gender || '—')}</td>
+            <td style="padding:7px 10px;">${escapeHtml(s.age_range || '—')}</td>
+            <td style="padding:7px 10px;">${escapeHtml(s.occupation || '—')}</td>
             <td style="padding:7px 10px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
-                title="${escapeHtml(s.primary_problem||'')}">${escapeHtml(s.primary_problem||'—')}</td>
+                title="${escapeHtml(s.primary_problem || '')}">${escapeHtml(s.primary_problem || '—')}</td>
             <td style="padding:7px 10px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
-                title="${escapeHtml(s.political_climate||'')}">${escapeHtml(s.political_climate||'—')}</td>
-            <td style="padding:7px 10px;">${escapeHtml(s.investment_acceptance||'—')}</td>
+                title="${escapeHtml(s.political_climate || '')}">${escapeHtml(s.political_climate || '—')}</td>
+            <td style="padding:7px 10px;">${escapeHtml(s.investment_acceptance || '—')}</td>
             <td style="padding:7px 10px;white-space:nowrap;">
                 <span style="background:${statusColor}18;color:${statusColor};
                     padding:2px 8px;border-radius:10px;font-size:.75rem;font-weight:700;">
@@ -2884,18 +3088,18 @@ function renderDashboardSurveys(surveys) {
 
 async function generateAnalisisPDF() {
     const data = analisisState.data;
-    if (!data) { alert('Carga primero el an&aacute;lisis antes de exportar.'); return; }
+    if (!data) { alert('Carga primero el análisis antes de exportar.'); return; }
 
     const btn = document.getElementById('analisis-pdf-btn');
     if (btn) { btn.disabled = true; btn.textContent = '... Generando'; }
 
     try {
-        const r  = data.resumen_ejecutivo || {};
+        const r = data.resumen_ejecutivo || {};
         const sg = data.sentimiento_global || {};
 
-        const sEl    = document.getElementById('analisis-sector-filter');
-        const sector = sEl?.selectedOptions[0]?.text || 'Todo San Bartolom&eacute;';
-        const sVal   = sEl?.value || 'general';
+        const sEl = document.getElementById('analisis-sector-filter');
+        const sector = sEl?.selectedOptions[0]?.text || 'Todo San Bartolomé';
+        const sVal = sEl?.value || 'general';
 
         // Obtener datos IA minera (si ya están en estado úsalos, si no pedir)
         let iaData = analisisState.iaMinera;
@@ -2903,9 +3107,9 @@ async function generateAnalisisPDF() {
             try { iaData = await requestJson('ia_minera', { params: { sector: sVal } }); } catch { iaData = null; }
         }
 
-        const now   = new Date();
-        const meses = ['enero','febrero','marzo','abril','mayo','junio',
-                       'julio','agosto','septiembre','octubre','noviembre','diciembre'];
+        const now = new Date();
+        const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+            'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
         const fecha = `${now.getDate()} de ${meses[now.getMonth()]} de ${now.getFullYear()}`;
 
         // --- Captura graficas ---
@@ -2913,7 +3117,7 @@ async function generateAnalisisPDF() {
             const el = document.getElementById(id);
             if (!el) return null;
             try {
-                const c = await html2canvas(el, { backgroundColor:'#1e2235', scale:2, useCORS:true, logging:false });
+                const c = await html2canvas(el, { backgroundColor: '#1e2235', scale: 2, useCORS: true, logging: false });
                 return c.toDataURL('image/png');
             } catch { return null; }
         }
@@ -2935,13 +3139,13 @@ async function generateAnalisisPDF() {
         } catch { /* sin preguntas */ }
 
         // --- Helpers ---
-        const esc = v => String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        const p   = v => (Number(v) || 0).toFixed(1) + '%';
-        const n   = v => Number(v) || 0;
+        const esc = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const p = v => (Number(v) || 0).toFixed(1) + '%';
+        const n = v => Number(v) || 0;
         const sgn = v => { const x = n(v); return (x >= 0 ? '+' : '') + x; };
 
-        function sentColor(i) { const x=n(i); return x>=15?'#0f9f6e':x<=-15?'#c43d45':'#d97706'; }
-        function sentLabel(i) { const x=n(i); return x>=15?'FAVORABLE':x<=-15?'CR&Iacute;TICO':'AMBIVALENTE'; }
+        function sentColor(i) { const x = n(i); return x >= 15 ? '#0f9f6e' : x <= -15 ? '#c43d45' : '#d97706'; }
+        function sentLabel(i) { const x = n(i); return x >= 15 ? 'FAVORABLE' : x <= -15 ? 'CRÍTICO' : 'AMBIVALENTE'; }
 
         function barRow(label, pctVal, count, color) {
             const w = Math.min(100, Math.max(0, n(pctVal)));
@@ -2956,11 +3160,11 @@ async function generateAnalisisPDF() {
         // --- Dimensiones ---
         let dimsHtml = '';
         (data.dimensiones || []).forEach((dim, i) => {
-            const ds  = dim.sentimiento || {};
+            const ds = dim.sentimiento || {};
             const col = sentColor(ds.indice);
             const lbl = sentLabel(ds.indice);
             const img = imgsDim[i] ? `<div class="dim-img-wrap"><img src="${imgsDim[i]}"></div>` : '';
-            const bars = (dim.distribucion?.items || []).slice(0,8).map(it => barRow(it.label, it.pct, undefined, col)).join('');
+            const bars = (dim.distribucion?.items || []).slice(0, 8).map(it => barRow(it.label, it.pct, undefined, col)).join('');
             dimsHtml += `
             <div class="dim-card no-break">
               <div class="dim-h" style="background:${col}">
@@ -2984,9 +3188,9 @@ async function generateAnalisisPDF() {
                 pregHtml += `<div class="pg-grupo"><h3 class="pg-gtit">${esc(g.titulo)}</h3><div class="pg-grid">`;
                 g.preguntas.forEach(preg => {
                     if (!preg.distribucion?.length) return;
-                    const tot = preg.distribucion.reduce((s,d) => s + n(d.count), 0);
+                    const tot = preg.distribucion.reduce((s, d) => s + n(d.count), 0);
                     const rows = preg.distribucion.map(o => {
-                        const pct2 = tot > 0 ? (n(o.count)/tot)*100 : 0;
+                        const pct2 = tot > 0 ? (n(o.count) / tot) * 100 : 0;
                         return barRow(o.label, pct2, o.count, '#0e4eb0');
                     }).join('');
                     pregHtml += `<div class="pg-card no-break">
@@ -3000,59 +3204,609 @@ async function generateAnalisisPDF() {
         }
 
         // --- Percepciones mineras ---
-        const benHtml  = (data.beneficios_mineros||[]).map(it => barRow(it.label,it.pct,it.n,'#0f9f6e')).join('');
-        const rskHtml  = (data.riesgos_mineros||[]).map(it => barRow(it.label,it.pct,it.n,'#c43d45')).join('');
-        const conocHtml = (data.conocimiento_minero||[]).map(it => {
+        const benHtml = (data.beneficios_mineros || []).map(it => barRow(it.label, it.pct, it.n, '#0f9f6e')).join('');
+        const rskHtml = (data.riesgos_mineros || []).map(it => barRow(it.label, it.pct, it.n, '#c43d45')).join('');
+        const conocHtml = (data.conocimiento_minero || []).map(it => {
             const kp = n(it.pct);
-            const kc = kp>=60?'#0f9f6e':kp>=30?'#d97706':'#c43d45';
+            const kc = kp >= 60 ? '#0f9f6e' : kp >= 30 ? '#d97706' : '#c43d45';
             return `<div class="krow"><span class="kdot" style="background:${kc}"></span>
               <span>${esc(it.label)}</span><strong style="color:${kc}">${kp.toFixed(1)}%</strong></div>`;
         }).join('');
 
         // --- Correlaciones ---
-        const corrHtml = (data.correlaciones||[]).map(c => `
+        const corrHtml = (data.correlaciones || []).map(c => `
           <div class="corr no-break">
             <strong>${esc(c.titulo)}</strong>
-            <p>${esc(c.descripcion||c.interpretacion||'')}</p>
+            <p>${esc(c.descripcion || c.interpretacion || '')}</p>
           </div>`).join('');
 
         // --- Sector dist ---
-        const sectorHtml = (data.distribucion_por_sector||[]).map(it => barRow(it.label,it.pct,it.n,'#0e4eb0')).join('');
+        const sectorHtml = (data.distribucion_por_sector || []).map(it => barRow(it.label, it.pct, it.n, '#0e4eb0')).join('');
 
         // --- Nivel / color ---
-        const nvlColor = {verde:'#0f9f6e',amarillo:'#d97706',rojo:'#c43d45'}[r.color_sentimiento]||'#555';
-        const indice   = n(r.indice_global);
+        const nvlColor = { verde: '#0f9f6e', amarillo: '#d97706', rojo: '#c43d45' }[r.color_sentimiento] || '#555';
+        const indice = n(r.indice_global);
 
         // --- Conclusion mejorada ---
-        const dimCriticas = (data.dimensiones||[]).filter(d => n(d.sentimiento?.indice) <= -15).map(d => d.nombre);
-        const dimFav      = (data.dimensiones||[]).filter(d => n(d.sentimiento?.indice) >= 15).map(d => d.nombre);
-        const critTxt     = dimCriticas.length ? `Las dimensiones que requieren atenci&oacute;n urgente son: <strong>${dimCriticas.join(', ')}</strong>.` : '';
-        const favTxt      = dimFav.length ? `Las &aacute;reas con mayor favorabilidad comunitaria son: <strong>${dimFav.join(', ')}</strong>.` : '';
+        const dimCriticas = (data.dimensiones || []).filter(d => n(d.sentimiento?.indice) <= -15).map(d => d.titulo).filter(Boolean);
+        const dimFav = (data.dimensiones || []).filter(d => n(d.sentimiento?.indice) >= 15).map(d => d.titulo).filter(Boolean);
+        const critTxt = dimCriticas.length ? `Las dimensiones que requieren atención urgente son: <strong>${dimCriticas.join(', ')}</strong>.` : '';
+        const favTxt = dimFav.length ? `Las áreas con mayor favorabilidad comunitaria son: <strong>${dimFav.join(', ')}</strong>.` : '';
 
         const concl = `
-          <p>El an&aacute;lisis de las encuestas comunitarias en la zona <strong>"${esc(sector)}"</strong> revela
-          un &iacute;ndice neto de sentimiento de <strong>${sgn(indice)} puntos</strong>, categorizado como
+          <p>El análisis de las encuestas comunitarias en la zona <strong>"${esc(sector)}"</strong> revela
+          un índice neto de sentimiento de <strong>${sgn(indice)} puntos</strong>, categorizado como
           <strong style="color:${nvlColor}">${esc(r.nivel_sentimiento)}</strong> dentro de la escala
-          de &minus;100 a +100 puntos. Esta clasificaci&oacute;n indica que el ${p(r.negativo_global)} de la ciudadan&iacute;a
-          expresa preocupaci&oacute;n, rechazo o insatisfacci&oacute;n frente a las dimensiones evaluadas, mientras
-          que &uacute;nicamente el ${p(r.positivo_global)} presenta una posici&oacute;n favorable.</p>
-          <p style="margin-top:12px">La problem&aacute;tica que mayor preocupaci&oacute;n genera en la ciudadan&iacute;a es
+          de &minus;100 a +100 puntos. Esta clasificación indica que el ${p(r.negativo_global)} de la ciudadanía
+          expresa preocupación, rechazo o insatisfacción frente a las dimensiones evaluadas, mientras
+          que únicamente el ${p(r.positivo_global)} presenta una posición favorable.</p>
+          <p style="margin-top:12px">La problemática que mayor preocupación genera en la ciudadanía es
           <strong>"${esc(r.problema_principal)}"</strong>. ${critTxt} ${favTxt}</p>
-          <p style="margin-top:12px">Frente a este escenario, se plantean las siguientes l&iacute;neas de acci&oacute;n:</p>
+          <p style="margin-top:12px">Frente a este escenario, se plantean las siguientes líneas de acción:</p>
           <ul class="recomend">
-            <li>Priorizar intervenciones de pol&iacute;tica p&uacute;blica en las dimensiones con &iacute;ndice cr&iacute;tico, articulando
-                respuestas concretas a las problem&aacute;ticas de mayor recurrencia en las encuestas.</li>
-            <li>Fortalecer la confianza institucional mediante espacios de di&aacute;logo comunitario y rendici&oacute;n
-                de cuentas transparente entre las autoridades del GAD y la ciudadan&iacute;a.</li>
-            <li>Implementar programas de socializaci&oacute;n sobre actividad minera responsable,
-                especialmente en sectores con bajo nivel de conocimiento (sem&aacute;foro rojo),
-                garantizando el acceso a informaci&oacute;n objetiva, t&eacute;cnica y en lenguaje accesible.</li>
-            <li>Dise&ntilde;ar estrategias diferenciadas por sector geogr&aacute;fico, considerando las brechas de
-                sentimiento detectadas entre zonas con mayor y menor participaci&oacute;n en el levantamiento.</li>
-            <li>Mantener un sistema de monitoreo continuo mediante encuestas peri&oacute;dicas que permita
+            <li>Priorizar intervenciones de política pública en las dimensiones con índice crítico, articulando
+                respuestas concretas a las problemáticas de mayor recurrencia en las encuestas.</li>
+            <li>Fortalecer la confianza institucional mediante espacios de diálogo comunitario y rendición
+                de cuentas transparente entre las autoridades del GAD y la ciudadanía.</li>
+            <li>Implementar programas de socialización sobre actividad minera responsable,
+                especialmente en sectores con bajo nivel de conocimiento (semáforo rojo),
+                garantizando el acceso a información objetiva, técnica y en lenguaje accesible.</li>
+            <li>Diseñar estrategias diferenciadas por sector geográfico, considerando las brechas de
+                sentimiento detectadas entre zonas con mayor y menor participación en el levantamiento.</li>
+            <li>Mantener un sistema de monitoreo continuo mediante encuestas periódicas que permita
                 evaluar el impacto de las intervenciones y ajustar las estrategias de acuerdo con la
-                evoluci&oacute;n del sentimiento comunitario.</li>
+                evolución del sentimiento comunitario.</li>
           </ul>`;
+
+        // ============================================================
+        //  PÁGINAS COMPLEMENTARIAS - EVITA ANIDAR TEMPLATE LITERALS (EVITA ERRORES EN EL EDITOR)
+        // ============================================================
+
+        // Page 7B: Metodología
+        let p7b_html = '';
+        if (iaData?.metodologia) {
+            const met = iaData.metodologia;
+            const modelos = (met.fase_clasificacion?.modelos || []).map(m =>
+              `<tr><td><strong>${esc(m.nombre)}</strong></td><td>${esc(m.arquitectura || '')}</td>
+               <td style="text-align:center">${m.precision ? m.precision + '%' : '—'}</td>
+               <td>${esc(m.uso)}</td></tr>`
+            ).join('');
+            const componentes = (met.fase_analisis?.componentes || []).map(c =>
+              `<li style="margin-bottom:6px;font-size:9.5pt">${esc(c)}</li>`).join('');
+            const proceso = (met.fase_plan_estrategico?.proceso || []).map((p,i) =>
+              `<div style="display:flex;gap:12px;margin-bottom:8px;align-items:flex-start">
+                 <div style="min-width:22px;height:22px;background:#0e4eb0;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8pt;font-weight:800">${i+1}</div>
+                 <span style="font-size:9.5pt;color:#334155;padding-top:2px">${esc(p)}</span>
+               </div>`).join('');
+            const variables = (met.fase_recoleccion?.variables_clave || []).join(', ');
+            const temas = (met.fase_vectorizacion?.temas_identificados || []).join(', ');
+            const limitaciones = (met.limitaciones || []).map(l =>
+              `<li style="font-size:9pt;color:#64748b;margin-bottom:5px">${esc(l)}</li>`).join('');
+            p7b_html = `
+<div class="page" style="page-break-before:always">
+<style>
+.met-hdr{font-size:11pt;font-weight:800;color:#0a2a6e;margin:18px 0 8px;padding-bottom:5px;border-bottom:2px solid #0a2a6e}
+.met-tbl{width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:14px}
+.met-tbl th{background:#0a2a6e;color:#fff;padding:7px 10px;font-size:8.5pt;text-align:left}
+.met-tbl td{padding:7px 10px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+.met-fase{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;margin-bottom:12px}
+.met-fase h4{font-size:10pt;font-weight:800;color:#0e4eb0;margin:0 0 8px}
+.met-fase p{font-size:9.5pt;color:#334155;margin:0 0 6px;line-height:1.6}
+.met-grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+</style>
+  <div style="background:linear-gradient(135deg,#0a2a6e,#1155bb);color:#fff;padding:22px 40px;border-radius:0">
+    <h2 style="font-size:16pt;font-weight:900;margin:0 0 4px">8A. Metodolog&iacute;a del Estudio</h2>
+    <p style="opacity:.8;font-size:9.5pt">${esc(met.nombre || '')} &middot; ${met.fase_recoleccion?.total_registros || 0} registros procesados</p>
+  </div>
+
+  <div class="met-hdr">Descripci&oacute;n del Proceso Metodol&oacute;gico</div>
+  <div class="met-grid2">
+    <div class="met-fase">
+      <h4>&#128196; Fase 1 &mdash; Recopilaci&oacute;n de Datos</h4>
+      <p>${esc(met.fase_recoleccion?.descripcion || '')}</p>
+      <p><strong>Instrumento:</strong> ${esc(met.fase_recoleccion?.instrumento || '')}</p>
+      <p style="font-size:8.5pt;color:#64748b"><strong>Variables clave:</strong> ${esc(variables)}</p>
+    </div>
+    <div class="met-fase">
+      <h4>&#128202; Fase 2 &mdash; Vectorizaci&oacute;n TF-IDF</h4>
+      <p>${esc(met.fase_vectorizacion?.descripcion || '')}</p>
+      <p><strong>T&eacute;cnica:</strong> ${esc(met.fase_vectorizacion?.tecnica || '')}</p>
+      <p style="font-size:8.5pt;color:#64748b"><strong>Temas identificados:</strong> ${esc(temas)}</p>
+    </div>
+    <div class="met-fase">
+      <h4>&#129504; Fase 3 &mdash; Clasificaci&oacute;n IA</h4>
+      <p>${esc(met.fase_clasificacion?.descripcion || '')}</p>
+      <p><strong>Variable objetivo:</strong> ${esc(met.fase_clasificacion?.variable_objetivo || '')}</p>
+      <p><strong>Registros de entrenamiento:</strong> ${met.fase_clasificacion?.n_entrenamiento || 0}</p>
+    </div>
+    <div class="met-fase">
+      <h4>&#128269; Fase 4 &mdash; An&aacute;lisis Estad&iacute;stico</h4>
+      <p>${esc(met.fase_analisis?.descripcion || '')}</p>
+      <ul style="padding-left:16px;margin:6px 0">${componentes}</ul>
+    </div>
+  </div>
+
+  <div class="met-hdr">Modelos de Inteligencia Artificial Utilizados</div>
+  <table class="met-tbl">
+    <tr><th>Modelo</th><th>Arquitectura / Par&aacute;metros</th><th>Precisi&oacute;n</th><th>Uso</th></tr>
+    ${modelos}
+  </table>
+
+  <div class="met-hdr">Proceso de Generaci&oacute;n del Plan Estrat&eacute;gico</div>
+  ${proceso}
+
+  <div class="met-hdr">Limitaciones del Estudio</div>
+  <ul style="padding-left:20px">${limitaciones}</ul>
+
+  <div class="pie"><span>Metodolog&iacute;a &middot; IA Minera &middot; San Bartolom&eacute;</span><span>${fecha}</span></div>
+</div>`;
+        }
+
+        // Page 8: IA Minera
+        let p8_html = '';
+        if (iaData?.ok) {
+            const ia = iaData;
+            const claseColor = { 'Aceptacion': '#0f9f6e', 'Neutral': '#d97706', 'Rechazo': '#c43d45' };
+            const pred = ia.prediccion_global || 'Sin datos';
+            const probs = ia.probabilidades_globales || {};
+            const predColor = claseColor[pred] || '#555';
+
+            const factoresHtml = (ia.importancia_factores || []).slice(0, 6).map(f => {
+                const barColor = f.score_pct > 60 ? '#0e4eb0' : f.score_pct > 30 ? '#d97706' : '#94a3b8';
+                return `<div class="ia-row">
+      <span class="ia-flabel">${esc(f.factor)}</span>
+      <div class="ia-fbar-w"><div class="ia-fbar" style="width:${f.score_pct}%;background:${barColor}"></div></div>
+      <span class="ia-fscore">${f.score_pct}%</span>
+    </div>`;
+            }).join('');
+
+            const sectorHtml2 = (ia.prediccion_por_sector || []).slice(0, 6).map(s =>
+                `<tr><td>${esc(s.sector)}</td>
+     <td style="color:#0f9f6e;font-weight:700">${s.Aceptacion}%</td>
+     <td style="color:#d97706;font-weight:700">${s.Neutral}%</td>
+     <td style="color:#c43d45;font-weight:700">${s.Rechazo}%</td>
+     <td style="color:#94a3b8">${s.n}</td></tr>`
+            ).join('');
+
+            const recsHtml2 = (ia.recomendaciones_ia || []).map((rec, i) =>
+                `<li><strong>R${i + 1}:</strong> ${esc(rec)}</li>`).join('');
+
+            const perfilAcHtml = (ia.perfil_aceptacion || []).map(p =>
+                `<div class="ia-prow"><span>${esc(p.factor)}:</span> <strong>${esc(p.valor)}</strong> <em>${p.pct}%</em></div>`).join('') || '<p style="color:#888;font-size:9pt">Sin datos suficientes</p>';
+            const perfilReHtml = (ia.perfil_rechazo || []).map(p =>
+                `<div class="ia-prow"><span>${esc(p.factor)}:</span> <strong>${esc(p.valor)}</strong> <em>${p.pct}%</em></div>`).join('') || '<p style="color:#888;font-size:9pt">Sin datos suficientes</p>';
+
+            const probBars = Object.entries(probs).map(([c, pv]) =>
+                `<div class="ia-pitem">
+      <div class="ia-pbar-w"><div class="ia-pbar" style="height:${pv}%;background:${claseColor[c] || '#888'}"></div></div>
+      <span class="ia-pval" style="color:${claseColor[c] || '#888'}">${pv}%</span>
+      <span class="ia-plabel">${esc(c)}</span>
+    </div>`).join('');
+
+            p8_html = `
+<style>
+.ia-cover{background:linear-gradient(135deg,#0a2a6e,#1155bb);color:#fff;padding:28px 42px;border-radius:0}
+.ia-cover h2{font-size:18pt;font-weight:900;margin-bottom:4px}
+.ia-cover p{font-size:10pt;opacity:.8}
+.ia-pred-badge{display:inline-block;padding:8px 20px;border-radius:24px;font-weight:800;
+  font-size:11pt;color:#fff;margin-top:10px}
+.ia-kpi3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:18px 0 20px}
+.ia-kpi-c{border-radius:9px;padding:14px;text-align:center;color:#fff}
+.ia-kpi-c .v{font-size:20pt;font-weight:900;display:block;margin-bottom:3px}
+.ia-kpi-c .l{font-size:8pt;opacity:.9;text-transform:uppercase;font-weight:600}
+.ia-probs-row{display:flex;justify-content:center;gap:20px;margin-bottom:20px;
+  padding:16px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0}
+.ia-pitem{display:flex;flex-direction:column;align-items:center;gap:6px}
+.ia-pbar-w{width:44px;height:80px;background:#e2e8f0;border-radius:6px;
+  display:flex;align-items:flex-end;overflow:hidden}
+.ia-pbar{width:100%;border-radius:6px 6px 0 0}
+.ia-pval{font-size:13pt;font-weight:800}
+.ia-plabel{font-size:9pt;color:#64748b;font-weight:600}
+.ia-st2{font-size:11pt;font-weight:800;color:#0a2a6e;margin:16px 0 8px;
+  padding-bottom:5px;border-bottom:2px solid #0a2a6e}
+.ia-row{display:flex;align-items:center;gap:10px;margin-bottom:7px;font-size:9.5pt}
+.ia-flabel{width:175px;flex-shrink:0;color:#334155;font-weight:500}
+.ia-fbar-w{flex:1;height:10px;background:#e2e8f0;border-radius:5px;overflow:hidden}
+.ia-fbar{height:100%;border-radius:5px}
+.ia-fscore{width:38px;text-align:right;font-weight:700;font-size:9pt;color:#475569}
+.ia-tbl{width:100%;border-collapse:collapse;font-size:9.5pt;margin-bottom:16px}
+.ia-tbl th{background:#0a2a6e;color:#fff;padding:8px 12px;font-size:9pt;text-align:left}
+.ia-tbl td{padding:8px 12px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+.ia-recs2{padding-left:20px;color:#334155;margin-bottom:16px}
+.ia-recs2 li{margin-bottom:8px;font-size:9.5pt;line-height:1.65}
+.ia-grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px}
+.ia-pcard{border-radius:8px;padding:14px 16px}
+.ia-pcard h5{font-size:10pt;font-weight:800;margin:0 0 8px}
+.ia-prow{display:flex;align-items:center;gap:8px;font-size:9pt;
+  color:#475569;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.05)}
+.ia-prow span{flex:1}.ia-prow strong{color:#1e293b;font-weight:700}
+.ia-prow em{font-style:normal;font-size:8.5pt;color:#64748b;margin-left:auto}
+.ia-modelo-note{font-size:8.5pt;color:#94a3b8;text-align:center;margin-top:12px;font-style:italic}
+</style>
+<div class="page">
+  <div class="ia-cover">
+    <h2>8. IA Minera &mdash; Modelo Predictivo de Aceptaci&oacute;n</h2>
+    <p>Clasificador Naive Bayes entrenado con los datos reales de encuestas &middot; ${ia.encuestas_entrenadas} registros &middot; Cobertura: ${ia.cobertura_datos}%</p>
+    <div class="ia-pred-badge" style="background:${predColor}">
+      Predicci&oacute;n global: ${esc(pred)}
+    </div>
+  </div>
+
+  <div class="ia-kpi3">
+    <div class="ia-kpi-c" style="background:#0e4eb0"><span class="v">${ia.total_encuestas}</span><span class="l">Encuestas totales</span></div>
+    <div class="ia-kpi-c" style="background:${predColor}"><span class="v">${esc(pred)}</span><span class="l">Predicci&oacute;n dominante</span></div>
+    <div class="ia-kpi-c" style="background:#475569"><span class="v">${ia.cobertura_datos}%</span><span class="l">Cobertura del modelo</span></div>
+  </div>
+
+  <div class="ia-st2">8.1 Probabilidades Predichas por Clase</div>
+  <div class="ia-probs-row">${probBars}</div>
+
+  <div class="ia-st2">8.2 Importancia de Factores — Red Neuronal + Random Forest</div>
+  ${factoresHtml}
+
+  ${sectorHtml2 ? `
+  <div class="ia-st2">8.3 Predicci&oacute;n por Sector Geogr&aacute;fico</div>
+  <table class="ia-tbl">
+    <tr><th>Sector</th><th>&#10003; Acepta</th><th>&#9888; Neutro</th><th>&#10007; Rechaza</th><th>n</th></tr>
+    ${sectorHtml2}
+  </table>` : ''}
+
+  <div class="ia-st2">8.4 Recomendaciones del Modelo</div>
+  <ul class="ia-recs2">${recsHtml2}</ul>
+
+  <div class="ia-st2">8.5 Perfiles Comunitarios</div>
+  <div class="ia-grid2">
+    <div class="ia-pcard" style="background:#f0fdf4;border:1px solid #bbf7d0">
+      <h5 style="color:#166534">&#10003; Perfil de Aceptaci&oacute;n</h5>${perfilAcHtml}
+    </div>
+    <div class="ia-pcard" style="background:#fef2f2;border:1px solid #fecaca">
+      <h5 style="color:#991b1b">&#10007; Perfil de Rechazo</h5>${perfilReHtml}
+    </div>
+  </div>
+  <div class="ia-modelo-note">Modelo: ${esc(ia.modelo || 'Red Neuronal MLP + Random Forest')} &middot; Generado autom&aacute;ticamente &middot; ${fecha}</div>
+  <div class="pie"><span>IA Minera &middot; Encuestas Parroquiales San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
+</div>`;
+        }
+
+        // Page 8B: Demografía & Conocimiento Minero
+        let p8b_html = '';
+        if (iaData?.ok) {
+            const ia = iaData;
+            const demo = ia.demografia || {};
+            const know = ia.conocimiento_minero || {};
+            const knowIdx = know.indice_conocimiento || 0;
+            const knowColor = knowIdx >= 60 ? '#0f9f6e' : knowIdx >= 30 ? '#d97706' : '#c43d45';
+            const knowNivel = knowIdx >= 60 ? 'ALTO' : knowIdx >= 30 ? 'MEDIO' : 'BAJO';
+
+            const genRows = (demo.genero||[]).map(g=>
+              `<tr><td>${esc(g.valor)}</td><td style="text-align:center">${g.n}</td><td style="text-align:center">${g.pct}%</td></tr>`).join('');
+            const edadRows = (demo.edad||[]).map(e=>
+              `<tr><td>${esc(e.valor)}</td><td style="text-align:center">${e.n}</td><td style="text-align:center">${e.pct}%</td></tr>`).join('');
+            const educRows = (demo.educacion||[]).slice(0,6).map(e=>
+              `<tr><td>${esc(e.valor)}</td><td style="text-align:center">${e.n}</td><td style="text-align:center">${e.pct}%</td></tr>`).join('');
+
+            const gvpRows = (demo.genero_vs_percepcion||[]).map(g=>
+              `<tr><td>${esc(g.genero)}</td><td>${g.n}</td>
+               <td style="color:#0f9f6e;font-weight:700">${g.aceptacion_pct}%</td>
+               <td style="color:#c43d45;font-weight:700">${g.rechazo_pct}%</td>
+               <td style="color:#d97706;font-weight:700">${g.neutral_pct}%</td></tr>`).join('');
+
+            const knowRows = (know.por_campo||[]).map(k => {
+              const kc = k.nivel === 'Alto' ? '#0f9f6e' : k.nivel === 'Medio' ? '#d97706' : '#c43d45';
+              const w = Math.min(100, k.pct_positivo);
+              return `<div style="margin-bottom:10px">
+                <div style="display:flex;justify-content:space-between;font-size:9pt;margin-bottom:3px">
+                  <span style="color:#334155">${esc(k.pregunta)}</span>
+                  <strong style="color:${kc}">${k.pct_positivo}% — ${esc(k.nivel)}</strong>
+                </div>
+                <div style="height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden">
+                  <div style="width:${w}%;height:100%;background:${kc};border-radius:4px"></div>
+                </div>
+              </div>`;
+            }).join('');
+
+            const cruceRows = (know.cruce_vs_aceptacion||[]).slice(0,5).map(c => {
+              const dif = c.diferencia_pp;
+              const dc = dif > 0 ? '#0f9f6e' : '#c43d45';
+              return `<tr>
+                <td style="font-size:8.5pt">${esc(c.pregunta)}</td>
+                <td style="text-align:center;color:#0f9f6e;font-weight:700">${c.acept_si_conoce}%</td>
+                <td style="text-align:center;color:#c43d45;font-weight:600">${c.acept_no_conoce}%</td>
+                <td style="text-align:center;color:${dc};font-weight:800">${dif > 0 ? '+' : ''}${dif} pp</td>
+              </tr>`;
+            }).join('');
+
+            const temasHtml = (ia.vectorizacion_temas||[]).slice(0,10).map(t => {
+              const w = Math.min(100, Math.round(t.relevancia * 2000));
+              return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:9pt">
+                <span style="width:160px;color:#334155">${esc(t.tema)}</span>
+                <div style="flex:1;height:7px;background:#e2e8f0;border-radius:4px;overflow:hidden">
+                  <div style="width:${w}%;height:100%;background:#0e4eb0;border-radius:4px"></div>
+                </div>
+                <span style="width:45px;text-align:right;font-size:8pt;color:#64748b">${t.relevancia.toFixed(4)}</span>
+              </div>`;
+            }).join('');
+
+            if (genRows || knowRows) {
+                p8b_html = `
+<div class="page" style="page-break-before:always">
+<style>
+.demo-tbl{width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:0}
+.demo-tbl th{background:#0a2a6e;color:#fff;padding:7px 10px;font-size:8.5pt}
+.demo-tbl td{padding:6px 10px;border-bottom:1px solid #f1f5f9}
+.demo-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:14px 0}
+.demo-card{border:1px solid #e2e8f0;border-radius:8px;padding:14px}
+.demo-card h4{font-size:10pt;font-weight:800;color:#0a2a6e;margin:0 0 10px;padding-bottom:6px;border-bottom:2px solid #e2e8f0}
+.sec-hdr{font-size:11pt;font-weight:800;color:#0a2a6e;margin:20px 0 10px;padding-bottom:5px;border-bottom:2px solid #0a2a6e}
+.know-badge{display:inline-block;padding:4px 14px;border-radius:20px;color:#fff;font-weight:800;font-size:11pt}
+</style>
+  <div style="background:linear-gradient(135deg,#0a2a6e,#1155bb);color:#fff;padding:22px 40px;border-radius:0;margin:-1px">
+    <h2 style="font-size:16pt;font-weight:900;margin:0 0 4px">8B. An&aacute;lisis Demogr&aacute;fico y Conocimiento Minero</h2>
+    <p style="opacity:.8;font-size:9.5pt">Vectorizaci&oacute;n completa de la base de datos &middot; ${ia.total_encuestas || ia.encuestas_entrenadas} encuestados analizados</p>
+  </div>
+
+  <div class="sec-hdr">Distribuci&oacute;n Demogr&aacute;fica</div>
+  <div class="demo-grid">
+    <div class="demo-card">
+      <h4>G&eacute;nero</h4>
+      <table class="demo-tbl"><tr><th>G&eacute;nero</th><th>n</th><th>%</th></tr>${genRows}</table>
+    </div>
+    <div class="demo-card">
+      <h4>Rango de Edad</h4>
+      <table class="demo-tbl"><tr><th>Edad</th><th>n</th><th>%</th></tr>${edadRows}</table>
+    </div>
+    <div class="demo-card">
+      <h4>Nivel de Educaci&oacute;n</h4>
+      <table class="demo-tbl"><tr><th>Educaci&oacute;n</th><th>n</th><th>%</th></tr>${educRows}</table>
+    </div>
+  </div>
+
+  ${gvpRows ? `
+  <div class="sec-hdr">Percepci&oacute;n Minera por G&eacute;nero</div>
+  <table class="demo-tbl" style="margin-bottom:18px">
+    <tr><th>G&eacute;nero</th><th>n</th><th style="color:#a7f3d0">&#10003; Acepta</th><th style="color:#fca5a5">&#10007; Rechaza</th><th style="color:#fcd34d">&#9888; Neutro</th></tr>
+    ${gvpRows}
+  </table>` : ''}
+
+  <div class="sec-hdr">&Iacute;ndice de Conocimiento Minero Comunitario</div>
+  <div style="text-align:center;margin:10px 0 16px">
+    <span class="know-badge" style="background:${knowColor}">${knowIdx}% &mdash; ${knowNivel}</span>
+    <p style="font-size:9pt;color:#64748b;margin-top:6px">Promedio de 5 dimensiones de conocimiento minero evaluadas en la encuesta</p>
+  </div>
+  ${knowRows}
+
+  ${cruceRows ? `
+  <div class="sec-hdr">Correlaci&oacute;n: Conocimiento vs Aceptaci&oacute;n Minera</div>
+  <table class="demo-tbl">
+    <tr><th>Dimensi&oacute;n</th><th>Acepta (s&iacute; conoce)</th><th>Acepta (no conoce)</th><th>Diferencia</th></tr>
+    ${cruceRows}
+  </table>
+  <p style="font-size:8.5pt;color:#64748b;margin-top:8px;font-style:italic">
+    Una diferencia positiva indica que el conocimiento favorece la aceptaci&oacute;n.
+  </p>` : ''}
+
+  ${temasHtml ? `
+  <div class="sec-hdr">Vectorizaci&oacute;n TF-IDF &mdash; Temas Dominantes en Textos Comunitarios</div>
+  <p style="font-size:9pt;color:#64748b;margin-bottom:10px">T&eacute;rminos m&aacute;s representativos extra&iacute;dos de comentarios, problemas, prioridades y percepciones libres.</p>
+  ${temasHtml}` : ''}
+
+  <div class="pie"><span>An&aacute;lisis Demogr&aacute;fico &middot; IA Minera &middot; San Bartolom&eacute;</span><span>${fecha}</span></div>
+</div>`;
+            }
+        }
+
+        // Page 9: Plan Estratégico Minero (Gemini o Fallback)
+        let p9_html = '';
+        const planGeminiData = analisisState.planGemini;
+        if (!planGeminiData || !planGeminiData.plan) {
+            const benMin = (data.beneficios_mineros || []);
+            const rskMin = (data.riesgos_mineros || []);
+            const topBen = benMin.slice(0, 4).map(b => esc(b.label)).join(', ') || 'Generación de empleo, ingresos al GAD, mejora de vialidad';
+            const topRsk = rskMin.slice(0, 4).map(r2 => esc(r2.label)).join(', ') || 'Contaminación ambiental, impacto en fuentes de agua, conflictos sociales';
+            const dimMinera = (data.dimensiones || []).find(d => /miner/i.test(d.nombre || d.titulo || ''));
+            const idxMin = dimMinera ? n(dimMinera.sentimiento?.indice) : indice;
+            const sentMin = idxMin >= 15 ? 'favorable' : idxMin <= -15 ? 'crítico' : 'ambivalente';
+            const apoyoPct = dimMinera ? p(dimMinera.sentimiento?.positivo_pct) : p(sg.positivo_pct);
+            const rechazoPct = dimMinera ? p(dimMinera.sentimiento?.negativo_pct) : p(sg.negativo_pct);
+            const nivelRiesgo = idxMin <= -15 ? 'ALTO' : idxMin <= 0 ? 'MEDIO' : 'BAJO';
+            const riesgoColor = nivelRiesgo === 'ALTO' ? '#c43d45' : nivelRiesgo === 'MEDIO' ? '#d97706' : '#0f9f6e';
+
+            p9_html = `
+<div class="page">
+  <div class="ph"><h2>9. Plan Estrat&eacute;gico de Reapertura (Offline Fallback)</h2><p>An&aacute;lisis del territorio</p></div>
+  <div class="narr">No se pudo cargar el plan estrat&eacute;gico detallado. Cargue la pestaña "An&aacute;lisis IA" primero para asegurar la generaci&oacute;n del reporte completo.</div>
+  <div class="pie"><span>Plan Estrat&eacute;gico &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
+</div>`;
+        } else {
+            const p = planGeminiData.plan;
+            const motor = planGeminiData.motor || 'Gemini API';
+            const isLocal = motor === 'Local Expert Engine' || planGeminiData.fuente === 'ia_local';
+            const mainTitle = isLocal ? 'IA Local &mdash; Plan Estrat&eacute;gico Parroquial' : 'Gemini IA &mdash; Plan Estrat&eacute;gico Integral';
+            const badgeText = isLocal ? 'Motor Experto Local (Offline)' : 'Powered by Gemini';
+            const headerBg = isLocal ? 'linear-gradient(135deg,#6f4e37,#a67c52)' : 'linear-gradient(135deg,#1a73e8,#0d47a1)';
+
+            // Marco regulatorio
+            const regHtml = (p.marco_regulatorio || []).map(r =>
+                `<div class="gm-reg-item" style="margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #f1f5f9;page-break-inside:avoid;">
+                    <strong style="color:#0f3460;font-size:10pt;display:block;">${esc(r.norma)}</strong>
+                    <p style="font-size:9.5pt;color:#334155;margin-top:4px;line-height:1.5">${esc(r.aplicacion)}</p>
+                </div>`
+            ).join('');
+
+            // Mejores prácticas
+            const pracHtml = (p.mejores_practicas || []).map(pr => {
+                const col = pr.nivel === 'Internacional' ? '#0e4eb0' : pr.nivel === 'Nacional' ? '#0f9f6e' : pr.nivel === 'Regional' ? '#7c3aed' : '#d97706';
+                return `<div class="gm-prac-item" style="margin-bottom:15px;padding:12px;background:#f8fafc;border-left:4px solid ${col};border-radius:0 8px 8px 0;page-break-inside:avoid;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <strong style="font-size:10pt;color:#1e293b">${esc(pr.practica)}</strong>
+                        <span style="background:${col};color:#fff;font-size:8pt;padding:2px 8px;border-radius:10px;font-weight:700;">${esc(pr.nivel)}</span>
+                    </div>
+                    <em style="font-size:8.5pt;color:#64748b;display:block;margin-bottom:4px;font-style:italic;">Referencia: ${esc(pr.referencia)}</em>
+                    <p style="font-size:9pt;color:#475569;line-height:1.4">${esc(pr.aplicabilidad)}</p>
+                </div>`;
+            }).join('');
+
+            // Ejes estratégicos
+            const ejesHtml = (p.ejes_estrategicos || []).map(e =>
+                `<div class="gm-eje-pdf no-break" style="border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;margin-bottom:12px;background:#fff;page-break-inside:avoid;">
+                    <div style="border-bottom:1px solid #f1f5f9;padding-bottom:6px;margin-bottom:8px;">
+                        <strong style="color:#0e4eb0;font-size:10.5pt;">${esc(e.eje)}</strong>
+                        <p style="font-size:9.5pt;color:#475569;margin-top:4px;line-height:1.45;">${esc(e.descripcion)}</p>
+                    </div>
+                    <div style="font-size:9pt;color:#334155;margin-bottom:6px;">
+                        <strong>Actores involucrados:</strong> ${(e.actores||[]).map(esc).join(', ')}
+                    </div>
+                    <ul style="padding-left:16px;margin:6px 0;font-size:9pt;color:#334155;">
+                        ${(e.acciones||[]).map(a => `<li style="margin-bottom:3px;">${esc(a)}</li>`).join('')}
+                    </ul>
+                    <div style="margin-top:8px;font-size:9pt;color:#0f9f6e;font-weight:700;background:#f0fdf4;padding:6px 10px;border-radius:6px;">
+                        Meta / Indicador: ${esc(e.indicador)}
+                    </div>
+                </div>`
+            ).join('');
+
+            // Vinculación academia
+            const ac = p.vinculacion_academia || {};
+            const acadHtml = `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;">
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:8px;">
+                    <h5 style="margin:0 0 6px;color:#0e4eb0;font-size:9.5pt;font-weight:700;">Instituciones Sugeridas</h5>
+                    <ul style="padding-left:14px;margin:0;font-size:9pt;color:#475569;">
+                        ${(ac.instituciones_sugeridas||[]).map(i=>`<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
+                    </ul>
+                </div>
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:8px;">
+                    <h5 style="margin:0 0 6px;color:#0e4eb0;font-size:9.5pt;font-weight:700;">L&iacute;neas de Investigaci&oacute;n</h5>
+                    <ul style="padding-left:14px;margin:0;font-size:9pt;color:#475569;">
+                        ${(ac.lineas_investigacion||[]).map(i=>`<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
+                    </ul>
+                </div>
+            </div>
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:8px;margin-top:10px;">
+                <h5 style="margin:0 0 6px;color:#0e4eb0;font-size:9.5pt;font-weight:700;">Programas Propuestos</h5>
+                <ul style="padding-left:14px;margin:0;font-size:9pt;color:#475569;">
+                    ${(ac.programas_propuestos||[]).map(i=>`<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
+                </ul>
+            </div>`;
+
+            // Plan empleo formación
+            const emp = p.plan_empleo_formacion || {};
+            const empHtml = `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;">
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:8px;">
+                    <h5 style="margin:0 0 6px;color:#0f9f6e;font-size:9.5pt;font-weight:700;">Perfiles Requeridos</h5>
+                    <ul style="padding-left:14px;margin:0;font-size:9pt;color:#475569;">
+                        ${(emp.perfiles_requeridos||[]).map(i=>`<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
+                    </ul>
+                </div>
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:8px;">
+                    <h5 style="margin:0 0 6px;color:#0f9f6e;font-size:9.5pt;font-weight:700;">Capacitaci&oacute;n</h5>
+                    <ul style="padding-left:14px;margin:0;font-size:9pt;color:#475569;">
+                        ${(emp.instituciones_capacitacion||[]).map(i=>`<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
+                    </ul>
+                </div>
+            </div>
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:8px;margin-top:10px;">
+                <h5 style="margin:0 0 6px;color:#0f9f6e;font-size:9.5pt;font-weight:700;">Metas</h5>
+                <ul style="padding-left:14px;margin:0;font-size:9pt;color:#475569;">
+                    ${(emp.metas||[]).map(i=>`<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
+                </ul>
+            </div>`;
+
+            // Turismo y agricultura
+            const ta = p.turismo_agricultura || {};
+            const taHtml = `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;">
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:8px;">
+                    <h5 style="margin:0 0 6px;color:#7c3aed;font-size:9.5pt;font-weight:700;">Turismo Comunitario</h5>
+                    <ul style="padding-left:14px;margin:0;font-size:9pt;color:#475569;">
+                        ${(ta.oportunidades_turismo||[]).map(i=>`<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
+                    </ul>
+                </div>
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:8px;">
+                    <h5 style="margin:0 0 6px;color:#7c3aed;font-size:9.5pt;font-weight:700;">Agricultura Sostenible</h5>
+                    <ul style="padding-left:14px;margin:0;font-size:9pt;color:#475569;">
+                        ${(ta.oportunidades_agricultura||[]).map(i=>`<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
+                    </ul>
+                </div>
+            </div>
+            <p style="margin-top:10px;font-size:9pt;color:#475569;background:#f5f3ff;padding:8px 12px;border-radius:6px;line-height:1.5;">
+                <strong>Sinergias:</strong> ${esc(ta.sinergias)}
+            </p>`;
+
+            // Cronograma
+            const cronHtml = (p.cronograma_estrategico || []).map(f =>
+                `<div style="display:grid;grid-template-columns:150px 1fr;gap:12px;border-bottom:1px solid #e2e8f0;padding:8px 0;page-break-inside:avoid;">
+                    <div style="font-weight:700;color:#0e4eb0;font-size:9pt;">${esc(f.fase)}<br><small style="color:#64748b;font-weight:400;">${esc(f.periodo)}</small></div>
+                    <ul style="padding-left:14px;margin:0;font-size:9pt;color:#334155;">
+                        ${(f.hitos||[]).map(h=>`<li style="margin-bottom:3px;">${esc(h)}</li>`).join('')}
+                    </ul>
+                </div>`
+            ).join('');
+
+            // Recomendaciones finales
+            const recsHtml = (p.recomendaciones_finales || []).map((r,i) =>
+                `<li style="margin-bottom:8px;font-size:9.5pt;line-height:1.5;"><strong>R${i+1}:</strong> ${esc(r)}</li>`).join('');
+
+            p9_html = `
+<div class="page" style="page-break-before:always">
+<style>
+.gm-header-pdf{background:${headerBg};color:#fff;padding:20px 30px;border-radius:0;margin-bottom:16px;}
+.gm-header-pdf h2{font-size:15pt;font-weight:900;margin:0 0 3px;}
+.gm-header-pdf p{font-size:8.5pt;opacity:.8;margin:0;}
+.gm-hdr{font-size:11pt;font-weight:800;color:#0a2a6e;margin:18px 0 8px;padding-bottom:5px;border-bottom:2px solid #0a2a6e;page-break-after:avoid;}
+.gm-grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+</style>
+  <div class="gm-header-pdf">
+    <h2>9. ${esc(p.titulo || mainTitle)}</h2>
+    <p>${esc(badgeText)} &middot; ${esc(sector.toUpperCase())} &middot; ${fecha}</p>
+  </div>
+
+  <div class="gm-hdr">Diagn&oacute;stico Contextual (IA + Literatura)</div>
+  <div style="font-size:9.5pt;line-height:1.6;color:#334155;background:#f8fafc;padding:12px 16px;border-radius:8px;border-left:4px solid #0e4eb0;margin-bottom:14px;">
+    ${esc(p.diagnostico_contextual)}
+  </div>
+
+  <div class="gm-hdr">Marco Regulatorio Vigente Ecuatoriano</div>
+  <div>${regHtml}</div>
+
+  <div class="gm-hdr">Mejores Pr&aacute;cticas de Sostenibilidad Evaluadas</div>
+  <div>${pracHtml}</div>
+
+  <div class="gm-hdr">Ejes Estrat&eacute;gicos de Intervenci&oacute;n</div>
+  <div>${ejesHtml}</div>
+
+  <div class="gm-hdr">Vinculaci&oacute;n con la Academia</div>
+  <div>${acadHtml}</div>
+
+  <div class="gm-hdr">Plan de Empleo y Formaci&oacute;n T&eacute;cnica Local</div>
+  <div>${empHtml}</div>
+
+  <div class="gm-hdr">Sinergias: Turismo y Agricultura Sostenible</div>
+  <div>${taHtml}</div>
+
+  <div class="gm-hdr">Cronograma e Hitos Estrat&eacute;gicos</div>
+  <div style="border:1px solid #e2e8f0;border-radius:8px;padding:0 14px;background:#fff;margin-bottom:14px;">${cronHtml}</div>
+
+  <div class="gm-hdr">&#128161; Recomendaciones Finales para el Plan de Acción</div>
+  <ul style="padding-left:20px;color:#334155;margin-bottom:16px;">${recsHtml}</ul>
+
+  ${(p.referencias_cientificas||[]).length ? `
+  <div class="gm-hdr">&#128218; Referencias Cient&iacute;ficas de Respaldo</div>
+  <div style="font-size:9pt;color:#475569;">
+      ${(p.referencias_cientificas||[]).map((ref,i) => `
+      <div style="margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #f1f5f9;page-break-inside:avoid;">
+          <strong>${i+1}.</strong> ${esc(ref.autor)} (${esc(String(ref.anio))}). <em>${esc(ref.titulo)}</em>. ${esc(ref.revista)}
+          ${ref.doi_url ? ` <a href="${esc(ref.doi_url)}" style="color:#0e4eb0;">${esc(ref.doi_url)}</a>` : ''}
+          ${ref.relevancia ? `<br><small>Relevancia: ${esc(ref.relevancia)}</small>` : ''}
+      </div>`).join('')}
+  </div>` : ''}
+
+  <div class="concl-box" style="margin-top:20px;page-break-inside:avoid;">${esc(p.conclusion)}</div>
+
+  <div class="pie"><span>Plan Estrat&eacute;gico &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
+</div>`;
+        }
 
         // ============================================================
         //  HTML DEL REPORTE
@@ -3222,7 +3976,7 @@ h1,h2,h3,h4{font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif}
       <tr><td>Zona analizada</td><td>${esc(sector)}</td></tr>
       <tr><td>Fecha de emisi&oacute;n</td><td>${fecha}</td></tr>
       <tr><td>Total de encuestas</td><td>${n(r.total_encuestas)} encuestas procesadas</td></tr>
-      <tr><td>&Uacute;ltimo registro</td><td>${esc((data.generado_en||'').split(' ')[0])}</td></tr>
+      <tr><td>&Uacute;ltimo registro</td><td>${esc((data.generado_en || '').split(' ')[0])}</td></tr>
     </table>
     <div class="nivel-pill" style="background:${nvlColor}">
       Nivel de Sentimiento Comunitario: ${esc(r.nivel_sentimiento)}
@@ -3275,46 +4029,45 @@ h1,h2,h3,h4{font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif}
   ${imgDonut ? `
   <div class="st">2.1 Distribuci&oacute;n de Sentimiento Comunitario</div>
   <div class="sd">Proporci&oacute;n de encuestas clasificadas como Positivo, Neutro y Negativo sobre el total analizado.</div>
-  <div class="chart-wrap"><img src="${imgDonut}" style="max-width:300px">
-  <div class="chart-cap">Positivo ${p(sg.positivo_pct)} &middot; Neutro ${p(sg.neutro_pct)} &middot; Negativo ${p(sg.negativo_pct)}</div></div>` : ''}
+  <div class="chart-wrap"><img src="${imgDonut}"></div>` : ''}
   ${imgRadar ? `
-  <div class="st">2.2 Radar Comparativo por Dimensi&oacute;n Tem&aacute;tica</div>
-  <div class="sd">Cada eje representa el &iacute;ndice neto de una dimensi&oacute;n. Mayor extensi&oacute;n hacia afuera indica mayor favorabilidad.</div>
-  <div class="chart-wrap"><img src="${imgRadar}" style="max-width:480px"></div>` : ''}
+  <div class="st">2.2 Fortaleza de Dimensiones</div>
+  <div class="sd">Puntaje neto obtenido en cada una de las dimensiones analizadas (de &minus;100 a +100 puntos).</div>
+  <div class="chart-wrap"><img src="${imgRadar}" style="max-height:360px"></div>` : ''}
   <div class="pie"><span>Reporte T&eacute;cnico-Cient&iacute;fico &middot; Encuestas Parroquiales San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
 </div>
 
-<!-- PAG 3: DIMENSIONES -->
+<!-- PAG 3: DETALLE DE DIMENSIONES -->
 <div class="page">
-  <div class="ph"><h2>3. An&aacute;lisis Detallado por Dimensi&oacute;n Tem&aacute;tica</h2><p>&Iacute;ndice neto, sentimiento y distribuci&oacute;n de respuestas por eje tem&aacute;tico</p></div>
+  <div class="ph"><h2>3. Sentimiento Detallado por Dimensi&oacute;n</h2><p>An&aacute;lisis del &Iacute;ndice Neto y respuestas porcentuales por &aacute;rea de inter&eacute;s</p></div>
   ${dimsHtml}
   <div class="pie"><span>Reporte T&eacute;cnico-Cient&iacute;fico &middot; Encuestas Parroquiales San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
 </div>
 
-<!-- PAG 4: PREGUNTAS -->
+<!-- PAG 4: PREGUNTAS DETALLADAS -->
 ${pregHtml ? `
 <div class="page">
-  <div class="ph"><h2>4. Distribuci&oacute;n de Respuestas por Pregunta</h2><p>Porcentaje de encuestados que eligi&oacute; cada opci&oacute;n &middot; Zona: ${esc(sector)}</p></div>
+  <div class="ph"><h2>4. Respuestas Detalladas a Preguntas Clave</h2><p>Distribuci&oacute;n de opciones seleccionadas en el formulario de encuesta</p></div>
   ${pregHtml}
   <div class="pie"><span>Reporte T&eacute;cnico-Cient&iacute;fico &middot; Encuestas Parroquiales San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
 </div>` : ''}
 
 <!-- PAG 5: PERCEPCIONES MINERAS -->
 <div class="page">
-  <div class="ph"><h2>5. Percepciones sobre la Actividad Minera</h2><p>Selecci&oacute;n m&uacute;ltiple &mdash; un encuestado puede indicar varios &iacute;tems simult&aacute;neamente</p></div>
+  <div class="ph"><h2>5. Percepciones e Impacto de la Actividad Minera</h2><p>Evaluaci&oacute;n comunitaria de riesgos, beneficios y conocimiento minero</p></div>
   <div class="mine-grid">
     <div class="mine-card no-break">
       <h4 style="color:#0f9f6e;border-color:#0f9f6e">Beneficios Percibidos</h4>
-      ${benHtml||'<p style="color:#888;font-size:9pt">Sin datos registrados</p>'}
+      ${benHtml || '<p style="color:#888;font-size:9pt">Sin datos registrados</p>'}
     </div>
     <div class="mine-card no-break">
       <h4 style="color:#c43d45;border-color:#c43d45">Riesgos Percibidos</h4>
-      ${rskHtml||'<p style="color:#888;font-size:9pt">Sin datos registrados</p>'}
+      ${rskHtml || '<p style="color:#888;font-size:9pt">Sin datos registrados</p>'}
     </div>
   </div>
   <div class="st">5.3 Nivel de Conocimiento sobre Miner&iacute;a</div>
   <div class="sd">Sem&aacute;foro: &#128994; &ge; 60% &mdash; conocimiento adecuado &nbsp;&middot;&nbsp; &#128993; 30&ndash;59% &mdash; conocimiento parcial &nbsp;&middot;&nbsp; &#128308; &lt; 30% &mdash; socializaci&oacute;n urgente</div>
-  ${conocHtml||'<p style="color:#888;font-size:9pt">Sin datos registrados</p>'}
+  ${conocHtml || '<p style="color:#888;font-size:9pt">Sin datos registrados</p>'}
   <div class="pie"><span>Reporte T&eacute;cnico-Cient&iacute;fico &middot; Encuestas Parroquiales San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
 </div>
 
@@ -3323,14 +4076,14 @@ ${pregHtml ? `
   <div class="ph"><h2>6. Correlaciones, Tendencia Temporal y Distribuci&oacute;n Geogr&aacute;fica</h2><p>Cruces estrat&eacute;gicos, evoluci&oacute;n del levantamiento y cobertura por sector</p></div>
   <div class="st">6.1 Correlaciones y Cruces Estrat&eacute;gicos</div>
   <div class="sd">Diferencia expresada en puntos porcentuales (pp) entre grupos comparados.</div>
-  ${corrHtml||'<p style="color:#888;font-size:9pt">Sin correlaciones disponibles</p>'}
+  ${corrHtml || '<p style="color:#888;font-size:9pt">Sin correlaciones disponibles</p>'}
   ${imgTendencia ? `
   <div class="st">6.2 Tendencia del Levantamiento (&uacute;ltimos 14 d&iacute;as)</div>
   <div class="sd">Barras: n&uacute;mero de encuestas por d&iacute;a &middot; L&iacute;nea: porcentaje de apertura a inversi&oacute;n minera.</div>
   <div class="chart-wrap"><img src="${imgTendencia}" style="max-width:580px"></div>` : ''}
   <div class="st">6.3 Distribuci&oacute;n por Sector Geogr&aacute;fico</div>
   <div class="sd">N&uacute;mero de encuestas registradas por zona dentro de la parroquia.</div>
-  ${sectorHtml||'<p style="color:#888;font-size:9pt">Sin datos de sector</p>'}
+  ${sectorHtml || '<p style="color:#888;font-size:9pt">Sin datos de sector</p>'}
   <div class="pie"><span>Reporte T&eacute;cnico-Cient&iacute;fico &middot; Encuestas Parroquiales San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
 </div>
 
@@ -3347,307 +4100,39 @@ ${pregHtml ? `
   <div class="pie" style="margin-top:18px"><span>Reporte T&eacute;cnico-Cient&iacute;fico &middot; Encuestas Parroquiales San Bartolom&eacute;</span><span>${fecha}</span></div>
 </div>
 
-<!-- PAG 8: IA MINERA -->
-${(() => {
-  if (!iaData?.ok) return '';
-  const ia = iaData;
-  const claseColor = { 'Aceptacion':'#0f9f6e','Neutral':'#d97706','Rechazo':'#c43d45' };
-  const pred = ia.prediccion_global || 'Sin datos';
-  const probs = ia.probabilidades_globales || {};
-  const predColor = claseColor[pred] || '#555';
+${p7b_html}
+${p8_html}
+${p8b_html}
+${p9_html}
 
-  const factoresHtml = (ia.importancia_factores||[]).slice(0,6).map(f => {
-    const barColor = f.score_pct > 60 ? '#0e4eb0' : f.score_pct > 30 ? '#d97706' : '#94a3b8';
-    return `<div class="ia-row">
-      <span class="ia-flabel">${esc(f.factor)}</span>
-      <div class="ia-fbar-w"><div class="ia-fbar" style="width:${f.score_pct}%;background:${barColor}"></div></div>
-      <span class="ia-fscore">${f.score_pct}%</span>
-    </div>`;
-  }).join('');
-
-  const sectorHtml2 = (ia.prediccion_por_sector||[]).slice(0,6).map(s =>
-    `<tr><td>${esc(s.sector)}</td>
-     <td style="color:#0f9f6e;font-weight:700">${s.Aceptacion}%</td>
-     <td style="color:#d97706;font-weight:700">${s.Neutral}%</td>
-     <td style="color:#c43d45;font-weight:700">${s.Rechazo}%</td>
-     <td style="color:#94a3b8">${s.n}</td></tr>`
-  ).join('');
-
-  const recsHtml2 = (ia.recomendaciones_ia||[]).map((rec,i) =>
-    `<li><strong>R${i+1}:</strong> ${esc(rec)}</li>`).join('');
-
-  const perfilAcHtml = (ia.perfil_aceptacion||[]).map(p =>
-    `<div class="ia-prow"><span>${esc(p.factor)}:</span> <strong>${esc(p.valor)}</strong> <em>${p.pct}%</em></div>`).join('') || '<p style="color:#888;font-size:9pt">Sin datos suficientes</p>';
-  const perfilReHtml = (ia.perfil_rechazo||[]).map(p =>
-    `<div class="ia-prow"><span>${esc(p.factor)}:</span> <strong>${esc(p.valor)}</strong> <em>${p.pct}%</em></div>`).join('') || '<p style="color:#888;font-size:9pt">Sin datos suficientes</p>';
-
-  const probBars = Object.entries(probs).map(([c,pv]) =>
-    `<div class="ia-pitem">
-      <div class="ia-pbar-w"><div class="ia-pbar" style="height:${pv}%;background:${claseColor[c]||'#888'}"></div></div>
-      <span class="ia-pval" style="color:${claseColor[c]||'#888'}">${pv}%</span>
-      <span class="ia-plabel">${esc(c)}</span>
-    </div>`).join('');
-
-  return `
-<style>
-.ia-cover{background:linear-gradient(135deg,#0a2a6e,#1155bb);color:#fff;padding:28px 42px;border-radius:0}
-.ia-cover h2{font-size:18pt;font-weight:900;margin-bottom:4px}
-.ia-cover p{font-size:10pt;opacity:.8}
-.ia-pred-badge{display:inline-block;padding:8px 20px;border-radius:24px;font-weight:800;
-  font-size:11pt;color:#fff;margin-top:10px}
-.ia-kpi3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:18px 0 20px}
-.ia-kpi-c{border-radius:9px;padding:14px;text-align:center;color:#fff}
-.ia-kpi-c .v{font-size:20pt;font-weight:900;display:block;margin-bottom:3px}
-.ia-kpi-c .l{font-size:8pt;opacity:.9;text-transform:uppercase;font-weight:600}
-.ia-probs-row{display:flex;justify-content:center;gap:20px;margin-bottom:20px;
-  padding:16px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0}
-.ia-pitem{display:flex;flex-direction:column;align-items:center;gap:6px}
-.ia-pbar-w{width:44px;height:80px;background:#e2e8f0;border-radius:6px;
-  display:flex;align-items:flex-end;overflow:hidden}
-.ia-pbar{width:100%;border-radius:6px 6px 0 0}
-.ia-pval{font-size:13pt;font-weight:800}
-.ia-plabel{font-size:9pt;color:#64748b;font-weight:600}
-.ia-st2{font-size:11pt;font-weight:800;color:#0a2a6e;margin:16px 0 8px;
-  padding-bottom:5px;border-bottom:2px solid #0a2a6e}
-.ia-row{display:flex;align-items:center;gap:10px;margin-bottom:7px;font-size:9.5pt}
-.ia-flabel{width:175px;flex-shrink:0;color:#334155;font-weight:500}
-.ia-fbar-w{flex:1;height:10px;background:#e2e8f0;border-radius:5px;overflow:hidden}
-.ia-fbar{height:100%;border-radius:5px}
-.ia-fscore{width:38px;text-align:right;font-weight:700;font-size:9pt;color:#475569}
-.ia-tbl{width:100%;border-collapse:collapse;font-size:9.5pt;margin-bottom:16px}
-.ia-tbl th{background:#0a2a6e;color:#fff;padding:8px 12px;font-size:9pt;text-align:left}
-.ia-tbl td{padding:8px 12px;border-bottom:1px solid #f1f5f9;vertical-align:top}
-.ia-recs2{padding-left:20px;color:#334155;margin-bottom:16px}
-.ia-recs2 li{margin-bottom:8px;font-size:9.5pt;line-height:1.65}
-.ia-grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px}
-.ia-pcard{border-radius:8px;padding:14px 16px}
-.ia-pcard h5{font-size:10pt;font-weight:800;margin:0 0 8px}
-.ia-prow{display:flex;align-items:center;gap:8px;font-size:9pt;
-  color:#475569;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.05)}
-.ia-prow span{flex:1}.ia-prow strong{color:#1e293b;font-weight:700}
-.ia-prow em{font-style:normal;font-size:8.5pt;color:#64748b;margin-left:auto}
-.ia-modelo-note{font-size:8.5pt;color:#94a3b8;text-align:center;margin-top:12px;font-style:italic}
-</style>
-<div class="page">
-  <div class="ia-cover">
-    <h2>8. IA Minera &mdash; Modelo Predictivo de Aceptaci&oacute;n</h2>
-    <p>Clasificador Naive Bayes entrenado con los datos reales de encuestas &middot; ${ia.encuestas_entrenadas} registros &middot; Cobertura: ${ia.cobertura_datos}%</p>
-    <div class="ia-pred-badge" style="background:${predColor}">
-      Predicci&oacute;n global: ${esc(pred)}
-    </div>
+<!-- CIERRE -->
+<div class="page" style="page-break-after:auto;">
+  <div class="cierre">
+    <strong>Fin del Reporte T&eacute;cnico-Cient&iacute;fico</strong><br>
+    Documento generado autom&aacute;ticamente por el Sistema de Informaci&oacute;n Comunitaria<br>
+    GAD Parroquial San Bartolom&eacute; &middot; Cuenca, Ecuador &middot; ${fecha}
   </div>
-
-  <div class="ia-kpi3">
-    <div class="ia-kpi-c" style="background:#0e4eb0"><span class="v">${ia.total_encuestas}</span><span class="l">Encuestas totales</span></div>
-    <div class="ia-kpi-c" style="background:${predColor}"><span class="v">${esc(pred)}</span><span class="l">Predicci&oacute;n dominante</span></div>
-    <div class="ia-kpi-c" style="background:#475569"><span class="v">${ia.cobertura_datos}%</span><span class="l">Cobertura del modelo</span></div>
-  </div>
-
-  <div class="ia-st2">8.1 Probabilidades Predichas por Clase</div>
-  <div class="ia-probs-row">${probBars}</div>
-
-  <div class="ia-st2">8.2 Importancia de Factores (Information Gain)</div>
-  ${factoresHtml}
-
-  ${sectorHtml2 ? `
-  <div class="ia-st2">8.3 Predicci&oacute;n por Sector Geogr&aacute;fico</div>
-  <table class="ia-tbl">
-    <tr><th>Sector</th><th>&#10003; Acepta</th><th>&#9888; Neutro</th><th>&#10007; Rechaza</th><th>n</th></tr>
-    ${sectorHtml2}
-  </table>` : ''}
-
-  <div class="ia-st2">8.4 Recomendaciones del Modelo</div>
-  <ul class="ia-recs2">${recsHtml2}</ul>
-
-  <div class="ia-st2">8.5 Perfiles Comunitarios</div>
-  <div class="ia-grid2">
-    <div class="ia-pcard" style="background:#f0fdf4;border:1px solid #bbf7d0">
-      <h5 style="color:#166534">&#10003; Perfil de Aceptaci&oacute;n</h5>${perfilAcHtml}
-    </div>
-    <div class="ia-pcard" style="background:#fef2f2;border:1px solid #fecaca">
-      <h5 style="color:#991b1b">&#10007; Perfil de Rechazo</h5>${perfilReHtml}
-    </div>
-  </div>
-  <div class="ia-modelo-note">Modelo: ${esc(ia.modelo)} &middot; Generado autom&aacute;ticamente &middot; ${fecha}</div>
-  <div class="pie"><span>IA Minera &middot; Encuestas Parroquiales San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
-</div>`;
-})()}
-
-<!-- PAG 9: PLAN ESTRATEGICO MINERO -->
-${(() => {
-  const benMin  = (data.beneficios_mineros  || []);
-  const rskMin  = (data.riesgos_mineros     || []);
-  const conocMin = (data.conocimiento_minero || []);
-  const topBen = benMin.slice(0,4).map(b => esc(b.label)).join(', ') || 'Generaci&oacute;n de empleo, ingresos al GAD, mejora de vialidad';
-  const topRsk = rskMin.slice(0,4).map(r2 => esc(r2.label)).join(', ') || 'Contaminaci&oacute;n ambiental, impacto en fuentes de agua, conflictos sociales';
-  const dimMinera = (data.dimensiones || []).find(d => /miner/i.test(d.nombre||d.titulo||''));
-  const idxMin   = dimMinera ? n(dimMinera.sentimiento?.indice) : indice;
-  const sentMin  = idxMin >= 15 ? 'favorable' : idxMin <= -15 ? 'cr&iacute;tico' : 'ambivalente';
-  const apoyoPct = dimMinera ? p(dimMinera.sentimiento?.positivo_pct) : p(sg.positivo_pct);
-  const rechazoPct = dimMinera ? p(dimMinera.sentimiento?.negativo_pct) : p(sg.negativo_pct);
-  const nivelRiesgo = idxMin <= -15 ? 'ALTO' : idxMin <= 0 ? 'MEDIO' : 'BAJO';
-  const riesgoColor = nivelRiesgo === 'ALTO' ? '#c43d45' : nivelRiesgo === 'MEDIO' ? '#d97706' : '#0f9f6e';
-
-  return `
-<style>
-.plan-cover{background:linear-gradient(135deg,#1a1a2e,#0f3460);color:#fff;padding:28px 42px}
-.plan-cover h2{font-size:18pt;font-weight:900;margin-bottom:4px}
-.plan-cover p{font-size:10pt;opacity:.8}
-.plan-badge{display:inline-block;background:#e2a114;color:#1a1a2e;font-weight:800;
-  font-size:9pt;padding:5px 16px;border-radius:20px;letter-spacing:1px;text-transform:uppercase;margin-top:10px}
-.plan-grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
-.plan-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:18px 0 18px}
-.plan-box{border:1px solid #e2e8f0;border-radius:9px;padding:16px 18px;background:#fff}
-.plan-box h4{font-size:10pt;font-weight:800;margin-bottom:10px;padding-bottom:7px;border-bottom:2px solid;text-transform:uppercase}
-.plan-box ul{padding-left:18px;color:#334155}
-.plan-box ul li{margin-bottom:7px;font-size:9.5pt;line-height:1.6}
-.plan-kpi2{border-radius:9px;padding:14px 16px;text-align:center;color:#fff}
-.plan-kpi2 .v{font-size:18pt;font-weight:900;display:block;line-height:1.1;margin-bottom:3px}
-.plan-kpi2 .l{font-size:8pt;opacity:.9;text-transform:uppercase;font-weight:600;letter-spacing:.5px}
-.plan-tbl{width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:14px}
-.plan-tbl th{background:#0f3460;color:#fff;padding:9px 12px;text-align:left;font-weight:700}
-.plan-tbl td{padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#334155;vertical-align:top;line-height:1.5}
-.plan-tbl tr:nth-child(even) td{background:#f8fafc}
-.plan-tbl td.pr{font-weight:800;text-align:center}
-.alta{color:#c43d45}.media{color:#d97706}.baja{color:#0f9f6e}
-.cron-row{display:grid;grid-template-columns:160px 1fr;gap:10px;margin-bottom:8px;
-  border:1px solid #e2e8f0;border-radius:8px;overflow:hidden}
-.cron-lbl{background:#0f3460;color:#fff;padding:10px 14px;font-size:9pt;font-weight:700;display:flex;align-items:center}
-.cron-body{padding:10px 14px;font-size:9.5pt;color:#334155;line-height:1.6}
-.ind-card{border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:8px;background:#f8fafc}
-.ind-num{background:#0f3460;color:#fff;border-radius:50%;width:20px;height:20px;
-  display:inline-flex;align-items:center;justify-content:center;font-size:8pt;font-weight:800;margin-right:6px}
-.plan-st{font-size:11pt;font-weight:800;color:#0f3460;margin:16px 0 8px;padding-bottom:5px;border-bottom:2px solid #0f3460}
-.mine-fin{background:linear-gradient(135deg,#0a3070,#1155bb);color:#fff;border-radius:10px;
-  padding:20px 24px;font-size:10.5pt;line-height:1.8;margin-top:16px}
-.mine-fin strong{color:#fcd34d}
-.ben-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:9.5pt;color:#334155}
-.ben-ico{font-size:14pt;flex-shrink:0}
-</style>
-
-<div class="page">
-  <div class="plan-cover">
-    <h2>9. Plan Estrat&eacute;gico para la Reapertura Minera</h2>
-    <p>An&aacute;lisis integral basado en las percepciones comunitarias &middot; Zona: ${esc(sector)}</p>
-    <div class="plan-badge">&#9888; Documento T&eacute;cnico de Planificaci&oacute;n</div>
-  </div>
-  <div class="plan-grid3">
-    <div class="plan-kpi2" style="background:${riesgoColor}"><span class="v">${nivelRiesgo}</span><span class="l">Nivel de Riesgo Social</span></div>
-    <div class="plan-kpi2" style="background:#0e4eb0"><span class="v">${apoyoPct}</span><span class="l">Apoyo Comunitario</span></div>
-    <div class="plan-kpi2" style="background:#c43d45"><span class="v">${rechazoPct}</span><span class="l">Rechazo Comunitario</span></div>
-  </div>
-  <div class="plan-st">9.1 Diagn&oacute;stico de la Situaci&oacute;n Actual</div>
-  <div class="narr" style="border-color:#0f3460">
-    La comunidad de <strong>${esc(sector)}</strong> presenta sentimiento <strong>${sentMin}</strong> (${sgn(idxMin)} pts) hacia la miner&iacute;a.
-    El <strong>${apoyoPct}</strong> muestra apertura; el <strong>${rechazoPct}</strong> expresa rechazo.
-    Beneficios reconocidos: <em>${topBen}</em>. Preocupaciones: <em>${topRsk}</em>.
-  </div>
-  <div class="plan-grid2">
-    <div class="plan-box">
-      <h4 style="color:#0f9f6e;border-color:#0f9f6e">&#10003; Factores Facilitadores</h4>
-      <ul>
-        <li>Reconocimiento ciudadano de beneficios econ&oacute;micos</li>
-        <li>Normativa minera nacional vigente (ARCOM)</li>
-        <li>Tecnolog&iacute;a disponible para miner&iacute;a sostenible</li>
-        <li>Inter&eacute;s del GAD en generaci&oacute;n de empleo local</li>
-        <li>Potencial de regal&iacute;as para inversi&oacute;n comunitaria</li>
-      </ul>
-    </div>
-    <div class="plan-box">
-      <h4 style="color:#c43d45;border-color:#c43d45">&#10007; Factores Limitantes</h4>
-      <ul>
-        <li>Bajo conocimiento sobre procesos mineros responsables</li>
-        <li>Preocupaci&oacute;n por impacto en p&aacute;ramos y agua</li>
-        <li>Desconfianza institucional y antecedentes de conflictos</li>
-        <li>Ausencia de estudios de impacto ambiental actualizados</li>
-        <li>Necesidad de t&iacute;tulos mineros y concesiones vigentes</li>
-      </ul>
-    </div>
-  </div>
-  <div class="plan-st">9.2 Acciones Prioritarias</div>
-  <table class="plan-tbl">
-    <tr><th>#</th><th>Acci&oacute;n</th><th>Responsable</th><th>Plazo</th><th>Prioridad</th></tr>
-    <tr><td>1</td><td>Diagn&oacute;stico t&eacute;cnico-legal de concesiones</td><td>GAD + ARCOM</td><td>1&ndash;2 m</td><td class="pr alta">ALTA</td></tr>
-    <tr><td>2</td><td>Socializaci&oacute;n y consulta previa comunitaria</td><td>GAD + Ministerio</td><td>2&ndash;3 m</td><td class="pr alta">ALTA</td></tr>
-    <tr><td>3</td><td>Estudio de Impacto Ambiental (EIA)</td><td>Empresa + MAATE</td><td>3&ndash;6 m</td><td class="pr alta">ALTA</td></tr>
-    <tr><td>4</td><td>Plan de compensaci&oacute;n social y fondo comunitario</td><td>Empresa + GAD</td><td>2&ndash;4 m</td><td class="pr media">MEDIA</td></tr>
-    <tr><td>5</td><td>Monitoreo ambiental participativo</td><td>GAD + Comunidad</td><td>4&ndash;6 m</td><td class="pr media">MEDIA</td></tr>
-    <tr><td>6</td><td>Capacitaci&oacute;n de mano de obra local</td><td>SERCOP + Empresa</td><td>3&ndash;5 m</td><td class="pr media">MEDIA</td></tr>
-    <tr><td>7</td><td>Mesa de di&aacute;logo permanente empresa-GAD-comunidad</td><td>GAD Parroquial</td><td>Permanente</td><td class="pr baja">CONTINUA</td></tr>
-  </table>
-  <div class="pie"><span>Plan Estrat&eacute;gico Minero &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
 </div>
 
-<div class="page">
-  <div class="plan-cover">
-    <h2>9. Plan Estrat&eacute;gico Minero (continuaci&oacute;n)</h2>
-    <p>Requerimientos, evaluaci&oacute;n de riesgos, cronograma e indicadores</p>
-  </div>
-  <div class="plan-st" style="margin-top:16px">9.3 Requerimientos T&eacute;cnicos, Legales, Ambientales y Sociales</div>
-  <div class="plan-grid2">
-    <div class="plan-box"><h4 style="color:#0e4eb0;border-color:#0e4eb0">&#128295; T&eacute;cnicos</h4><ul>
-      <li>Plan de manejo de aguas residuales y relaves</li><li>Equipamiento certificado de bajo impacto</li>
-      <li>Plan de cierre y restauraci&oacute;n de mina</li><li>Auditor&iacute;as t&eacute;cnicas semestrales</li></ul></div>
-    <div class="plan-box"><h4 style="color:#7c3aed;border-color:#7c3aed">&#128196; Legales</h4><ul>
-      <li>Concesi&oacute;n minera vigente ante ARCOM</li><li>Licencia ambiental aprobada por MAATE</li>
-      <li>Consulta previa libre e informada (Art. 57 CRE)</li><li>Contrato de prestaci&oacute;n de servicios mineros</li></ul></div>
-    <div class="plan-box"><h4 style="color:#0f9f6e;border-color:#0f9f6e">&#127807; Ambientales</h4><ul>
-      <li>Protecci&oacute;n de fuentes h&iacute;dricas y zonas de recarga</li><li>Plan de revegetaci&oacute;n del p&aacute;ramo</li>
-      <li>Monitoreo de biodiversidad en &aacute;rea de influencia</li><li>Manejo de residuos s&oacute;lidos y l&iacute;quidos</li></ul></div>
-    <div class="plan-box"><h4 style="color:#c43d45;border-color:#c43d45">&#128101; Sociales</h4><ul>
-      <li>Priorizaci&oacute;n de empleo para pobladores locales</li><li>Fondo comunitario del 5% de utilidades</li>
-      <li>Programa de fortalecimiento de capacidades</li><li>Mecanismo de quejas y reclamos accesible</li></ul></div>
-  </div>
-  <div class="plan-st">9.4 Evaluaci&oacute;n de Riesgos</div>
-  <table class="plan-tbl">
-    <tr><th>Riesgo</th><th>Probabilidad</th><th>Impacto</th><th>Medida de Control</th></tr>
-    <tr><td>Contaminaci&oacute;n de fuentes de agua</td><td class="media">Media</td><td class="alta">Alto</td><td>Sistema de impermeabilizaci&oacute;n y monitoreo h&iacute;drico</td></tr>
-    <tr><td>Conflicto social por rechazo comunitario</td><td style="color:${riesgoColor};font-weight:800">${nivelRiesgo}</td><td class="alta">Alto</td><td>Consulta previa y compensaci&oacute;n social</td></tr>
-    <tr><td>Incumplimiento normativa ARCOM/MAATE</td><td class="baja">Baja</td><td class="alta">Alto</td><td>Asesor&iacute;a legal permanente y auditor&iacute;as</td></tr>
-    <tr><td>Da&ntilde;o a ecosistemas de p&aacute;ramo</td><td class="media">Media</td><td class="alta">Alto</td><td>Zonas de exclusi&oacute;n y EIA estricto</td></tr>
-    <tr><td>Abandono sin restauraci&oacute;n</td><td class="baja">Baja</td><td class="alta">Alto</td><td>P&oacute;liza ambiental y plan de cierre obligatorio</td></tr>
-    <tr><td>Accidentes laborales</td><td class="media">Media</td><td class="media">Medio</td><td>Protocolo de seguridad industrial</td></tr>
-  </table>
-  <div class="plan-st">9.5 Cronograma</div>
-  <div class="cron-row"><div class="cron-lbl">Fase 1<br>Meses 1&ndash;2</div><div class="cron-body"><strong>Preparaci&oacute;n:</strong> Revisi&oacute;n legal, equipo t&eacute;cnico, l&iacute;nea base ambiental y social.</div></div>
-  <div class="cron-row"><div class="cron-lbl">Fase 2<br>Meses 2&ndash;4</div><div class="cron-body"><strong>Socializaci&oacute;n:</strong> Consulta previa, talleres comunitarios, plan de compensaci&oacute;n.</div></div>
-  <div class="cron-row"><div class="cron-lbl">Fase 3<br>Meses 3&ndash;6</div><div class="cron-body"><strong>Regularizaci&oacute;n:</strong> EIA, obtenci&oacute;n de licencias, sistemas de monitoreo.</div></div>
-  <div class="cron-row"><div class="cron-lbl">Fase 4<br>Meses 6&ndash;9</div><div class="cron-body"><strong>Inicio de operaciones:</strong> Infraestructura, contrataci&oacute;n local, arranque controlado.</div></div>
-  <div class="cron-row"><div class="cron-lbl">Fase 5<br>Mes 9+</div><div class="cron-body"><strong>Seguimiento:</strong> Auditor&iacute;as, rendici&oacute;n de cuentas, ajuste del plan estrat&eacute;gico.</div></div>
-  <div class="plan-st">9.6 Indicadores de Seguimiento</div>
-  <div class="ind-card"><span class="ind-num">1</span><strong>Aprobaci&oacute;n comunitaria</strong> &mdash; Meta: superar ${apoyoPct} actual &middot; Encuestas trimestrales</div>
-  <div class="ind-card"><span class="ind-num">2</span><strong>Cumplimiento legal</strong> &mdash; Meta: 100% permisos antes de operar &middot; Auditor&iacute;a semestral</div>
-  <div class="ind-card"><span class="ind-num">3</span><strong>Calidad del agua</strong> &mdash; Meta: valores dentro de norma TULSMA &middot; Laboratorio mensual</div>
-  <div class="ind-card"><span class="ind-num">4</span><strong>Empleo local</strong> &mdash; Meta: m&iacute;nimo 60% mano de obra local &middot; N&oacute;mina mensual</div>
-  <div class="ind-card"><span class="ind-num">5</span><strong>Fondo comunitario</strong> &mdash; Meta: 5% utilidades anuales &middot; Informe anual</div>
-  <div class="ind-card"><span class="ind-num">6</span><strong>Incidentes ambientales</strong> &mdash; Meta: cero incidentes mayores &middot; Registro continuo</div>
-  <div class="mine-fin">
-    La reapertura minera en <strong>${esc(sector)}</strong> es viable bajo un enfoque <strong>responsable, legal y sostenible</strong>,
-    condicionada al cumplimiento de los requerimientos identificados. El sentimiento comunitario <strong>${sentMin}</strong>
-    (${sgn(idxMin)} pts) indica que el &eacute;xito depende de la <strong>transparencia institucional</strong>,
-    la <strong>consulta previa efectiva</strong> y el beneficio compartido real con la comunidad.
-  </div>
-  <div class="pie"><span>Plan Estrat&eacute;gico Minero &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
-</div>`;
-})()}
+</body>
+</html>`;
 
-<scr' + 'ipt>window.onload = () => { setTimeout(() => window.print(), 900); }</scr' + 'ipt>
-</body></html>`;
-
-        // Usar Blob URL con BOM para forzar UTF-8 en el navegador
-        const blob = new Blob(['﻿' + html], { type: 'text/html;charset=utf-8' });
-        const url  = URL.createObjectURL(blob);
-        const win  = window.open(url, '_blank');
-        if (!win) {
-            alert('El navegador bloqueó la ventana emergente. Permite ventanas emergentes para este sitio e intenta de nuevo.');
+        // Abrir en nueva ventana e imprimir
+        const win = window.open('', '_blank');
+        if (win) {
+            win.document.write(html);
+            win.document.close();
+            win.focus();
+            setTimeout(() => win.print(), 800);
         } else {
-            setTimeout(() => URL.revokeObjectURL(url), 60000);
+            alert('El navegador bloqueó la ventana emergente. Permite popups para este sitio.');
         }
 
     } catch (err) {
-        console.error('Error generando reporte:', err);
+        console.error('Error generando PDF:', err);
         alert('Error al generar el reporte: ' + err.message);
     } finally {
-        if (btn) { btn.disabled = false; btn.textContent = 'Reporte PDF'; }
+        const btn = document.getElementById('analisis-pdf-btn');
+        if (btn) { btn.disabled = false; btn.textContent = '📄 Exportar Reporte PDF'; }
     }
 }

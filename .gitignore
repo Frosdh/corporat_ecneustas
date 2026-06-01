@@ -26,6 +26,8 @@
 Thumbs.db
 *.db
 *.log
+__pycache__/
+*.pyc
 
 # IDE & Editor Files
 .vscode/
@@ -39,3 +41,4 @@ error_log
 .env
 .env.local
 .env.*.local
+backend/config_local.php
