@@ -2392,21 +2392,6 @@ function renderPlanGemini(payload) {
         <div class="gm-section-title">&#128161; Recomendaciones Finales</div>
         <ul class="gm-recs">${recsHtml}</ul>
 
-        ${(p.referencias_cientificas||[]).length ? `
-        <div class="gm-section-title">&#128218; Referencias Cient&iacute;ficas</div>
-        <div class="gm-refs-list">
-            ${(p.referencias_cientificas||[]).map((ref,i) => `
-            <div class="gm-ref-item">
-                <div class="gm-ref-num">${i+1}</div>
-                <div class="gm-ref-body">
-                    <strong>${esc(ref.autor)} (${esc(String(ref.anio))}).</strong>
-                    <span class="gm-ref-titulo">${esc(ref.titulo)}.</span>
-                    <em>${esc(ref.revista)}</em>
-                    ${ref.doi_url ? `<a class="gm-ref-doi" href="${esc(ref.doi_url)}" target="_blank" rel="noopener">${esc(ref.doi_url)}</a>` : ''}
-                    ${ref.relevancia ? `<p class="gm-ref-rel"><strong>Relevancia:</strong> ${esc(ref.relevancia)}</p>` : ''}
-                </div>
-            </div>`).join('')}
-        </div>` : ''}
 
         <div class="gm-conclusion">${esc(p.conclusion)}</div>
     </div>`;
@@ -3230,32 +3215,32 @@ async function generateAnalisisPDF() {
         // --- Conclusion mejorada ---
         const dimCriticas = (data.dimensiones || []).filter(d => n(d.sentimiento?.indice) <= -15).map(d => d.titulo).filter(Boolean);
         const dimFav = (data.dimensiones || []).filter(d => n(d.sentimiento?.indice) >= 15).map(d => d.titulo).filter(Boolean);
-        const critTxt = dimCriticas.length ? `Las dimensiones que requieren atención urgente son: <strong>${dimCriticas.join(', ')}</strong>.` : '';
-        const favTxt = dimFav.length ? `Las áreas con mayor favorabilidad comunitaria son: <strong>${dimFav.join(', ')}</strong>.` : '';
+        const critTxt = dimCriticas.length ? `Las dimensiones que requieren atenci&oacute;n urgente son: <strong>${dimCriticas.join(', ')}</strong>.` : '';
+        const favTxt = dimFav.length ? `Las &aacute;reas con mayor favorabilidad comunitaria son: <strong>${dimFav.join(', ')}</strong>.` : '';
 
         const concl = `
-          <p>El análisis de las encuestas comunitarias en la zona <strong>"${esc(sector)}"</strong> revela
-          un índice neto de sentimiento de <strong>${sgn(indice)} puntos</strong>, categorizado como
+          <p>El an&aacute;lisis de las encuestas comunitarias en la zona <strong>"${esc(sector)}"</strong> revela
+          un &iacute;ndice neto de sentimiento de <strong>${sgn(indice)} puntos</strong>, categorizado como
           <strong style="color:${nvlColor}">${esc(r.nivel_sentimiento)}</strong> dentro de la escala
-          de &minus;100 a +100 puntos. Esta clasificación indica que el ${p(r.negativo_global)} de la ciudadanía
-          expresa preocupación, rechazo o insatisfacción frente a las dimensiones evaluadas, mientras
-          que únicamente el ${p(r.positivo_global)} presenta una posición favorable.</p>
-          <p style="margin-top:12px">La problemática que mayor preocupación genera en la ciudadanía es
+          de &minus;100 a +100 puntos. Esta clasificaci&oacute;n indica que el ${p(r.negativo_global)} de la ciudadan&iacute;a
+          expresa preocupaci&oacute;n, rechazo o insatisfacci&oacute;n frente a las dimensiones evaluadas, mientras
+          que &uacute;nicamente el ${p(r.positivo_global)} presenta una posici&oacute;n favorable.</p>
+          <p style="margin-top:12px">La problem&aacute;tica que mayor preocupaci&oacute;n genera en la ciudadan&iacute;a es
           <strong>"${esc(r.problema_principal)}"</strong>. ${critTxt} ${favTxt}</p>
-          <p style="margin-top:12px">Frente a este escenario, se plantean las siguientes líneas de acción:</p>
+          <p style="margin-top:12px">Frente a este escenario, se plantean las siguientes l&iacute;neas de acci&oacute;n:</p>
           <ul class="recomend">
-            <li>Priorizar intervenciones de política pública en las dimensiones con índice crítico, articulando
-                respuestas concretas a las problemáticas de mayor recurrencia en las encuestas.</li>
-            <li>Fortalecer la confianza institucional mediante espacios de diálogo comunitario y rendición
-                de cuentas transparente entre las autoridades del GAD y la ciudadanía.</li>
-            <li>Implementar programas de socialización sobre actividad minera responsable,
-                especialmente en sectores con bajo nivel de conocimiento (semáforo rojo),
-                garantizando el acceso a información objetiva, técnica y en lenguaje accesible.</li>
-            <li>Diseñar estrategias diferenciadas por sector geográfico, considerando las brechas de
-                sentimiento detectadas entre zonas con mayor y menor participación en el levantamiento.</li>
-            <li>Mantener un sistema de monitoreo continuo mediante encuestas periódicas que permita
+            <li>Priorizar intervenciones de pol&iacute;tica p&uacute;blica en las dimensiones con &iacute;ndice cr&iacute;tico, articulando
+                respuestas concretas a las problem&aacute;ticas de mayor recurrencia en las encuestas.</li>
+            <li>Fortalecer la confianza institucional mediante espacios de di&aacute;logo comunitario y rendici&oacute;n
+                de cuentas transparente entre las autoridades del GAD y la ciudadan&iacute;a.</li>
+            <li>Implementar programas de socializaci&oacute;n sobre actividad minera responsable,
+                especialmente en sectores con bajo nivel de conocimiento (sem&aacute;foro rojo),
+                garantizando el acceso a informaci&oacute;n objetiva, t&eacute;cnica y en lenguaje accesible.</li>
+            <li>Dise&ntilde;ar estrategias diferenciadas por sector geogr&aacute;fico, considerando las brechas de
+                sentimiento detectadas entre zonas con mayor y menor participaci&oacute;n en el levantamiento.</li>
+            <li>Mantener un sistema de monitoreo continuo mediante encuestas peri&oacute;dicas que permita
                 evaluar el impacto de las intervenciones y ajustar las estrategias de acuerdo con la
-                evolución del sentimiento comunitario.</li>
+                evoluci&oacute;n del sentimiento comunitario.</li>
           </ul>`;
 
         // ============================================================
@@ -3791,16 +3776,6 @@ async function generateAnalisisPDF() {
   <div class="gm-hdr">&#128161; Recomendaciones Finales para el Plan de Acción</div>
   <ul style="padding-left:20px;color:#334155;margin-bottom:16px;">${recsHtml}</ul>
 
-  ${(p.referencias_cientificas||[]).length ? `
-  <div class="gm-hdr">&#128218; Referencias Cient&iacute;ficas de Respaldo</div>
-  <div style="font-size:9pt;color:#475569;">
-      ${(p.referencias_cientificas||[]).map((ref,i) => `
-      <div style="margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #f1f5f9;page-break-inside:avoid;">
-          <strong>${i+1}.</strong> ${esc(ref.autor)} (${esc(String(ref.anio))}). <em>${esc(ref.titulo)}</em>. ${esc(ref.revista)}
-          ${ref.doi_url ? ` <a href="${esc(ref.doi_url)}" style="color:#0e4eb0;">${esc(ref.doi_url)}</a>` : ''}
-          ${ref.relevancia ? `<br><small>Relevancia: ${esc(ref.relevancia)}</small>` : ''}
-      </div>`).join('')}
-  </div>` : ''}
 
   <div class="concl-box" style="margin-top:20px;page-break-inside:avoid;">${esc(p.conclusion)}</div>
 
