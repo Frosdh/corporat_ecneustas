@@ -2224,11 +2224,11 @@ function renderIAMinera(payload) {
         ${(() => {
             const kb = d.base_conocimiento;
             if (!kb || !kb.total_papers) return '';
-            const papersHtml = (kb.papers || []).map((p,i) =>
-                `<div class="kb-paper"><span class="kb-num">${i+1}</span><div>
-                    <strong>${p.autores||''} (${p.anio||'?'})</strong>
-                    <span class="kb-titulo"> ${p.titulo||''}</span>
-                    <em> ${p.revista||''}</em>
+            const papersHtml = (kb.papers || []).map((p, i) =>
+                `<div class="kb-paper"><span class="kb-num">${i + 1}</span><div>
+                    <strong>${p.autores || ''} (${p.anio || '?'})</strong>
+                    <span class="kb-titulo"> ${p.titulo || ''}</span>
+                    <em> ${p.revista || ''}</em>
                 </div></div>`).join('');
             return `<div class="kb-box">
                 <div class="kb-header">Base de Conocimiento Cient&iacute;fico &mdash; ${kb.total_papers} art&iacute;culos analizados
@@ -2236,8 +2236,8 @@ function renderIAMinera(payload) {
                 </div>
                 <div class="kb-body">
                     <div class="kb-tags">
-                        ${(kb.top_riesgos||[]).map(r=>`<span class="kb-tag kb-tag-rsk">${r}</span>`).join('')}
-                        ${(kb.top_beneficios||[]).map(b=>`<span class="kb-tag kb-tag-ben">${b}</span>`).join('')}
+                        ${(kb.top_riesgos || []).map(r => `<span class="kb-tag kb-tag-rsk">${r}</span>`).join('')}
+                        ${(kb.top_beneficios || []).map(b => `<span class="kb-tag kb-tag-ben">${b}</span>`).join('')}
                     </div>
                     <div class="kb-papers">${papersHtml}</div>
                 </div>
@@ -2280,8 +2280,8 @@ function renderPlanGemini(payload) {
             <div class="gm-eje-header"><strong>${esc(e.eje)}</strong></div>
             <p class="gm-eje-desc">${esc(e.descripcion)}</p>
             <div class="gm-eje-body">
-                <div><span class="gm-lbl">Actores:</span> ${(e.actores||[]).map(esc).join(', ')}</div>
-                <ul>${(e.acciones||[]).map(a => `<li>${esc(a)}</li>`).join('')}</ul>
+                <div><span class="gm-lbl">Actores:</span> ${(e.actores || []).map(esc).join(', ')}</div>
+                <ul>${(e.acciones || []).map(a => `<li>${esc(a)}</li>`).join('')}</ul>
                 <div class="gm-indicador"><strong>Indicador:</strong> ${esc(e.indicador)}</div>
             </div>
         </div>`
@@ -2293,16 +2293,16 @@ function renderPlanGemini(payload) {
         <div class="gm-grid2">
             <div class="gm-sub-box">
                 <h5>Instituciones sugeridas</h5>
-                <ul>${(ac.instituciones_sugeridas||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul>
+                <ul>${(ac.instituciones_sugeridas || []).map(i => `<li>${esc(i)}</li>`).join('')}</ul>
             </div>
             <div class="gm-sub-box">
                 <h5>L&iacute;neas de investigaci&oacute;n</h5>
-                <ul>${(ac.lineas_investigacion||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul>
+                <ul>${(ac.lineas_investigacion || []).map(i => `<li>${esc(i)}</li>`).join('')}</ul>
             </div>
         </div>
         <div class="gm-sub-box" style="margin-top:10px">
             <h5>Programas propuestos</h5>
-            <ul>${(ac.programas_propuestos||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul>
+            <ul>${(ac.programas_propuestos || []).map(i => `<li>${esc(i)}</li>`).join('')}</ul>
         </div>`;
 
     // Empleo y formación
@@ -2311,16 +2311,16 @@ function renderPlanGemini(payload) {
         <div class="gm-grid2">
             <div class="gm-sub-box">
                 <h5>Perfiles requeridos</h5>
-                <ul>${(emp.perfiles_requeridos||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul>
+                <ul>${(emp.perfiles_requeridos || []).map(i => `<li>${esc(i)}</li>`).join('')}</ul>
             </div>
             <div class="gm-sub-box">
                 <h5>Instituciones de capacitaci&oacute;n</h5>
-                <ul>${(emp.instituciones_capacitacion||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul>
+                <ul>${(emp.instituciones_capacitacion || []).map(i => `<li>${esc(i)}</li>`).join('')}</ul>
             </div>
         </div>
         <div class="gm-sub-box" style="margin-top:10px">
             <h5>Metas</h5>
-            <ul>${(emp.metas||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul>
+            <ul>${(emp.metas || []).map(i => `<li>${esc(i)}</li>`).join('')}</ul>
         </div>`;
 
     // Turismo y agricultura
@@ -2329,11 +2329,11 @@ function renderPlanGemini(payload) {
         <div class="gm-grid2">
             <div class="gm-sub-box">
                 <h5>Turismo comunitario</h5>
-                <ul>${(ta.oportunidades_turismo||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul>
+                <ul>${(ta.oportunidades_turismo || []).map(i => `<li>${esc(i)}</li>`).join('')}</ul>
             </div>
             <div class="gm-sub-box">
                 <h5>Agricultura sostenible</h5>
-                <ul>${(ta.oportunidades_agricultura||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul>
+                <ul>${(ta.oportunidades_agricultura || []).map(i => `<li>${esc(i)}</li>`).join('')}</ul>
             </div>
         </div>
         <p class="gm-sinergia"><strong>Sinergia:</strong> ${esc(ta.sinergias)}</p>`;
@@ -2342,13 +2342,13 @@ function renderPlanGemini(payload) {
     const cronHtml = (p.cronograma_estrategico || []).map(f =>
         `<div class="gm-cron-row">
             <div class="gm-cron-lbl">${esc(f.fase)}<br><small>${esc(f.periodo)}</small></div>
-            <ul>${(f.hitos||[]).map(h=>`<li>${esc(h)}</li>`).join('')}</ul>
+            <ul>${(f.hitos || []).map(h => `<li>${esc(h)}</li>`).join('')}</ul>
         </div>`
     ).join('');
 
     // Recomendaciones finales
-    const recsHtml = (p.recomendaciones_finales || []).map((r,i) =>
-        `<li><strong>R${i+1}:</strong> ${esc(r)}</li>`).join('');
+    const recsHtml = (p.recomendaciones_finales || []).map((r, i) =>
+        `<li><strong>R${i + 1}:</strong> ${esc(r)}</li>`).join('');
 
     const motor = payload.motor || 'Gemini API';
     const isLocal = motor === 'Local Expert Engine';
@@ -3167,22 +3167,34 @@ async function generateAnalisisPDF() {
 
         // --- Preguntas ---
         let pregHtml = '';
+        let chartsCode = '';
+        let cIdx = 0;
         if (pregData) {
             (pregData.grupos || []).forEach(g => {
                 if (!g.preguntas?.length) return;
                 pregHtml += `<div class="pg-grupo"><h3 class="pg-gtit">${esc(g.titulo)}</h3><div class="pg-grid">`;
                 g.preguntas.forEach(preg => {
                     if (!preg.distribucion?.length) return;
-                    const tot = preg.distribucion.reduce((s, d) => s + n(d.count), 0);
-                    const rows = preg.distribucion.map(o => {
-                        const pct2 = tot > 0 ? (n(o.count) / tot) * 100 : 0;
-                        return barRow(o.label, pct2, o.count, '#0e4eb0');
-                    }).join('');
-                    pregHtml += `<div class="pg-card no-break">
-                      <p class="pg-q">${esc(preg.pregunta)}</p>
-                      <p class="pg-n">n = ${n(preg.respondentes)} respuestas</p>
-                      ${rows}
-                    </div>`;
+                    const cid = 'c' + (cIdx++);
+                    const isDo = preg.tipo === 'donut';
+                    const clab = preg.distribucion.map(d => d.label);
+                    const cdat = preg.distribucion.map(d => d.count);
+                    const ctype = isDo ? 'doughnut' : 'bar';
+                    // Altura dinámica para barras horizontales: ~34px por categoría
+                    const barH = Math.max(140, (clab.length * 34) + 40);
+                    const wrapH = isDo ? 200 : barH;
+                    const cardMinH = isDo ? 220 : (barH + 70);
+                    pregHtml += `<div class="pg-card no-break" style="min-height:${cardMinH}px;"><p class="pg-q">${esc(preg.pregunta)}</p><p class="pg-n">n = ${n(preg.respondentes)} respuestas</p><div style="position:relative;width:100%;max-width:100%;overflow:hidden;height:${wrapH}px;"><canvas id="${cid}"></canvas></div></div>`;
+                    // Acortar etiquetas largas para que no desborden el eje
+                    const safeLab = clab.map(l => { const s = String(l); return s.length > 28 ? s.slice(0, 27) + '…' : s; });
+                    const legendCfg = isDo ? '{display:true,position:"bottom"}' : '{display:false}';
+                    const optsCommon = 'responsive:true,maintainAspectRatio:false,layout:{padding:4},plugins:{legend:' + legendCfg + '}';
+                    if (isDo) {
+                        chartsCode += 'new Chart(document.getElementById("' + cid + '"),{type:"doughnut",data:{labels:' + JSON.stringify(safeLab) + ',datasets:[{data:' + JSON.stringify(cdat) + ',backgroundColor:["#0e4eb0","#0f9f6e","#c43d45","#d97706","#7c3aed","#ec4899","#f59e0b","#14b8a6"]}]},options:{' + optsCommon + '}});';
+                    } else {
+                        // Barras horizontales: las etiquetas van en el eje Y, sin riesgo de cortarse
+                        chartsCode += 'new Chart(document.getElementById("' + cid + '"),{type:"bar",data:{labels:' + JSON.stringify(safeLab) + ',datasets:[{data:' + JSON.stringify(cdat) + ',backgroundColor:["#0e4eb0","#0f9f6e","#c43d45","#d97706","#7c3aed","#ec4899","#f59e0b","#14b8a6"]}]},options:{' + optsCommon + ',indexAxis:"y",scales:{x:{beginAtZero:true,ticks:{font:{size:9}}},y:{ticks:{font:{size:9},autoSkip:false}}}}});';
+                    }
                 });
                 pregHtml += '</div></div>';
             });
@@ -3252,21 +3264,21 @@ async function generateAnalisisPDF() {
         if (iaData?.metodologia) {
             const met = iaData.metodologia;
             const modelos = (met.fase_clasificacion?.modelos || []).map(m =>
-              `<tr><td><strong>${esc(m.nombre)}</strong></td><td>${esc(m.arquitectura || '')}</td>
+                `<tr><td><strong>${esc(m.nombre)}</strong></td><td>${esc(m.arquitectura || '')}</td>
                <td style="text-align:center">${m.precision ? m.precision + '%' : 'N/A'}</td>
                <td>${esc(m.uso)}</td></tr>`
             ).join('');
             const componentes = (met.fase_analisis?.componentes || []).map(c =>
-              `<li style="margin-bottom:6px;font-size:9.5pt">${esc(c)}</li>`).join('');
-            const proceso = (met.fase_plan_estrategico?.proceso || []).map((p,i) =>
-              `<div style="display:flex;gap:12px;margin-bottom:8px;align-items:flex-start">
-                 <div style="min-width:22px;height:22px;background:#0e4eb0;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8pt;font-weight:800">${i+1}</div>
+                `<li style="margin-bottom:6px;font-size:9.5pt">${esc(c)}</li>`).join('');
+            const proceso = (met.fase_plan_estrategico?.proceso || []).map((p, i) =>
+                `<div style="display:flex;gap:12px;margin-bottom:8px;align-items:flex-start">
+                 <div style="min-width:22px;height:22px;background:#0e4eb0;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8pt;font-weight:800">${i + 1}</div>
                  <span style="font-size:9.5pt;color:#334155;padding-top:2px">${esc(p)}</span>
                </div>`).join('');
             const variables = (met.fase_recoleccion?.variables_clave || []).join(', ');
             const temas = (met.fase_vectorizacion?.temas_identificados || []).join(', ');
             const limitaciones = (met.limitaciones || []).map(l =>
-              `<li style="font-size:9pt;color:#64748b;margin-bottom:5px">${esc(l)}</li>`).join('');
+                `<li style="font-size:9pt;color:#64748b;margin-bottom:5px">${esc(l)}</li>`).join('');
             p7b_html = `
 <div class="page" style="page-break-before:always">
 <style>
@@ -3463,23 +3475,23 @@ async function generateAnalisisPDF() {
             const knowColor = knowIdx >= 60 ? '#0f9f6e' : knowIdx >= 30 ? '#d97706' : '#c43d45';
             const knowNivel = knowIdx >= 60 ? 'ALTO' : knowIdx >= 30 ? 'MEDIO' : 'BAJO';
 
-            const genRows = (demo.genero||[]).map(g=>
-              `<tr><td>${esc(g.valor)}</td><td style="text-align:center">${g.n}</td><td style="text-align:center">${g.pct}%</td></tr>`).join('');
-            const edadRows = (demo.edad||[]).map(e=>
-              `<tr><td>${esc(e.valor)}</td><td style="text-align:center">${e.n}</td><td style="text-align:center">${e.pct}%</td></tr>`).join('');
-            const educRows = (demo.educacion||[]).slice(0,6).map(e=>
-              `<tr><td>${esc(e.valor)}</td><td style="text-align:center">${e.n}</td><td style="text-align:center">${e.pct}%</td></tr>`).join('');
+            const genRows = (demo.genero || []).map(g =>
+                `<tr><td>${esc(g.valor)}</td><td style="text-align:center">${g.n}</td><td style="text-align:center">${g.pct}%</td></tr>`).join('');
+            const edadRows = (demo.edad || []).map(e =>
+                `<tr><td>${esc(e.valor)}</td><td style="text-align:center">${e.n}</td><td style="text-align:center">${e.pct}%</td></tr>`).join('');
+            const educRows = (demo.educacion || []).slice(0, 6).map(e =>
+                `<tr><td>${esc(e.valor)}</td><td style="text-align:center">${e.n}</td><td style="text-align:center">${e.pct}%</td></tr>`).join('');
 
-            const gvpRows = (demo.genero_vs_percepcion||[]).map(g=>
-              `<tr><td>${esc(g.genero)}</td><td>${g.n}</td>
+            const gvpRows = (demo.genero_vs_percepcion || []).map(g =>
+                `<tr><td>${esc(g.genero)}</td><td>${g.n}</td>
                <td style="color:#0f9f6e;font-weight:700">${g.aceptacion_pct}%</td>
                <td style="color:#c43d45;font-weight:700">${g.rechazo_pct}%</td>
                <td style="color:#d97706;font-weight:700">${g.neutral_pct}%</td></tr>`).join('');
 
-            const knowRows = (know.por_campo||[]).map(k => {
-              const kc = k.nivel === 'Alto' ? '#0f9f6e' : k.nivel === 'Medio' ? '#d97706' : '#c43d45';
-              const w = Math.min(100, k.pct_positivo);
-              return `<div style="margin-bottom:10px">
+            const knowRows = (know.por_campo || []).map(k => {
+                const kc = k.nivel === 'Alto' ? '#0f9f6e' : k.nivel === 'Medio' ? '#d97706' : '#c43d45';
+                const w = Math.min(100, k.pct_positivo);
+                return `<div style="margin-bottom:10px">
                 <div style="display:flex;justify-content:space-between;font-size:9pt;margin-bottom:3px">
                   <span style="color:#334155">${esc(k.pregunta)}</span>
                   <strong style="color:${kc}">${k.pct_positivo}% — ${esc(k.nivel)}</strong>
@@ -3490,10 +3502,10 @@ async function generateAnalisisPDF() {
               </div>`;
             }).join('');
 
-            const cruceRows = (know.cruce_vs_aceptacion||[]).slice(0,5).map(c => {
-              const dif = c.diferencia_pp;
-              const dc = dif > 0 ? '#0f9f6e' : '#c43d45';
-              return `<tr>
+            const cruceRows = (know.cruce_vs_aceptacion || []).slice(0, 5).map(c => {
+                const dif = c.diferencia_pp;
+                const dc = dif > 0 ? '#0f9f6e' : '#c43d45';
+                return `<tr>
                 <td style="font-size:8.5pt">${esc(c.pregunta)}</td>
                 <td style="text-align:center;color:#0f9f6e;font-weight:700">${c.acept_si_conoce}%</td>
                 <td style="text-align:center;color:#c43d45;font-weight:600">${c.acept_no_conoce}%</td>
@@ -3501,9 +3513,9 @@ async function generateAnalisisPDF() {
               </tr>`;
             }).join('');
 
-            const temasHtml = (ia.vectorizacion_temas||[]).slice(0,10).map(t => {
-              const w = Math.min(100, Math.round(t.relevancia * 2000));
-              return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:9pt">
+            const temasHtml = (ia.vectorizacion_temas || []).slice(0, 10).map(t => {
+                const w = Math.min(100, Math.round(t.relevancia * 2000));
+                return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:9pt">
                 <span style="width:160px;color:#334155">${esc(t.tema)}</span>
                 <div style="flex:1;height:7px;background:#e2e8f0;border-radius:4px;overflow:hidden">
                   <div style="width:${w}%;height:100%;background:#0e4eb0;border-radius:4px"></div>
@@ -3639,10 +3651,10 @@ async function generateAnalisisPDF() {
                         <p style="font-size:9.5pt;color:#475569;margin-top:4px;line-height:1.45;">${esc(e.descripcion)}</p>
                     </div>
                     <div style="font-size:9pt;color:#334155;margin-bottom:6px;">
-                        <strong>Actores involucrados:</strong> ${(e.actores||[]).map(esc).join(', ')}
+                        <strong>Actores involucrados:</strong> ${(e.actores || []).map(esc).join(', ')}
                     </div>
                     <ul style="padding-left:16px;margin:6px 0;font-size:9pt;color:#334155;">
-                        ${(e.acciones||[]).map(a => `<li style="margin-bottom:3px;">${esc(a)}</li>`).join('')}
+                        ${(e.acciones || []).map(a => `<li style="margin-bottom:3px;">${esc(a)}</li>`).join('')}
                     </ul>
                     <div style="margin-top:8px;font-size:9pt;color:#0f9f6e;font-weight:700;background:#f0fdf4;padding:6px 10px;border-radius:6px;">
                         Meta / Indicador: ${esc(e.indicador)}
@@ -3657,20 +3669,20 @@ async function generateAnalisisPDF() {
                 <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:8px;">
                     <h5 style="margin:0 0 6px;color:#0e4eb0;font-size:9.5pt;font-weight:700;">Instituciones Sugeridas</h5>
                     <ul style="padding-left:14px;margin:0;font-size:9pt;color:#475569;">
-                        ${(ac.instituciones_sugeridas||[]).map(i=>`<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
+                        ${(ac.instituciones_sugeridas || []).map(i => `<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
                     </ul>
                 </div>
                 <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:8px;">
                     <h5 style="margin:0 0 6px;color:#0e4eb0;font-size:9.5pt;font-weight:700;">L&iacute;neas de Investigaci&oacute;n</h5>
                     <ul style="padding-left:14px;margin:0;font-size:9pt;color:#475569;">
-                        ${(ac.lineas_investigacion||[]).map(i=>`<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
+                        ${(ac.lineas_investigacion || []).map(i => `<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
                     </ul>
                 </div>
             </div>
             <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:8px;margin-top:10px;">
                 <h5 style="margin:0 0 6px;color:#0e4eb0;font-size:9.5pt;font-weight:700;">Programas Propuestos</h5>
                 <ul style="padding-left:14px;margin:0;font-size:9pt;color:#475569;">
-                    ${(ac.programas_propuestos||[]).map(i=>`<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
+                    ${(ac.programas_propuestos || []).map(i => `<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
                 </ul>
             </div>`;
 
@@ -3681,20 +3693,20 @@ async function generateAnalisisPDF() {
                 <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:8px;">
                     <h5 style="margin:0 0 6px;color:#0f9f6e;font-size:9.5pt;font-weight:700;">Perfiles Requeridos</h5>
                     <ul style="padding-left:14px;margin:0;font-size:9pt;color:#475569;">
-                        ${(emp.perfiles_requeridos||[]).map(i=>`<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
+                        ${(emp.perfiles_requeridos || []).map(i => `<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
                     </ul>
                 </div>
                 <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:8px;">
                     <h5 style="margin:0 0 6px;color:#0f9f6e;font-size:9.5pt;font-weight:700;">Capacitaci&oacute;n</h5>
                     <ul style="padding-left:14px;margin:0;font-size:9pt;color:#475569;">
-                        ${(emp.instituciones_capacitacion||[]).map(i=>`<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
+                        ${(emp.instituciones_capacitacion || []).map(i => `<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
                     </ul>
                 </div>
             </div>
             <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:8px;margin-top:10px;">
                 <h5 style="margin:0 0 6px;color:#0f9f6e;font-size:9.5pt;font-weight:700;">Metas</h5>
                 <ul style="padding-left:14px;margin:0;font-size:9pt;color:#475569;">
-                    ${(emp.metas||[]).map(i=>`<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
+                    ${(emp.metas || []).map(i => `<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
                 </ul>
             </div>`;
 
@@ -3705,13 +3717,13 @@ async function generateAnalisisPDF() {
                 <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:8px;">
                     <h5 style="margin:0 0 6px;color:#7c3aed;font-size:9.5pt;font-weight:700;">Turismo Comunitario</h5>
                     <ul style="padding-left:14px;margin:0;font-size:9pt;color:#475569;">
-                        ${(ta.oportunidades_turismo||[]).map(i=>`<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
+                        ${(ta.oportunidades_turismo || []).map(i => `<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
                     </ul>
                 </div>
                 <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:8px;">
                     <h5 style="margin:0 0 6px;color:#7c3aed;font-size:9.5pt;font-weight:700;">Agricultura Sostenible</h5>
                     <ul style="padding-left:14px;margin:0;font-size:9pt;color:#475569;">
-                        ${(ta.oportunidades_agricultura||[]).map(i=>`<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
+                        ${(ta.oportunidades_agricultura || []).map(i => `<li style="margin-bottom:3px;">${esc(i)}</li>`).join('')}
                     </ul>
                 </div>
             </div>
@@ -3724,14 +3736,14 @@ async function generateAnalisisPDF() {
                 `<div style="display:grid;grid-template-columns:150px 1fr;gap:12px;border-bottom:1px solid #e2e8f0;padding:8px 0;page-break-inside:avoid;">
                     <div style="font-weight:700;color:#0e4eb0;font-size:9pt;">${esc(f.fase)}<br><small style="color:#64748b;font-weight:400;">${esc(f.periodo)}</small></div>
                     <ul style="padding-left:14px;margin:0;font-size:9pt;color:#334155;">
-                        ${(f.hitos||[]).map(h=>`<li style="margin-bottom:3px;">${esc(h)}</li>`).join('')}
+                        ${(f.hitos || []).map(h => `<li style="margin-bottom:3px;">${esc(h)}</li>`).join('')}
                     </ul>
                 </div>`
             ).join('');
 
             // Recomendaciones finales
-            const recsHtml = (p.recomendaciones_finales || []).map((r,i) =>
-                `<li style="margin-bottom:8px;font-size:9.5pt;line-height:1.5;"><strong>R${i+1}:</strong> ${esc(r)}</li>`).join('');
+            const recsHtml = (p.recomendaciones_finales || []).map((r, i) =>
+                `<li style="margin-bottom:8px;font-size:9.5pt;line-height:1.5;"><strong>R${i + 1}:</strong> ${esc(r)}</li>`).join('');
 
             p9_html = `
 <div class="page" style="page-break-before:always">
@@ -3868,9 +3880,10 @@ h1,h2,h3,h4{font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif}
 /* Preguntas */
 .pg-grupo{margin-bottom:30px}
 .pg-gtit{background:#1e293b;color:#f8fafc;padding:10px 18px;border-radius:8px;
-         font-size:12pt;font-weight:700;margin-bottom:16px}
-.pg-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.pg-card{border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px;background:#fff}
+         font-size:12pt;font-weight:700;margin-bottom:16px;break-after:avoid;page-break-after:avoid}
+.pg-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.pg-card{border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px;background:#fff;break-inside:avoid;page-break-inside:avoid;overflow:hidden;min-width:0}
+.pg-card canvas{max-width:100%!important;width:100%!important}
 .pg-q{font-weight:700;font-size:10.5pt;color:#0f172a;margin-bottom:6px;line-height:1.5}
 .pg-n{font-size:8.5pt;color:#64748b;margin-bottom:12px;font-weight:500}
 
@@ -3913,7 +3926,7 @@ h1,h2,h3,h4{font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif}
 .pie{margin-top:28px;padding-top:12px;border-top:1px solid #e2e8f0;
      font-size:8.5pt;color:#94a3b8;display:flex;justify-content:space-between;}
 
-.no-break{page-break-inside:avoid}
+.no-break{page-break-inside:avoid;break-inside:avoid}
 
 /* Cierre */
 .cierre{text-align:center;padding:28px;background:#f1f5f9;border-radius:10px;
@@ -3928,11 +3941,15 @@ h1,h2,h3,h4{font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif}
   @page{size: A4; margin: 0;}
   body{font-size:10pt; margin: 0; padding: 0;}
   .portada{height: 297mm; min-height: 297mm; padding: 70px 55px 55px; box-sizing: border-box;}
-  .page{padding: 20mm 15mm; min-height: 297mm; box-sizing: border-box; margin-top: 0;}
+  .page{padding: 20mm 15mm; min-height: 297mm; box-sizing: border-box; margin-top: 0; width:100%; max-width:100%; overflow:hidden;}
   .portada-titulo{font-size:30pt;}
   .dim-body{grid-template-columns:130px 1fr}
-  .pg-grid{grid-template-columns:1fr 1fr}
-  .mine-grid{grid-template-columns:1fr 1fr}
+  .pg-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .pg-card{break-inside:avoid!important;page-break-inside:avoid!important;overflow:hidden;min-width:0}
+  .pg-card canvas{max-width:100%!important;width:100%!important}
+  .dim-card,.corr,.mine-card,.gm-eje-pdf,.no-break{break-inside:avoid!important;page-break-inside:avoid!important}
+  .mine-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .mine-card{min-width:0;overflow:hidden}
   .bl{width:155px}
   .kc .v{font-size:18pt}
   .krow4{gap:10px}
@@ -4089,6 +4106,11 @@ ${p9_html}
   </div>
 </div>
 
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.js"></script>
+<script>
+${chartsCode}
+</script>
 </body>
 </html>`;
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'san-bartolome-pro-v10';
+const CACHE_NAME = 'san-bartolome-pro-v13';
 const ASSETS = [
     './',
     './index.php',
