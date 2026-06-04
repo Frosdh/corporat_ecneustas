@@ -198,7 +198,6 @@ try {
             session_write_close();
             respond([
                 'ok'      => true,
-                'graficas'=> get_analisis_graficas($_GET['sector'] ?? 'general'),
                 'analisis'=> get_analisis_experto($_GET['sector'] ?? 'general'),
             ]);
 

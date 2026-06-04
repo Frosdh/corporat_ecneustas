@@ -2104,8 +2104,10 @@ async function loadAnalisis(force = false) {
         clearTimeout(analisisState.autoRefreshTimer);
         analisisState.autoRefreshTimer = setTimeout(() => loadAnalisis(), 90000);
     } catch (err) {
-        setAnalisisUI('empty');
-        console.error('Error en analisis:', err);
+        if (err.name !== 'AbortError') {
+            setAnalisisUI('empty');
+            console.error('Error en analisis:', err);
+        }
     }
 }
 
