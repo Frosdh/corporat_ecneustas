@@ -44,6 +44,7 @@ try {
                 'dashboard' => get_dashboard($_GET['sector'] ?? 'general'),
             ]);
 
+
         case 'register-application':
             ensure_method('POST', $method);
             $result = register_application($_POST, $_FILES);

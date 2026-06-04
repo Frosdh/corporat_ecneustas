@@ -158,6 +158,7 @@ header('Expires: 0');
                 <button id="tab-button-analisis" class="tab" data-tab="analisis">An&aacute;lisis IA</button>
                 <button id="tab-button-reports" class="tab" data-tab="reports">Reportes</button>
                 <button id="tab-button-audit" class="tab" data-tab="audit">Auditoria</button>
+                <button id="tab-button-llm" class="tab" data-tab="llm">LLM</button>
                 <button id="tab-button-offline" class="tab hidden" data-tab="offline">Cola Offline</button>
             </nav>
 
@@ -884,6 +885,16 @@ header('Expires: 0');
                     </div>
                 </div>
                 <div id="audit-list" class="stack-list"></div>
+            </section>
+
+            <section id="tab-llm" class="tab-panel hidden">
+                <div class="section-title">
+                    <h3>Integración LLM</h3>
+                    <p>Consultas y análisis avanzados mediante IA conversacional.</p>
+                </div>
+                <div class="card">
+                    <p>Módulo LLM en construcción...</p>
+                </div>
             </section>
 
             <section id="tab-offline" class="tab-panel hidden">

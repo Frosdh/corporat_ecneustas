@@ -4133,22 +4133,50 @@ ${chartsCode}
             .replace(/α/g, '&alpha;');
 
         // Abrir en nueva ventana e imprimir
-        const win = window.open('', '_blank');
-        if (win) {
-            win.document.open('text/html;charset=utf-8', 'replace');
-            win.document.write(cleanHtml);
-            win.document.close();
-            win.focus();
-            setTimeout(() => win.print(), 800);
-        } else {
-            alert('El navegador bloqueó la ventana emergente. Permite popups para este sitio.');
-        }
+        // Imprimir mediante un iframe oculto (sin popups y sin bloquear la página principal)
+        const oldFrame = document.getElementById('pdf-print-frame');
+        if (oldFrame) oldFrame.remove();
+
+        const iframe = document.createElement('iframe');
+        iframe.id = 'pdf-print-frame';
+        // Tamaño real A4 (~96dpi) fuera de pantalla para que las gráficas se rendericen con ancho válido
+        iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;height:1123px;border:0;';
+        document.body.appendChild(iframe);
+
+        const idoc = iframe.contentWindow.document;
+        idoc.open('text/html;charset=utf-8', 'replace');
+        idoc.write(cleanHtml);
+        idoc.close();
+
+        let printed = false;
+        const doPrint = () => {
+            if (printed) return;
+            printed = true;
+            try {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+            } catch (e) {
+                console.error('Error al imprimir:', e);
+            }
+            // Limpiar el iframe después de imprimir; el foco vuelve a la página normalmente
+            const cleanup = () => { const f = document.getElementById('pdf-print-frame'); if (f) f.remove(); };
+            if (iframe.contentWindow) {
+                iframe.contentWindow.onafterprint = cleanup;
+            }
+            setTimeout(cleanup, 60000); // respaldo por si onafterprint no dispara
+        };
+
+        // Esperar a que carguen Chart.js y se dibujen las gráficas antes de imprimir
+        iframe.onload = () => setTimeout(doPrint, 1200);
+        // Respaldo si onload no dispara (document.write a veces no lo lanza)
+        setTimeout(doPrint, 2000);
 
     } catch (err) {
         console.error('Error generando PDF:', err);
         alert('Error al generar el reporte: ' + err.message);
     } finally {
         const btn = document.getElementById('analisis-pdf-btn');
-        if (btn) { btn.disabled = false; btn.textContent = '📄 Exportar Reporte PDF'; }
+        if (btn) { btn.disabled = false; btn.textContent = 'Exportar Reporte PDF'; }
     }
+    
 }
