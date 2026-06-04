@@ -555,7 +555,7 @@ function renderDimGauges(dims) {
 }
 
 function populateSectorFilters(sectors) {
-    const filters = ['sector-filter', 'analisis-sector-filter', 'preguntas-sector-filter', 'survey-filter-sector'];
+    const filters = ['sector-filter', 'analisis-sector-filter', 'preguntas-sector-filter', 'survey-filter-sector', 'llm-sector-filter'];
     filters.forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;

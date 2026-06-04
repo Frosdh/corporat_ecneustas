@@ -3442,7 +3442,7 @@ function get_llm_nvidia(string $sector = 'general'): array
             return $result;
         }
 
-        return ['ok' => false, 'error' => 'Error parseando JSON de Python', 'raw_output' => $output, 'python_err' => $error];
+        return ['ok' => false, 'error' => "Error parseando JSON de Python. \nRaw: $output \nErr: $error"];
     }
 
     return ['ok' => false, 'error' => 'No se pudo ejecutar el script de Python.'];

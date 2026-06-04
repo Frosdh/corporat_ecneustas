@@ -21,12 +21,24 @@ def main():
 
     n_encuestas = len(encuestas)
     
+    # Reducir el tamaño del payload para no exceder el límite de tokens
+    trimmed_encuestas = []
+    for e in encuestas[:300]:  # Limitar a las ultimas 300 encuestas
+        trimmed_encuestas.append({
+            "sector": e.get("sector"),
+            "problema": e.get("primary_problem"),
+            "social": e.get("social_priority"),
+            "inversion": e.get("investment_acceptance"),
+            "mineria": e.get("mine_reopening_perception")
+        })
+
     prompt = f"""
     Eres un analista experto en sociología y minería. Se han recopilado {n_encuestas} encuestas en una comunidad sobre un proyecto minero.
-    A continuación se presentan los datos:
-    {json.dumps(encuestas[:150], ensure_ascii=False)}
+    A continuación se presenta una muestra representativa de los datos clave:
+    {json.dumps(trimmed_encuestas)}
     
-    Realiza un análisis completo y estructurado basado en los datos proporcionados.
+    Realiza un análisis profundo, cualitativo y cuantitativo, de estos registros en tiempo real.
+    Interpreta las principales preocupaciones, extrae conclusiones claras y propón soluciones, mejoras y propuestas de planes de acción muy específicos para este contexto.
     Responde ESTRICTAMENTE con un objeto JSON válido. NO incluyas markdown, explicaciones previas ni texto fuera del JSON.
     El JSON debe tener EXACTAMENTE esta estructura:
     {{
@@ -86,7 +98,7 @@ def main():
         # Parsear para verificar que sea valido
         parsed = json.loads(json_str)
         parsed["motor"] = "NVIDIA Nemotron-3-Super-120B"
-        print(json.dumps(parsed, ensure_ascii=False))
+        print(json.dumps(parsed))
 
     except Exception as e:
         print(json.dumps({"ok": False, "error": f"NVIDIA API Error: {str(e)}", "raw": final_content if 'final_content' in locals() else ""}))
