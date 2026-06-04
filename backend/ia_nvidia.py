@@ -529,9 +529,9 @@ def extract_json(text):
         candidate = text[start:end+1]
         try:
             import json
-            json.loads(candidate)
-            return candidate
-        except ValueError:
+            parsed = json.loads(candidate)
+            return candidate, parsed
+        except Exception as e:
             end = text.rfind('}', start, end)
             
     raise ValueError("JSON incompleto o invalido en la respuesta.")
@@ -591,8 +591,7 @@ def main():
         return
 
     try:
-        json_str = extract_json(content)
-        result   = json.loads(json_str)
+        json_str, result = extract_json(content)
     except Exception as e:
         emit({"type": "error",
               "error": "Error parseando respuesta LLM: " + str(e) + ". Raw (500 chars): " + content[:500]})
