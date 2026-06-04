@@ -80,6 +80,8 @@ function bindEvents() {
         document.getElementById(id).addEventListener('change', loadSurveys);
     });
 
+    document.getElementById('preguntas-sector-filter')?.addEventListener('change', () => loadPreguntas(true));
+
     document.getElementById('clear-survey-filters-button').addEventListener('click', () => {
         document.getElementById('survey-filter-sector').value = 'general';
         document.getElementById('survey-filter-surveyor').value = '';
@@ -116,6 +118,15 @@ function bindEvents() {
             }
             if (button.dataset.tab === 'analisis') {
                 await loadAnalisis();
+            }
+            if (button.dataset.tab === 'llm') {
+                // Sincronizar sector y disparar análisis NVIDIA si no está ya corriendo
+                const llmSf = document.getElementById('llm-sector-filter');
+                const analisisSf = document.getElementById('analisis-sector-filter');
+                if (llmSf && analisisSf && llmSf.value === 'general' && analisisSf.value !== 'general') {
+                    llmSf.value = analisisSf.value;
+                }
+                if (typeof generateLLMNvidia === 'function') generateLLMNvidia();
             }
             if (button.dataset.tab === 'preguntas') {
                 await loadPreguntas();
@@ -251,11 +262,6 @@ async function bootstrapApp() {
     if (payload.dashboard) {
         renderDashboard(payload.dashboard);
         fetchTotalEncuestas(); // corrige el total con el valor real de la base
-        
-        // Auto-iniciar analisis LLM en segundo plano
-        if (typeof generateLLMNvidia === 'function' && document.getElementById('llm-generate-btn')) {
-            setTimeout(generateLLMNvidia, 1000);
-        }
     }
     renderOfflineQueue();
     await syncPendingSurveys(false);
@@ -574,10 +580,11 @@ function populateSectorFilters(sectors) {
         el.appendChild(defaultOpt);
 
         sectors.forEach(item => {
-            if (!item.label || item.label.toLowerCase() === 'general' || item.label.toLowerCase() === 'todas las zonas' || item.label.includes('bartolom')) return;
+            const label = item.label;
+            if (!label || label.toLowerCase() === 'general' || label.toLowerCase() === 'todas las zonas') return;
             const opt = document.createElement('option');
-            opt.value = item.label;
-            opt.textContent = item.label;
+            opt.value = label;        // Backend ya devuelve UTF-8 correcto
+            opt.textContent = label;
             el.appendChild(opt);
         });
 
@@ -2035,6 +2042,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Eventos para el nuevo modulo LLM Nvidia
     const llmBtn = document.getElementById('llm-generate-btn');
     if (llmBtn) llmBtn.addEventListener('click', () => generateLLMNvidia());
+    const llmFilter = document.getElementById('llm-sector-filter');
+    if (llmFilter) llmFilter.addEventListener('change', () => generateLLMNvidia());
 });
 
 let _analisisAbortController = null;
@@ -2060,6 +2069,10 @@ async function loadAnalisis(force = false) {
         analisisState.data = payload.analisis;
         if (!analisisState.data || analisisState.data.total === 0) {
             setAnalisisUI('empty');
+            const emptyEl = document.getElementById('analisis-empty');
+            if (emptyEl) emptyEl.innerHTML = `<p style="padding:24px;text-align:center;color:#888">
+                Sin encuestas para <strong>${sector === 'general' ? 'todas las zonas' : sector}</strong>.
+                Verifica que la zona tiene encuestas registradas.</p>`;
             return;
         }
         renderAnalisis(analisisState.data);
@@ -2088,14 +2101,10 @@ async function loadAnalisis(force = false) {
                 });
         }
         
-        // Cargar LLM Nvidia en paralelo automáticamente
-        // Sincroniza el filtro del sector LLM con el filtro principal
+        // Sincronizar zona en filtro LLM (solo sincroniza, no dispara NVIDIA — eso es del tab LLM)
         const llmSectorFilter = document.getElementById('llm-sector-filter');
-        if (llmSectorFilter) {
-            llmSectorFilter.value = sector;
-        }
-        generateLLMNvidia();
-        
+        if (llmSectorFilter) llmSectorFilter.value = sector;
+
         // Sincronizar total con el dashboard
         const totalReal = analisisState.data.total_encuestas ?? analisisState.data.total ?? 0;
         setTotalEncuestasReal(totalReal);
@@ -2107,6 +2116,10 @@ async function loadAnalisis(force = false) {
         if (err.name !== 'AbortError') {
             setAnalisisUI('empty');
             console.error('Error en analisis:', err);
+            const emptyEl = document.getElementById('analisis-empty');
+            if (emptyEl) emptyEl.innerHTML = `<p style="padding:24px;text-align:center;color:#c00">
+                Error al cargar análisis: ${err.message || 'Error del servidor.'}<br>
+                <small>Revisa la consola para más detalles.</small></p>`;
         }
     }
 }
@@ -3464,7 +3477,12 @@ async function loadDashboardSurveys(sector) {
 
         let allSurveys = [...pending, ...backendSurveys];
         if (sector && sector !== 'general') {
-            allSurveys = allSurveys.filter(s => s.sector === sector);
+            // Comparar normalizando acentos para cubrir encodings mixtos en la BD
+            const normSector = sector.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+            allSurveys = allSurveys.filter(s => {
+                const ns = (s.sector || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+                return ns === normSector;
+            });
         }
 
         _dashSurveys = allSurveys;

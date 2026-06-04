@@ -225,6 +225,7 @@ try {
             if (!user_can_access_dashboard()) {
                 respond(['ok' => false, 'message' => 'No tienes acceso.'], 403);
             }
+            session_write_close(); // Liberar sesión antes de llamada lenta a Gemini API
             respond(get_plan_gemini($_GET['sector'] ?? 'general'));
 
         case 'llm_nvidia':
@@ -232,6 +233,7 @@ try {
             if (!user_can_access_dashboard()) {
                 respond(['ok' => false, 'message' => 'No tienes acceso.'], 403);
             }
+            session_write_close();
             respond(get_llm_nvidia($_GET['sector'] ?? 'general'));
 
         case 'llm_stats':
@@ -240,6 +242,7 @@ try {
             if (!user_can_access_dashboard()) {
                 respond(['ok' => false, 'message' => 'No tienes acceso.'], 403);
             }
+            session_write_close();
             respond(get_llm_stats_only($_GET['sector'] ?? 'general'));
 
         // llm_nvidia_stream is handled before the try/switch above

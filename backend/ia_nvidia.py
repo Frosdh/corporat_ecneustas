@@ -413,12 +413,9 @@ def _call_via_openai(prompt):
             )},
             {"role": "user", "content": prompt}
         ],
-        temperature=1,
+        temperature=0.4,
         top_p=0.95,
-        max_tokens=16384,
-        extra_body={
-            "chat_template_kwargs": {"enable_thinking": False},
-        },
+        max_tokens=12000,
         stream=True,
     )
 
@@ -457,12 +454,9 @@ def _call_via_urllib(prompt):
             {"role": "system", "content": "You are a precise JSON-outputting engine. Output only a single valid JSON object. No markdown."},
             {"role": "user", "content": prompt}
         ],
-        "temperature": 0.7,
+        "temperature": 0.4,
         "top_p": 0.95,
-        "max_tokens": 16384,
-        "extra_body": {
-            "chat_template_kwargs": {"enable_thinking": False},
-        },
+        "max_tokens": 12000,
         "stream": True,
     }
     api_url = NVIDIA_BASE_URL + "/chat/completions"
@@ -554,26 +548,18 @@ def main():
         emit({"type": "error", "error": "No hay encuestas para analizar."})
         return
 
-    import time
     total_rows = len(rows)
-    for i in range(0, total_rows, 30):
-        batch = min(30, total_rows - i)
-        emit({"type": "progress", "mensaje": f"Analizando lote de encuestas: {i+1} a {i+batch} (Progreso: {min(100, int((i+batch)/total_rows*100))}%) en segundo plano..."})
-        time.sleep(0.015) # Simula procesamiento rápido de 30 en 30 sin demorar
-
-    emit({"type": "progress", "mensaje": "Consolidando métricas locales y contactando a la IA de NVIDIA..."})
     sectores_list = sorted(list(set((r.get('sector') or 'general').strip() for r in rows)))
     total = len(rows)
+
+    # Emitir progreso inmediato sin loops de sleep
     emit({
         "type": "progress",
-        "mensaje": "Cargando " + str(total) + " encuestas de " + str(len(sectores_list)) + " zona(s)...",
+        "mensaje": f"Procesando {total} encuestas de {len(sectores_list)} zona(s)...",
         "zonas": sectores_list,
         "total": total,
         "procesadas": total,
     })
-
-    emit({"type": "progress", "mensaje": "Calculando estadisticas de todas las zonas...",
-          "total": total, "procesadas": total})
     try:
         stats = analyze_statistics(rows)
     except Exception as e:

@@ -4,6 +4,13 @@ declare(strict_types=1);
 
 $config = require __DIR__ . '/config.php';
 
+session_set_cookie_params([
+    'lifetime' => 86400 * 30,
+    'path' => '/',
+    'secure' => false,
+    'httponly' => true,
+    'samesite' => 'Lax'
+]);
 session_name($config['app']['session_name']);
 session_start();
 
@@ -1068,17 +1075,24 @@ function compute_json_option_counts(array $rows, string $field): array
 function normalize_sector_label(string $sector): string
 {
     $sector = trim($sector);
-    
-    // Remover acentos para normalizar la comparacion
-    $search = ['Ã¡','Ã©','Ã­','Ã³','Ãº','Ã','Ã‰','Ã','Ã“','Ãš'];
-    $replace = ['a','e','i','o','u','a','e','i','o','u'];
-    $lowerNorm = strtolower(str_replace($search, $replace, $sector));
-    
-    if (strpos($lowerNorm, 'bartoloma') !== false || strpos($lowerNorm, 'bartolome') !== false) {
-        return 'San BartolomÃ©';
+
+    // Strip double-encoded UTF-8 artifacts (e.g. bytes c3 83 c2 a9 -> 'e')
+    // AND proper UTF-8 accents (e.g. c3 a9 = é -> 'e') for detection
+    $double_encoded = ['Ã¡','Ã©','Ã­','Ã³','Ãº',
+                       'Ã','Ã‰','Ã','Ã“','Ãš'];
+    $proper_accents = ['é','á','í','ó','ú',
+                       'É','Á','Í','Ó','Ú'];
+    $replace_ascii  = ['e','a','i','o','u','e','a','i','o','u'];
+    $stripped = str_replace($double_encoded, $replace_ascii,
+                  str_replace($proper_accents, $replace_ascii, $sector));
+    $lowerNorm = strtolower($stripped);
+
+    // Retornar siempre UTF-8 correcto (\xc3\xa9 = é, \xc3\xad = í)
+    if (strpos($lowerNorm, 'bartolom') !== false) {
+        return "San Bartolomé";  // San Bartolomé
     }
     if (strpos($lowerNorm, 'sigsig') !== false) {
-        return 'SÃ­gsig';
+        return "Sígsig";  // Sígsig
     }
     if (strpos($lowerNorm, 'deleg') !== false) {
         return 'La Deleg';
@@ -1092,8 +1106,35 @@ function normalize_sector_label(string $sector): string
     if (strpos($lowerNorm, 'pishio') !== false) {
         return 'Pishio';
     }
-    
+
     return mb_convert_case($sector, MB_CASE_TITLE, 'UTF-8');
+}
+
+/**
+ * Genera el fragmento WHERE y los params PDO para filtrar por sector.
+ * Prueba la forma UTF-8 correcta Y la doble-codificada para cubrir
+ * registros guardados con encoding roto en la BD.
+ * Uso: ['where' => '...', 'params' => [...]]
+ */
+function sector_where(string $sector, string $col = 'sector'): array
+{
+    if ($sector === 'general' || $sector === '') {
+        return ['where' => '', 'params' => []];
+    }
+    $norm = normalize_sector_label($sector);
+    // Variante doble-codificada para compat con BDs con encoding roto
+    $double = function_exists('iconv') ? @iconv('ISO-8859-1', 'UTF-8//IGNORE', $norm) : false;
+    // Comparacion directa - la collation de la BD (latin1_swedish_ci) ya es case-insensitive
+    if ($double !== false && $double !== $norm) {
+        return [
+            'where'  => "WHERE ({$col} = :sw_a OR {$col} = :sw_b)",
+            'params' => [':sw_a' => $norm, ':sw_b' => $double],
+        ];
+    }
+    return [
+        'where'  => "WHERE {$col} = :sw_a",
+        'params' => [':sw_a' => $norm],
+    ];
 }
 
 function build_label_total_rows(array $counts, int $limit = 0): array
@@ -1115,12 +1156,9 @@ function build_label_total_rows(array $counts, int $limit = 0): array
 
 function get_dashboard(string $sector = 'general'): array
 {
-    $params = [];
-    $where = '';
-    if ($sector !== 'general') {
-        $where = 'WHERE sector = :sector';
-        $params[':sector'] = $sector;
-    }
+    $sw = sector_where($sector);
+    $where  = $sw['where'];
+    $params = $sw['params'];
 
     $summarySql = "
         SELECT
@@ -1161,6 +1199,10 @@ function get_dashboard(string $sector = 'general'): array
     $serviceStmt->execute($params);
     $services = $serviceStmt->fetch() ?: [];
 
+    // Build map WHERE: reuse sector condition + lat/lng filter
+    $mapWhere = ($sw['where'] !== '')
+        ? $sw['where'] . ' AND s.latitude IS NOT NULL AND s.longitude IS NOT NULL'
+        : 'WHERE s.latitude IS NOT NULL AND s.longitude IS NOT NULL';
     $mapSql = "
         SELECT
             s.id,
@@ -1173,7 +1215,7 @@ function get_dashboard(string $sector = 'general'): array
             COALESCE(s.surveyor_name, sv.full_name) AS surveyor_name
         FROM surveys s
         LEFT JOIN surveyors sv ON sv.id = s.surveyor_id
-        " . ($sector !== 'general' ? 'WHERE sector = :sector AND latitude IS NOT NULL AND longitude IS NOT NULL' : 'WHERE latitude IS NOT NULL AND longitude IS NOT NULL') . "
+        $mapWhere
         ORDER BY survey_date DESC
         LIMIT 30
     ";
@@ -1560,8 +1602,11 @@ function get_surveys(array $filters = []): array
     $status = sanitize_text($filters['status'] ?? '');
 
     if ($sector !== '' && $sector !== 'general') {
-        $conditions[] = 's.sector = :sector';
-        $params[':sector'] = $sector;
+        $sw_surveys = sector_where($sector, 's.sector');
+        // Extract condition without leading WHERE keyword
+        $cond = preg_replace('/^WHERE /i', '', $sw_surveys['where']);
+        $conditions[] = $cond;
+        $params = array_merge($params, $sw_surveys['params']);
     }
     if ($dateFrom !== '') {
         $conditions[] = 'DATE(s.survey_date) >= :date_from';
@@ -1963,12 +2008,9 @@ function analizar_conocimiento_minero(array $rows): array
 
 function get_analisis_experto(string $sector = 'general'): array
 {
-    $params = [];
-    $where  = '';
-    if ($sector !== 'general') {
-        $where            = 'WHERE sector = :sector';
-        $params[':sector'] = $sector;
-    }
+    $sw = sector_where($sector);
+    $where  = $sw['where'];
+    $params = $sw['params'];
 
     $sql = "
         SELECT *
@@ -2185,7 +2227,7 @@ function get_analisis_experto(string $sector = 'general'): array
         $dimNeg ? (($dimNeg['sentimiento']['indice'] > 0 ? '+' : '') . $dimNeg['sentimiento']['indice']) : 'N/A'
     );
 
-    return [
+    $result = [
         'total'               => $n,
         'sector'              => $sector,
         'generado_en'         => date('Y-m-d H:i:s'),
@@ -2225,6 +2267,7 @@ function get_analisis_experto(string $sector = 'general'): array
         ]],
         'distribucion_por_sector' => $sectorItems,
     ];
+    return $result;
 }
 
 function freq_dist_multi(array $rows, string $field, string $storage): array
@@ -2260,12 +2303,9 @@ function freq_dist_multi(array $rows, string $field, string $storage): array
 
 function get_preguntas_data(string $sector = 'general'): array
 {
-    $where  = '';
-    $params = [];
-    if ($sector !== 'general' && $sector !== '') {
-        $where  = 'WHERE sector = :sector';
-        $params = [':sector' => normalize_sector_label($sector)];
-    }
+    $sw = sector_where($sector);
+    $where  = $sw['where'];
+    $params = $sw['params'];
 
     $sql = "
         SELECT *
@@ -2572,12 +2612,9 @@ PROMPT;
 // ============================================================
 function ia_minera_entrenar_y_analizar(string $sector = 'general'): array
 {
-    $params = [];
-    $where  = '';
-    if ($sector !== 'general') {
-        $where             = 'WHERE sector = :sector';
-        $params[':sector'] = $sector;
-    }
+    $sw = sector_where($sector);
+    $where  = $sw['where'];
+    $params = $sw['params'];
 
     $stmt = db()->prepare("SELECT * FROM surveys $where ORDER BY survey_date DESC");
     $stmt->execute($params);
@@ -3417,8 +3454,14 @@ function get_llm_stats_only(string $sector = 'general'): array
 {
     set_time_limit(60);
 
-    $stmt = db()->prepare("SELECT * FROM surveys WHERE ? = 'general' OR sector = ?");
-    $stmt->execute([$sector, $sector]);
+    $sw = sector_where($sector);
+    if ($sector === 'general') {
+        $stmt = db()->prepare('SELECT * FROM surveys');
+        $stmt->execute();
+    } else {
+        $stmt = db()->prepare('SELECT * FROM surveys ' . $sw['where']);
+        $stmt->execute($sw['params']);
+    }
     $surveys = $stmt->fetchAll();
 
     if (empty($surveys)) {
@@ -3478,8 +3521,14 @@ function get_llm_nvidia(string $sector = 'general'): array
     // Aumentar el lÃ­mite de tiempo a 5 minutos para el LLM con reasoning
     set_time_limit(300);
 
-    $stmt = db()->prepare("SELECT * FROM surveys WHERE ? = 'general' OR sector = ?");
-    $stmt->execute([$sector, $sector]);
+    $sw = sector_where($sector);
+    if ($sector === 'general') {
+        $stmt = db()->prepare('SELECT * FROM surveys');
+        $stmt->execute();
+    } else {
+        $stmt = db()->prepare('SELECT * FROM surveys ' . $sw['where']);
+        $stmt->execute($sw['params']);
+    }
     $surveys = $stmt->fetchAll();
 
     if (empty($surveys)) {
@@ -3554,14 +3603,43 @@ function stream_llm_nvidia(string $sector = 'general'): void
 {
     set_time_limit(360);
 
+    // Normalizar sector
+    $sw_llm  = sector_where($sector);
+    $sector  = ($sector !== 'general') ? normalize_sector_label($sector) : 'general';
+
+    // --- Cache de 30 minutos para no rellamar la API de NVIDIA ---
+    $cacheDir  = sys_get_temp_dir();
+    $cacheKey  = 'llm_' . md5($sector);
+    $cacheFile = $cacheDir . '/' . $cacheKey . '.json';
+    $cacheTtl  = 600;  // 10 min
+
     // Cabeceras SSE
     header('Content-Type: text/event-stream; charset=utf-8');
     header('Cache-Control: no-cache');
     header('X-Accel-Buffering: no'); // Deshabilitar buffering en Nginx
     if (ob_get_level()) ob_end_flush();
 
-    $stmt = db()->prepare("SELECT * FROM surveys WHERE ? = 'general' OR sector = ?");
-    $stmt->execute([$sector, $sector]);
+    // Si hay resultado en cache fresco, emitirlo directamente
+    if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < $cacheTtl) {
+        $cached = file_get_contents($cacheFile);
+        if ($cached !== false) {
+            echo "data: " . json_encode(['type' => 'progress', 'mensaje' => 'Cargando resultado en cache...']) . "\n\n";
+            flush();
+            echo "data: $cached\n\n";
+            flush();
+            return;
+        }
+    }
+
+    // Consultar encuestas usando sector normalizado con ambas variantes de encoding
+    if ($sector === 'general') {
+        $stmt = db()->prepare('SELECT * FROM surveys');
+        $stmt->execute();
+    } else {
+        $sql_llm = 'SELECT * FROM surveys ' . $sw_llm['where'];
+        $stmt    = db()->prepare($sql_llm);
+        $stmt->execute($sw_llm['params']);
+    }
     $surveys = $stmt->fetchAll();
 
     if (empty($surveys)) {
@@ -3613,6 +3691,10 @@ function stream_llm_nvidia(string $sector = 'general'): void
                     flush();
                     // Si es el resultado final o error, terminar
                     if (in_array($obj['type'] ?? '', ['result', 'error'])) {
+                        // Guardar en cache solo si es resultado exitoso
+                        if (($obj['type'] ?? '') === 'result' && isset($cacheFile)) {
+                            @file_put_contents($cacheFile, $line);
+                        }
                         fclose($pipes[1]);
                         fclose($pipes[2]);
                         proc_close($process);
