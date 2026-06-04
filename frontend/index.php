@@ -959,7 +959,14 @@ header('Expires: 0');
 
                     <!-- Graficas / Dimensiones -->
                     <div style="margin-top: 20px;">
-                        <h3>Análisis de Sentimiento por Dimensión</h3>
+                        <div class="card" style="margin-bottom: 20px;">
+                            <h4 style="text-align: center;">Vista Radar – Comparativa por Dimensión</h4>
+                            <div style="position: relative; height: 350px; width: 100%; display: flex; justify-content: center;">
+                                <canvas id="llm-radar-chart"></canvas>
+                            </div>
+                        </div>
+
+                        <h3>Análisis Detallado por Dimensión</h3>
                         <div id="llm-dimensiones-grid" class="analisis-grid"></div>
                     </div>
 

@@ -2064,6 +2064,15 @@ async function loadAnalisis() {
                     geminiBox.innerHTML = '<div class="ia-error">&#9888; Plan Gemini no disponible: ' + err.message + '</div>';
                 });
         }
+        
+        // Cargar LLM Nvidia en paralelo automáticamente
+        // Sincroniza el filtro del sector LLM con el filtro principal
+        const llmSectorFilter = document.getElementById('llm-sector-filter');
+        if (llmSectorFilter) {
+            llmSectorFilter.value = sector;
+        }
+        generateLLMNvidia();
+        
         // Sincronizar total con el dashboard
         const totalReal = analisisState.data.total_encuestas ?? analisisState.data.total ?? 0;
         setTotalEncuestasReal(totalReal);
@@ -2519,10 +2528,57 @@ function renderLLMNvidia(payload) {
         accionesBox.innerHTML = acciones.map(a => `<li>${escapeHtml(a)}</li>`).join('');
     }
 
-    // Graficas de sentimientos (Dimensiones)
+    // Graficas de sentimientos (Dimensiones y Radar)
     if (payload.dimensiones && payload.dimensiones.length > 0) {
         renderLLMDimensiones(payload.dimensiones);
+        renderLLMRadarChart(payload.dimensiones);
     }
+}
+
+function renderLLMRadarChart(dimensiones) {
+    const ctx = document.getElementById('llm-radar-chart');
+    if (!ctx || typeof Chart === 'undefined') return;
+
+    if (analisisState.charts['llm-radar']) {
+        analisisState.charts['llm-radar'].destroy();
+    }
+
+    const labels = dimensiones.map(d => truncate(d.titulo, 25));
+    // Normalizar el indice de -100 a 100 hacia 0 a 100 para el radar
+    const dataPositiva = dimensiones.map(d => (d.sentimiento.indice + 100) / 2);
+
+    analisisState.charts['llm-radar'] = new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Índice de Favorabilidad',
+                data: dataPositiva,
+                backgroundColor: 'rgba(14, 78, 176, 0.2)',
+                borderColor: 'rgba(14, 78, 176, 1)',
+                pointBackgroundColor: 'rgba(14, 78, 176, 1)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'rgba(14, 78, 176, 1)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                r: {
+                    angleLines: { color: 'rgba(255, 255, 255, 0.2)' },
+                    grid: { color: 'rgba(255, 255, 255, 0.2)' },
+                    pointLabels: { color: 'rgba(255, 255, 255, 0.8)', font: { size: 12 } },
+                    ticks: { display: false, min: 0, max: 100 }
+                }
+            },
+            plugins: {
+                legend: { position: 'bottom', labels: { color: 'rgba(255,255,255,0.8)' } },
+                tooltip: { callbacks: { label: (c) => ' Favorabilidad: ' + c.raw.toFixed(1) + '/100' } }
+            }
+        }
+    });
 }
 
 function renderLLMDimensiones(dimensiones) {

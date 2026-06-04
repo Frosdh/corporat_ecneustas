@@ -22,25 +22,48 @@ def main():
 
     n_encuestas = len(encuestas)
     
-    # Reducir el tamaño del payload para no exceder el límite de tokens
-    trimmed_encuestas = []
-    for e in encuestas[:800]:  # Limitar a las ultimas 800 encuestas para mayor cobertura
-        trimmed_encuestas.append({
-            "sector": e.get("sector"),
-            "problema": e.get("primary_problem"),
-            "social": e.get("social_priority"),
-            "inversion": e.get("investment_acceptance"),
-            "mineria": e.get("mine_reopening_perception")
-        })
+    # Agregar las encuestas para reducir DRASTICAMENTE el tamaño del prompt
+    # Esto permite procesar el 100% de la base de datos sin timeout del servidor.
+    problemas_count = {}
+    inversion_count = {}
+    mineria_count = {}
+    sectores_count = {}
+    social_count = {}
+
+    for e in encuestas:
+        # Sectores
+        sec = e.get("sector", "Desconocido")
+        sectores_count[sec] = sectores_count.get(sec, 0) + 1
+        # Problemas
+        p = e.get("primary_problem", "No definido")
+        problemas_count[p] = problemas_count.get(p, 0) + 1
+        # Inversion
+        i = e.get("investment_acceptance", "No definido")
+        inversion_count[i] = inversion_count.get(i, 0) + 1
+        # Mineria
+        m = e.get("mine_reopening_perception", "No definido")
+        mineria_count[m] = mineria_count.get(m, 0) + 1
+        # Social
+        soc = e.get("social_priority", "No definido")
+        social_count[soc] = social_count.get(soc, 0) + 1
+
+    datos_agregados = {
+        "total_encuestas_analizadas": n_encuestas,
+        "zonas_analizadas": sectores_count,
+        "distribucion_problemas_principales": problemas_count,
+        "distribucion_prioridad_social": social_count,
+        "distribucion_aceptacion_inversion": inversion_count,
+        "distribucion_percepcion_mineria": mineria_count
+    }
 
     prompt = f"""
-    Eres un analista experto en sociología y minería. Se han recopilado {n_encuestas} encuestas en una comunidad sobre un proyecto minero.
-    A continuación se presenta una muestra representativa de los datos clave:
-    {json.dumps(trimmed_encuestas)}
+    Eres un analista experto en sociología y minería, capaz de aprender y mejorar continuamente tus consejos.
+    Se han recopilado y agregado matemáticamente {n_encuestas} encuestas (el 100% de la base de datos solicitada).
+    A continuación se presentan las estadísticas consolidadas exactas:
+    {json.dumps(datos_agregados, ensure_ascii=False)}
     
-    Realiza un análisis profundo, cualitativo y cuantitativo, de estos registros en tiempo real.
-    Interpreta las principales preocupaciones, extrae conclusiones claras y propón soluciones, mejoras y propuestas de planes de acción muy específicos para este contexto.
-    Responde ESTRICTAMENTE con un objeto JSON válido. NO incluyas markdown, explicaciones previas ni texto fuera del JSON.
+    Analiza detalladamente estas estadísticas. Tu objetivo es generar soluciones automáticas de minería, proponer planes estratégicos y generar las dimensiones de sentimiento.
+    Responde ESTRICTAMENTE con un objeto JSON válido. NO incluyas markdown.
     El JSON debe tener EXACTAMENTE esta estructura:
     {{
         "ok": true,
@@ -94,27 +117,43 @@ def main():
     try:
         with urllib.request.urlopen(req) as response:
             result_body = response.read().decode('utf-8')
-            result_json = json.loads(result_body)
             
-            # Obtener solo el contenido final (ignora el reasoning_content si lo hay)
-            final_content = result_json["choices"][0]["message"]["content"]
+            try:
+                result_json = json.loads(result_body)
+            except json.JSONDecodeError:
+                raise ValueError(f"La API de NVIDIA no devolvio JSON. Raw: {result_body[:200]}")
 
-            # Extraer JSON de la respuesta (por si el LLM pone ```json ... ```)
-            match = re.search(r"```(?:json)?\s*(.*?)\s*```", final_content, re.DOTALL | re.IGNORECASE)
-            if match:
-                json_str = match.group(1)
+            # Obtener solo el contenido final
+            if "choices" not in result_json or not result_json["choices"]:
+                raise ValueError(f"Respuesta inesperada de NVIDIA sin 'choices': {result_body[:200]}")
+                
+            final_content = result_json["choices"][0]["message"].get("content", "")
+
+            # Extraer JSON buscando el primer '{' y el último '}'
+            json_str = final_content.strip()
+            start = json_str.find('{')
+            end = json_str.rfind('}')
+            
+            if start != -1 and end != -1:
+                json_str = json_str[start:end+1]
             else:
-                json_str = final_content.strip()
+                raise ValueError(f"No se encontro JSON en la respuesta del modelo. Texto crudo: {final_content[:200]}")
 
             # Parsear para verificar que sea valido
-            parsed = json.loads(json_str)
-            parsed["motor"] = "NVIDIA Nemotron-3-Super-120B"
-            print(json.dumps(parsed))
+            try:
+                parsed = json.loads(json_str)
+                parsed["motor"] = "NVIDIA Nemotron-3-Super-120B"
+                print(json.dumps(parsed))
+            except json.JSONDecodeError as je:
+                raise ValueError(f"El modelo genero JSON invalido. Raw JSON: {json_str[:200]}... Error: {str(je)}")
 
     except Exception as e:
         err_msg = str(e)
         if isinstance(e, urllib.error.HTTPError):
-            err_msg += " - " + e.read().decode('utf-8')
+            try:
+                err_msg += " - " + e.read().decode('utf-8')
+            except:
+                pass
         print(json.dumps({"ok": False, "error": f"NVIDIA API Error: {err_msg}"}))
 
 if __name__ == "__main__":
