@@ -2410,11 +2410,6 @@ function renderPlanGemini(payload) {
     </div>`;
 }
 
-function setText(id, val) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = val ?? '—';
-}
-
 function destroyChart(key) {
     if (analisisState.charts[key]) {
         try { analisisState.charts[key].destroy(); } catch (e) { }
@@ -2461,7 +2456,8 @@ function renderDonutGlobal(sent) {
 // NVIDIA NEMOTRON LLM — SSE STREAMING
 // ==========================================
 
-let _llmEventSource = null; // referencia global para poder cancelar
+// Dos fases: 1) stats instantáneo, 2) LLM completo en fetch normal
+let _llmEventSource = null;
 
 function generateLLMNvidia() {
     const sector  = document.getElementById('llm-sector-filter')?.value ?? 'general';
@@ -2485,7 +2481,7 @@ function generateLLMNvidia() {
     if (zonasProg) zonasProg.innerHTML = '';
 
     // Construir URL SSE
-    const base = apiUrl('llm_nvidia_stream', { sector });
+    const base = apiUrl('llm_nvidia_stream', { params: { sector } });
     const es = new EventSource(base, { withCredentials: true });
     _llmEventSource = es;
 
@@ -2586,8 +2582,8 @@ function renderLLMNvidia(payload) {
     setText('llm-prob-neutral',    (probs.Neutral    ?? '--') + '%');
     setText('llm-prob-rechazo',    (probs.Rechazo    ?? '--') + '%');
 
-    // Donut de sentimiento LLM
-    renderLLMSentimientoDonut(payload.sentimiento_global || probs, 'llm-radar-chart');
+    // Actualizar donut de stats con datos del LLM
+    renderLLMSentimientoDonut(payload.sentimiento_global || probs, 'llm-donut-stats');
 
     // Factores de importancia
     const factoresBox = document.getElementById('llm-factores');
@@ -2754,7 +2750,12 @@ function renderLLMAnalissiZonas(zonas) {
 function renderLLMRadarChart(dimensiones) {
     const ctx = document.getElementById('llm-radar-chart');
     if (!ctx || typeof Chart === 'undefined') return;
+    // Destruir cualquier chart previo en este canvas (donut o radar)
     destroyChart('llm-radar');
+    destroyChart('llm-donut-llm-radar-chart');
+    // También destruir via Chart.js por si quedó referencia huérfana
+    const existingChart = Chart.getChart(ctx);
+    if (existingChart) existingChart.destroy();
 
     const labels      = dimensiones.map(d => truncate(d.titulo, 22));
     const dataFavor   = dimensiones.map(d => Math.max(0, (( d.sentimiento?.indice ?? 0) + 100) / 2));

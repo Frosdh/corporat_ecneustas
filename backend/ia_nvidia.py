@@ -528,6 +528,8 @@ def extract_json(text):
 
 
 def main():
+    stats_only = '--stats-only' in sys.argv
+
     try:
         raw = sys.stdin.read()
         if not raw.strip():
@@ -561,6 +563,10 @@ def main():
         return
 
     emit({"type": "stats", "stats": stats})
+
+    # Si solo se pidieron estadísticas locales, terminar aquí
+    if stats_only:
+        return
 
     mode = "(openai+streaming+reasoning)" if HAS_OPENAI else "(urllib)"
     emit({"type": "progress",

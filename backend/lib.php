@@ -3407,6 +3407,62 @@ function get_plan_gemini(string $sector = 'general'): array
 /**
  * Detecta el comando Python disponible en el servidor.
  */
+
+/**
+ * Fase 1: estadísticas locales instantáneas vía Python (sin llamada a NVIDIA).
+ * Llama al mismo ia_nvidia.py pero con flag --stats-only para que salga
+ * después de emitir el evento "stats" y antes de llamar al LLM.
+ */
+function get_llm_stats_only(string $sector = 'general'): array
+{
+    set_time_limit(60);
+
+    $stmt = db()->prepare("SELECT * FROM surveys WHERE ? = 'general' OR sector = ?");
+    $stmt->execute([$sector, $sector]);
+    $surveys = $stmt->fetchAll();
+
+    if (empty($surveys)) {
+        return ['ok' => false, 'error' => 'No hay encuestas para analizar.'];
+    }
+
+    $inputData  = json_encode($surveys, JSON_UNESCAPED_UNICODE);
+    $scriptPath = __DIR__ . '/ia_nvidia.py';
+    $pythonCmd  = get_python_cmd();
+
+    $descriptorspec = [0 => ["pipe","r"], 1 => ["pipe","w"], 2 => ["pipe","w"]];
+    $process = proc_open("$pythonCmd "$scriptPath" --stats-only", $descriptorspec, $pipes);
+
+    if (!is_resource($process)) {
+        return ['ok' => false, 'error' => 'No se pudo ejecutar Python.'];
+    }
+
+    fwrite($pipes[0], $inputData);
+    fclose($pipes[0]);
+
+    $stdout = stream_get_contents($pipes[1]);
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+    proc_close($process);
+
+    foreach (explode("\n", trim($stdout)) as $line) {
+        $line = trim($line);
+        if (!$line) continue;
+        $obj = json_decode($line, true);
+        if (!is_array($obj)) continue;
+        if (($obj['type'] ?? '') === 'stats') {
+            $stats = $obj['stats'] ?? [];
+            $stats['ok']             = true;
+            $stats['total_encuestas']= count($surveys);
+            $stats['motor']          = 'Estadistico Local';
+            return $stats;
+        }
+        if (($obj['type'] ?? '') === 'error') {
+            return ['ok' => false, 'error' => $obj['error'] ?? 'Error desconocido.'];
+        }
+    }
+    return ['ok' => false, 'error' => 'Sin respuesta del script.'];
+}
+
 function get_python_cmd(): string {
     foreach (['python3', 'python', '/usr/bin/python3', '/usr/local/bin/python3'] as $cmd) {
         $out = shell_exec("$cmd --version 2>&1");
@@ -3566,11 +3622,10 @@ function stream_llm_nvidia(string $sector = 'general'): void
         } elseif (feof($pipes[1])) {
             break;
         } else {
-            usleep(50000); // 50ms
+            usleep(30000);
         }
     }
 
-    // Procesar buffer restante
     if ($buffer !== '') {
         $obj = json_decode(trim($buffer), true);
         if (is_array($obj)) {

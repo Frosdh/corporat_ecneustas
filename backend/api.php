@@ -9,6 +9,44 @@ header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 $action = $_GET['action'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
+// ── SSE streaming: manejado ANTES del try/switch para que exceptions
+//    no llamen a respond() (JSON) despues de headers SSE ya enviados ─────────
+if ($action === 'llm_nvidia_stream') {
+    while (ob_get_level()) ob_end_clean();
+    header('Content-Type: text/event-stream; charset=utf-8');
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    header('X-Accel-Buffering: no');
+    header('Connection: keep-alive');
+
+    if (!current_user()) {
+        echo "data: " . json_encode([
+            'type'  => 'error',
+            'error' => 'Sesion expirada. Por favor recargue la pagina e inicie sesion nuevamente.'
+        ]) . "\n\n";
+        flush();
+        exit;
+    }
+    if (!user_can_access_dashboard()) {
+        echo "data: " . json_encode([
+            'type'  => 'error',
+            'error' => 'No tienes acceso al dashboard de analisis.'
+        ]) . "\n\n";
+        flush();
+        exit;
+    }
+    try {
+        stream_llm_nvidia($_GET['sector'] ?? 'general');
+    } catch (Throwable $e) {
+        echo "data: " . json_encode([
+            'type'  => 'error',
+            'error' => 'Error interno: ' . $e->getMessage()
+        ]) . "\n\n";
+        flush();
+    }
+    exit;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 try {
     switch ($action) {
         case 'login':
@@ -185,16 +223,15 @@ try {
             }
             respond(get_llm_nvidia($_GET['sector'] ?? 'general'));
 
-        case 'llm_nvidia_stream':
+        case 'llm_stats':
+            // Fase 1: Solo estadísticas locales (instantáneo, sin LLM)
             require_auth();
             if (!user_can_access_dashboard()) {
-                http_response_code(403);
-                header('Content-Type: text/event-stream');
-                echo "data: " . json_encode(['type' => 'error', 'error' => 'No tienes acceso.']) . "\n\n";
-                exit;
+                respond(['ok' => false, 'message' => 'No tienes acceso.'], 403);
             }
-            stream_llm_nvidia($_GET['sector'] ?? 'general');
-            exit;
+            respond(get_llm_stats_only($_GET['sector'] ?? 'general'));
+
+        // llm_nvidia_stream is handled before the try/switch above
 
         case 'surveys':
             require_admin();
