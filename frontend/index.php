@@ -889,96 +889,152 @@ header('Expires: 0');
 
             <section id="tab-llm" class="tab-panel hidden">
                 <div class="section-title">
-                    <h3>Integración LLM (NVIDIA Nemotron-3-Super-120B)</h3>
-                    <p>Análisis avanzado, extracción de sentimientos y plan estratégico impulsado por inteligencia artificial.</p>
+                    <h3>An&aacute;lisis IA &mdash; NVIDIA Nemotron-3-Super-120B</h3>
+                    <p>Razonamiento profundo, sentimientos y plan estrat&eacute;gico impulsado exclusivamente por la IA de NVIDIA.</p>
                 </div>
 
+                <!-- Filtro y boton -->
                 <div class="card filter-panel">
                     <div class="form-grid">
                         <div>
-                            <label class="field-label" for="llm-sector-filter">Sector a analizar</label>
+                            <label class="field-label" for="llm-sector-filter">Zona a analizar</label>
                             <select id="llm-sector-filter">
-                                <option value="general">Todo San Bartolomé</option>
+                                <option value="general">Todo San Bartolom&eacute;</option>
                             </select>
                         </div>
                     </div>
-                    <div class="inline-actions">
-                        <button id="llm-generate-btn" class="primary-button" type="button">Generar Análisis con NVIDIA LLM</button>
+                    <div class="inline-actions" style="gap:12px;flex-wrap:wrap;">
+                        <button id="llm-generate-btn" class="primary-button" type="button">&#9889; Generar An&aacute;lisis con NVIDIA LLM</button>
                     </div>
                 </div>
 
+                <!-- Loading -->
                 <div id="llm-loading" class="hidden">
                     <div class="ia-loading">
                         <span class="ia-spinner"></span>
-                        <div style="margin-top: 10px;">
-                            <strong>Conectando con NVIDIA API...</strong><br>
-                            <small>Nemotron-3-Super-120B está leyendo las encuestas, razonando y generando el análisis. Esto puede tardar unos segundos.</small>
+                        <div style="margin-top:12px;text-align:center;">
+                            <strong id="llm-progress-msg">Iniciando NVIDIA Nemotron...</strong><br>
+                            <small style="color:var(--text-muted);">Las estad&iacute;sticas de todas las zonas se cargar&aacute;n mientras la IA razona.</small>
+                            <div id="llm-zonas-progress" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;"></div>
                         </div>
                     </div>
                 </div>
 
+                <!-- Error -->
                 <div id="llm-error" class="hidden ia-error"></div>
 
+                <!-- Resultados -->
                 <div id="llm-results" class="hidden">
-                    <!-- Resumen -->
-                    <div class="card">
-                        <h4>Resumen Ejecutivo</h4>
-                        <p id="llm-resumen" style="font-size: 1.1rem; color: var(--text-color);"></p>
-                        
-                        <div style="margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                            <div class="mini-kpi">
-                                <span>Predicción Global</span>
-                                <strong id="llm-prediccion">--</strong>
+
+                    <!-- Badge motor -->
+                    <div style="text-align:right;margin-bottom:8px;">
+                        <span id="llm-motor-badge" style="background:#1e3a5f;color:#60a5fa;padding:4px 14px;border-radius:20px;font-size:0.8rem;font-weight:600;"></span>
+                    </div>
+
+                    <!-- KPIs globales -->
+                    <div class="card" style="margin-bottom:18px;">
+                        <h4>Resumen Ejecutivo NVIDIA</h4>
+                        <p id="llm-resumen" style="font-size:1.05rem;color:var(--text-color);line-height:1.7;"></p>
+                        <div style="margin-top:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+                            <div class="mini-kpi"><span>Predicci&oacute;n Global</span><strong id="llm-prediccion">--</strong></div>
+                            <div class="mini-kpi" style="border-left:4px solid #22c55e;"><span>Aceptaci&oacute;n</span><strong id="llm-prob-aceptacion">--%</strong></div>
+                            <div class="mini-kpi" style="border-left:4px solid #f59e0b;"><span>Neutral</span><strong id="llm-prob-neutral">--%</strong></div>
+                            <div class="mini-kpi" style="border-left:4px solid #ef4444;"><span>Rechazo</span><strong id="llm-prob-rechazo">--%</strong></div>
+                        </div>
+                    </div>
+
+                    <!-- Gr&aacute;ficas globales: Donut + Zonas barras -->
+                    <div class="form-grid" style="margin-bottom:18px;">
+                        <div class="card">
+                            <h4 style="text-align:center;">Sentimiento Global</h4>
+                            <div style="position:relative;height:260px;display:flex;justify-content:center;">
+                                <canvas id="llm-donut-stats"></canvas>
                             </div>
-                            <div class="mini-kpi" style="border-left: 4px solid #0f9f6e;">
-                                <span>Aceptación</span>
-                                <strong id="llm-prob-aceptacion">--%</strong>
-                            </div>
-                            <div class="mini-kpi" style="border-left: 4px solid #d97706;">
-                                <span>Neutral</span>
-                                <strong id="llm-prob-neutral">--%</strong>
-                            </div>
-                            <div class="mini-kpi" style="border-left: 4px solid #c43d45;">
-                                <span>Rechazo</span>
-                                <strong id="llm-prob-rechazo">--%</strong>
+                        </div>
+                        <div class="card">
+                            <h4 style="text-align:center;">Distribuci&oacute;n por Zona</h4>
+                            <div style="position:relative;height:260px;">
+                                <canvas id="llm-zonas-chart"></canvas>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Factores y Recomendaciones -->
-                    <div class="form-grid" style="margin-top: 20px;">
+                    <!-- Caja de razonamiento -->
+                    <div id="llm-thinking-box" class="hidden" style="background:#0f172a;border:1px solid #1e3a5f;border-radius:8px;padding:14px;margin-bottom:18px;max-height:200px;overflow-y:auto;font-size:0.78rem;color:#94a3b8;font-family:monospace;white-space:pre-wrap;line-height:1.6;">
+                    </div>
+
+                    <!-- Dimensiones estad&iacute;sticas (pre-LLM) -->
+                    <div style="margin-bottom:18px;">
+                        <h3 style="margin-bottom:12px;">Sentimientos por Dimensi&oacute;n &mdash; <small style="color:var(--text-muted);font-size:0.85rem;">Calculado localmente antes de la IA</small></h3>
+                        <div id="llm-stats-dimensiones-grid" class="analisis-grid"></div>
+                    </div>
+
+                    <!-- Factores + Recomendaciones -->
+                    <div class="form-grid" style="margin-bottom:18px;">
                         <div class="card">
-                            <h4>Principales Factores Detectados</h4>
-                            <ul id="llm-factores" style="padding-left: 20px; color: var(--text-muted); line-height: 1.6;"></ul>
+                            <h4>Factores Cr&iacute;ticos Identificados por la IA</h4>
+                            <ul id="llm-factores" style="list-style:none;padding:0;margin-top:10px;"></ul>
                         </div>
                         <div class="card">
-                            <h4>Recomendaciones IA</h4>
-                            <ul id="llm-recomendaciones" style="padding-left: 20px; color: var(--text-muted); line-height: 1.6;"></ul>
+                            <h4>Recomendaciones NVIDIA LLM</h4>
+                            <ul id="llm-recomendaciones" style="padding-left:18px;color:var(--text-muted);line-height:1.7;"></ul>
                         </div>
                     </div>
 
-                    <!-- Graficas / Dimensiones -->
-                    <div style="margin-top: 20px;">
-                        <div class="card" style="margin-bottom: 20px;">
-                            <h4 style="text-align: center;">Vista Radar – Comparativa por Dimensión</h4>
-                            <div style="position: relative; height: 350px; width: 100%; display: flex; justify-content: center;">
-                                <canvas id="llm-radar-chart"></canvas>
-                            </div>
-                        </div>
+                    <!-- An&aacute;lisis por zona (LLM) -->
+                    <div class="card" style="margin-bottom:18px;">
+                        <h4>An&aacute;lisis por Zona &mdash; <small style="color:#60a5fa;font-size:0.82rem;">Generado por NVIDIA LLM</small></h4>
+                        <div id="llm-zonas-llm-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:12px;"></div>
+                    </div>
 
-                        <h3>Análisis Detallado por Dimensión</h3>
+                    <!-- Radar + Dimensiones LLM -->
+                    <div class="card" style="margin-bottom:18px;">
+                        <h4 style="text-align:center;">Radar de Favorabilidad por Dimensi&oacute;n</h4>
+                        <div style="position:relative;height:360px;display:flex;justify-content:center;">
+                            <canvas id="llm-radar-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom:18px;">
+                        <h3 style="margin-bottom:12px;">An&aacute;lisis Detallado por Dimensi&oacute;n &mdash; <small style="color:#60a5fa;font-size:0.82rem;">NVIDIA Nemotron LLM</small></h3>
                         <div id="llm-dimensiones-grid" class="analisis-grid"></div>
                     </div>
 
-                    <!-- Plan Estrategico -->
-                    <div class="card" style="margin-top: 20px; border-top: 4px solid #0e4eb0;">
-                        <h3 id="llm-plan-titulo" style="color: #0e4eb0; margin-bottom: 10px;">Plan Estratégico</h3>
-                        <p id="llm-plan-diagnostico" style="margin-bottom: 20px;"></p>
-                        
+                    <!-- Plan estrat&eacute;gico -->
+                    <div class="card" style="margin-top:20px;border-top:4px solid #3b82f6;">
+                        <h3 id="llm-plan-titulo" style="color:#3b82f6;margin-bottom:10px;">Plan Estrat&eacute;gico</h3>
+                        <p id="llm-plan-diagnostico" style="margin-bottom:20px;line-height:1.7;"></p>
+
+                        <!-- Fases -->
+                        <h4 style="margin-bottom:10px;">Fases de Implementaci&oacute;n</h4>
+                        <div id="llm-plan-fases" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-bottom:20px;"></div>
+
+                        <!-- Indicadores -->
+                        <h4 style="margin-bottom:10px;">Indicadores de Seguimiento</h4>
+                        <div style="overflow-x:auto;margin-bottom:20px;">
+                            <table style="width:100%;border-collapse:collapse;font-size:0.88rem;">
+                                <thead>
+                                    <tr style="border-bottom:1px solid rgba(255,255,255,0.15);color:var(--text-muted);">
+                                        <th style="padding:8px 10px;text-align:left;">Indicador</th>
+                                        <th style="padding:8px 10px;text-align:left;">Meta</th>
+                                        <th style="padding:8px 10px;text-align:left;">Plazo</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="llm-plan-indicadores"></tbody>
+                            </table>
+                        </div>
+
                         <h4>Acciones Finales</h4>
-                        <ul id="llm-plan-acciones" style="padding-left: 20px; color: var(--text-muted); line-height: 1.6;"></ul>
+                        <ul id="llm-plan-acciones" style="padding-left:20px;color:var(--text-muted);line-height:1.8;"></ul>
                     </div>
-                </div>
+
+                    <!-- Conclusi&oacute;n -->
+                    <div class="card" style="margin-top:18px;border-left:4px solid #22c55e;background:rgba(34,197,94,0.05);">
+                        <h4>&#128161; Conclusi&oacute;n NVIDIA</h4>
+                        <p id="llm-conclusion" style="line-height:1.7;"></p>
+                    </div>
+
+                </div><!-- /llm-results -->
             </section>
 
             <section id="tab-offline" class="tab-panel hidden">

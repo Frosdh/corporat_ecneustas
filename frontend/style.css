@@ -2515,3 +2515,61 @@ fieldset {
 .kb-num { background: #3730a3; color: #fff; border-radius: 50%; width: 20px; height: 20px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800; margin-top: 1px; }
 .kb-titulo { color: #1e1b4b; }
 .kb-paper em { color: #6366f1; font-style: italic; }
+
+/* ── NVIDIA LLM Section ─────────────────────────────────────────────────────── */
+.llm-zona-badge {
+    display: inline-block;
+    background: rgba(59,130,246,0.15);
+    color: #93c5fd;
+    border: 1px solid rgba(59,130,246,0.35);
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.llm-fase-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 14px 16px;
+}
+.llm-fase-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.llm-fase-periodo {
+    background: #1e3a5f;
+    color: #60a5fa;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+}
+.llm-fase-acciones {
+    padding-left: 18px;
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.87rem;
+    line-height: 1.7;
+}
+
+.llm-zona-card {
+    background: rgba(255,255,255,0.04);
+    border-radius: 10px;
+    padding: 14px 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+#llm-thinking-box {
+    transition: opacity 0.3s;
+}
+
+/* Progress message */
+#llm-progress-msg {
+    font-size: 0.92rem;
+    color: #93c5fd;
+}

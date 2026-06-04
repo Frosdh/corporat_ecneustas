@@ -2458,143 +2458,358 @@ function renderDonutGlobal(sent) {
 }
 
 // ==========================================
-// NVIDIA NEMOTRON LLM
+// NVIDIA NEMOTRON LLM — SSE STREAMING
 // ==========================================
-async function generateLLMNvidia() {
-    const sector = document.getElementById('llm-sector-filter')?.value ?? 'general';
-    const btn = document.getElementById('llm-generate-btn');
+
+let _llmEventSource = null; // referencia global para poder cancelar
+
+function generateLLMNvidia() {
+    const sector  = document.getElementById('llm-sector-filter')?.value ?? 'general';
+    const btn     = document.getElementById('llm-generate-btn');
     const loading = document.getElementById('llm-loading');
-    const errBox = document.getElementById('llm-error');
+    const errBox  = document.getElementById('llm-error');
     const results = document.getElementById('llm-results');
+    const thinking= document.getElementById('llm-thinking-box');
+    const progBox = document.getElementById('llm-progress-msg');
+    const zonasProg = document.getElementById('llm-zonas-progress');
+
+    // Cancelar si hay una solicitud en curso
+    if (_llmEventSource) { _llmEventSource.close(); _llmEventSource = null; }
 
     if (btn) btn.disabled = true;
     if (loading) loading.classList.remove('hidden');
     if (errBox) errBox.classList.add('hidden');
     if (results) results.classList.add('hidden');
+    if (thinking) { thinking.classList.add('hidden'); thinking.textContent = ''; }
+    if (progBox) progBox.textContent = 'Iniciando análisis NVIDIA...';
+    if (zonasProg) zonasProg.innerHTML = '';
 
-    try {
-        const payload = await requestJson('llm_nvidia', { params: { sector } });
-        
-        if (!payload || !payload.ok) {
-            throw new Error(payload?.error || 'Error desconocido de la API.');
+    // Construir URL SSE
+    const base = apiUrl('llm_nvidia_stream', { sector });
+    const es = new EventSource(base, { withCredentials: true });
+    _llmEventSource = es;
+
+    es.onmessage = function(e) {
+        let obj;
+        try { obj = JSON.parse(e.data); } catch(_) { return; }
+
+        switch (obj.type) {
+            case 'progress':
+                if (progBox) progBox.textContent = obj.mensaje || '';
+                if (zonasProg && obj.zonas && obj.zonas.length > 0) {
+                    zonasProg.innerHTML = obj.zonas.map(z =>
+                        `<span class="llm-zona-badge">${escapeHtml(z)}</span>`
+                    ).join('');
+                }
+                break;
+
+            case 'stats':
+                // Mostrar estadísticas locales inmediatamente mientras el LLM razona
+                if (obj.stats) renderLLMStats(obj.stats);
+                if (results) results.classList.remove('hidden');
+                break;
+
+            case 'thinking':
+                if (thinking) {
+                    thinking.classList.remove('hidden');
+                    thinking.textContent += obj.text;
+                    thinking.scrollTop = thinking.scrollHeight;
+                }
+                if (progBox) progBox.textContent = 'NVIDIA Nemotron razonando...';
+                break;
+
+            case 'result':
+                es.close(); _llmEventSource = null;
+                renderLLMNvidia(obj);
+                if (results) results.classList.remove('hidden');
+                if (btn) btn.disabled = false;
+                if (loading) loading.classList.add('hidden');
+                if (progBox) progBox.textContent = 'Análisis completado con NVIDIA Nemotron-3-Super-120B';
+                break;
+
+            case 'error':
+                es.close(); _llmEventSource = null;
+                if (errBox) {
+                    errBox.textContent = 'Error NVIDIA: ' + (obj.error || 'Error desconocido');
+                    errBox.classList.remove('hidden');
+                }
+                if (btn) btn.disabled = false;
+                if (loading) loading.classList.add('hidden');
+                break;
         }
+    };
 
-        renderLLMNvidia(payload);
-        if (results) results.classList.remove('hidden');
-
-    } catch (error) {
+    es.onerror = function() {
+        // Si ya cerramos intencionalmente, ignorar
+        if (!_llmEventSource) return;
+        es.close(); _llmEventSource = null;
         if (errBox) {
-            errBox.textContent = 'Error: ' + error.message;
+            errBox.textContent = 'Error de conexión con el servidor. Verifique su sesión e inténtelo de nuevo.';
             errBox.classList.remove('hidden');
         }
-    } finally {
         if (btn) btn.disabled = false;
         if (loading) loading.classList.add('hidden');
+    };
+}
+
+/** Muestra estadísticas locales calculadas por Python ANTES de que el LLM responda */
+function renderLLMStats(stats) {
+    // Probabilidades globales estadísticas
+    const probs = stats.probabilidades_globales || {};
+    setText('llm-prob-aceptacion', (probs.Aceptacion ?? '--') + '%');
+    setText('llm-prob-neutral',    (probs.Neutral    ?? '--') + '%');
+    setText('llm-prob-rechazo',    (probs.Rechazo    ?? '--') + '%');
+    setText('llm-prediccion', stats.prediccion_global || '--');
+
+    // Gráfica donut sentimiento global estadístico
+    renderLLMSentimientoDonut(stats.sentimiento_global || probs, 'llm-donut-stats');
+
+    // Gráfica barras por sector
+    renderLLMZonasChart(stats.sectores_detalle || []);
+
+    // Dimensiones estadísticas previas
+    if (stats.sentimientos_dimensiones && stats.sentimientos_dimensiones.length > 0) {
+        renderLLMDimensiones(stats.sentimientos_dimensiones, 'llm-stats-dimensiones-grid', 'llm-stats-dim-');
     }
 }
 
 function renderLLMNvidia(payload) {
-    // Resumen
-    setText('llm-resumen', payload.resumen_ejecutivo);
-    setText('llm-prediccion', payload.prediccion_global);
+    // Motor y resumen
+    const motor = payload.motor || 'NVIDIA Nemotron-3-Super-120B';
+    setText('llm-motor-badge', motor);
+    setText('llm-resumen', payload.resumen_ejecutivo || '');
+    setText('llm-conclusion', payload.conclusion || '');
+    setText('llm-prediccion', payload.prediccion_global || '--');
 
     const probs = payload.probabilidades_globales || {};
     setText('llm-prob-aceptacion', (probs.Aceptacion ?? '--') + '%');
-    setText('llm-prob-neutral', (probs.Neutral ?? '--') + '%');
-    setText('llm-prob-rechazo', (probs.Rechazo ?? '--') + '%');
+    setText('llm-prob-neutral',    (probs.Neutral    ?? '--') + '%');
+    setText('llm-prob-rechazo',    (probs.Rechazo    ?? '--') + '%');
 
-    // Factores
+    // Donut de sentimiento LLM
+    renderLLMSentimientoDonut(payload.sentimiento_global || probs, 'llm-radar-chart');
+
+    // Factores de importancia
     const factoresBox = document.getElementById('llm-factores');
     if (factoresBox) {
         const facts = payload.importancia_factores || [];
-        factoresBox.innerHTML = facts.map(f => `<li><strong>${escapeHtml(f.factor)}:</strong> ${f.score_pct}% de peso predictivo</li>`).join('');
+        factoresBox.innerHTML = facts.map((f, i) => `
+            <li style="margin-bottom:6px;">
+                <strong>${escapeHtml(f.factor)}</strong>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:2px;">
+                    <div style="flex:1;background:rgba(255,255,255,0.1);border-radius:4px;height:8px;">
+                        <div style="width:${f.score_pct}%;background:${i===0?'#22c55e':i===1?'#3b82f6':'#f59e0b'};height:8px;border-radius:4px;transition:width 0.8s;"></div>
+                    </div>
+                    <span style="color:var(--text-muted);font-size:0.82rem;min-width:40px;">${f.score_pct}%</span>
+                </div>
+            </li>`).join('');
     }
 
     // Recomendaciones
     const recsBox = document.getElementById('llm-recomendaciones');
     if (recsBox) {
         const recs = payload.recomendaciones_ia || [];
-        recsBox.innerHTML = recs.map(r => `<li>${escapeHtml(r)}</li>`).join('');
+        recsBox.innerHTML = recs.map(r =>
+            `<li style="margin-bottom:8px;padding-left:4px;border-left:3px solid #3b82f6;">${escapeHtml(r)}</li>`
+        ).join('');
     }
 
-    // Plan
+    // Análisis por zona (LLM)
+    renderLLMAnalissiZonas(payload.analisis_por_zona || payload.stats_locales?.sectores_detalle || []);
+
+    // Dimensiones con gráficas
+    if (payload.dimensiones && payload.dimensiones.length > 0) {
+        renderLLMDimensiones(payload.dimensiones, 'llm-dimensiones-grid', 'llm-dim-');
+        renderLLMRadarChart(payload.dimensiones);
+    }
+
+    // Plan estratégico
     const plan = payload.plan_estrategico || {};
     setText('llm-plan-titulo', plan.titulo || 'Plan Estratégico');
     setText('llm-plan-diagnostico', plan.diagnostico_contextual || '');
+
+    // Fases del plan
+    const fasesBox = document.getElementById('llm-plan-fases');
+    if (fasesBox && plan.fases && plan.fases.length > 0) {
+        fasesBox.innerHTML = plan.fases.map(f => `
+            <div class="llm-fase-card">
+                <div class="llm-fase-header">
+                    <strong>${escapeHtml(f.fase)}</strong>
+                    <span class="llm-fase-periodo">${escapeHtml(f.periodo)}</span>
+                </div>
+                <ul class="llm-fase-acciones">
+                    ${(f.acciones || []).map(a => `<li>${escapeHtml(a)}</li>`).join('')}
+                </ul>
+            </div>`).join('');
+    }
+
+    // Indicadores del plan
+    const indBox = document.getElementById('llm-plan-indicadores');
+    if (indBox && plan.indicadores && plan.indicadores.length > 0) {
+        indBox.innerHTML = plan.indicadores.map(ind => `
+            <tr>
+                <td>${escapeHtml(ind.nombre)}</td>
+                <td style="color:#22c55e;font-weight:600;">${escapeHtml(ind.meta)}</td>
+                <td style="color:var(--text-muted);">${escapeHtml(ind.plazo)}</td>
+            </tr>`).join('');
+    }
 
     const accionesBox = document.getElementById('llm-plan-acciones');
     if (accionesBox) {
         const acciones = plan.recomendaciones_finales || [];
         accionesBox.innerHTML = acciones.map(a => `<li>${escapeHtml(a)}</li>`).join('');
     }
+}
 
-    // Graficas de sentimientos (Dimensiones y Radar)
-    if (payload.dimensiones && payload.dimensiones.length > 0) {
-        renderLLMDimensiones(payload.dimensiones);
-        renderLLMRadarChart(payload.dimensiones);
-    }
+/** Donut de sentimiento (positivo/neutro/negativo) */
+function renderLLMSentimientoDonut(sentData, canvasId) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx || typeof Chart === 'undefined') return;
+    destroyChart('llm-donut-' + canvasId);
+
+    const pos = sentData.positivo_pct ?? sentData.Aceptacion ?? 0;
+    const neu = sentData.neutro_pct   ?? sentData.Neutral    ?? 0;
+    const neg = sentData.negativo_pct ?? sentData.Rechazo    ?? 0;
+
+    analisisState.charts['llm-donut-' + canvasId] = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Positivo / Aceptación', 'Neutro', 'Negativo / Rechazo'],
+            datasets: [{
+                data: [pos, neu, neg],
+                backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'],
+                borderColor: 'rgba(0,0,0,0.2)',
+                borderWidth: 2,
+            }],
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, cutout: '60%',
+            plugins: {
+                legend: { position: 'bottom', labels: { color: 'rgba(255,255,255,0.8)', font: {size:11} } },
+                tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed.toFixed(1)}%` } },
+            },
+            animation: { duration: 800 },
+        },
+    });
+}
+
+/** Gráfica de barras por zona (estadístico) */
+function renderLLMZonasChart(sectores) {
+    const ctx = document.getElementById('llm-zonas-chart');
+    if (!ctx || !sectores.length || typeof Chart === 'undefined') return;
+    destroyChart('llm-zonas');
+
+    const labels = sectores.map(s => truncate(s.sector, 18));
+    analisisState.charts['llm-zonas'] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                { label: 'Aceptación %', data: sectores.map(s => s.aceptacion_pct), backgroundColor: '#22c55e', borderRadius: 4 },
+                { label: 'Neutral %',    data: sectores.map(s => s.neutral_pct),    backgroundColor: '#f59e0b', borderRadius: 4 },
+                { label: 'Rechazo %',    data: sectores.map(s => s.rechazo_pct),    backgroundColor: '#ef4444', borderRadius: 4 },
+            ],
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: {
+                x: { stacked: true, grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.7)', font: {size:10} } },
+                y: { stacked: true, max: 100, ticks: { color: 'rgba(255,255,255,0.7)' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+            },
+            plugins: {
+                legend: { position: 'bottom', labels: { color: 'rgba(255,255,255,0.8)' } },
+                tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.y}%` } },
+            },
+            animation: { duration: 700 },
+        },
+    });
+}
+
+/** Análisis por zona generado por el LLM */
+function renderLLMAnalissiZonas(zonas) {
+    const box = document.getElementById('llm-zonas-llm-grid');
+    if (!box) return;
+    if (!zonas || !zonas.length) { box.innerHTML = ''; return; }
+
+    box.innerHTML = zonas.map(z => {
+        const pred = z.prediccion || (z.aceptacion_pct >= z.rechazo_pct ? 'Aceptacion' : 'Rechazo');
+        const color = pred === 'Aceptacion' ? '#22c55e' : pred === 'Rechazo' ? '#ef4444' : '#f59e0b';
+        return `
+        <div class="llm-zona-card" style="border-left:4px solid ${color};">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <strong style="font-size:1rem;">${escapeHtml(z.zona || z.sector || '')}</strong>
+                <span style="background:${color};color:#fff;padding:2px 10px;border-radius:12px;font-size:0.8rem;font-weight:600;">${escapeHtml(pred)}</span>
+            </div>
+            <div style="display:flex;gap:12px;font-size:0.82rem;color:var(--text-muted);margin-bottom:6px;">
+                <span>✓ ${z.aceptacion_pct ?? 0}%</span>
+                <span>~ ${z.neutral_pct ?? 0}%</span>
+                <span>✗ ${z.rechazo_pct ?? 0}%</span>
+                <span style="margin-left:auto;">${z.n ?? ''} encuestas</span>
+            </div>
+            ${z.hallazgo_clave ? `<p style="font-size:0.85rem;color:var(--text-color);margin:0;line-height:1.5;">${escapeHtml(z.hallazgo_clave)}</p>` : ''}
+        </div>`;
+    }).join('');
 }
 
 function renderLLMRadarChart(dimensiones) {
     const ctx = document.getElementById('llm-radar-chart');
     if (!ctx || typeof Chart === 'undefined') return;
+    destroyChart('llm-radar');
 
-    if (analisisState.charts['llm-radar']) {
-        analisisState.charts['llm-radar'].destroy();
-    }
-
-    const labels = dimensiones.map(d => truncate(d.titulo, 25));
-    // Normalizar el indice de -100 a 100 hacia 0 a 100 para el radar
-    const dataPositiva = dimensiones.map(d => (d.sentimiento.indice + 100) / 2);
+    const labels      = dimensiones.map(d => truncate(d.titulo, 22));
+    const dataFavor   = dimensiones.map(d => Math.max(0, (( d.sentimiento?.indice ?? 0) + 100) / 2));
 
     analisisState.charts['llm-radar'] = new Chart(ctx, {
         type: 'radar',
         data: {
-            labels: labels,
+            labels,
             datasets: [{
-                label: 'Índice de Favorabilidad',
-                data: dataPositiva,
-                backgroundColor: 'rgba(14, 78, 176, 0.2)',
-                borderColor: 'rgba(14, 78, 176, 1)',
-                pointBackgroundColor: 'rgba(14, 78, 176, 1)',
+                label: 'Índice de Favorabilidad (0-100)',
+                data: dataFavor,
+                backgroundColor: 'rgba(14, 78, 176, 0.25)',
+                borderColor: 'rgba(59, 130, 246, 1)',
+                pointBackgroundColor: 'rgba(59, 130, 246, 1)',
                 pointBorderColor: '#fff',
                 pointHoverBackgroundColor: '#fff',
-                pointHoverBorderColor: 'rgba(14, 78, 176, 1)'
-            }]
+                pointHoverBorderColor: 'rgba(59, 130, 246, 1)',
+            }],
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
+            responsive: true, maintainAspectRatio: false,
             scales: {
                 r: {
-                    angleLines: { color: 'rgba(255, 255, 255, 0.2)' },
-                    grid: { color: 'rgba(255, 255, 255, 0.2)' },
-                    pointLabels: { color: 'rgba(255, 255, 255, 0.8)', font: { size: 12 } },
-                    ticks: { display: false, min: 0, max: 100 }
-                }
+                    min: 0, max: 100,
+                    angleLines: { color: 'rgba(255,255,255,0.15)' },
+                    grid:        { color: 'rgba(255,255,255,0.15)' },
+                    pointLabels: { color: 'rgba(255,255,255,0.85)', font: { size: 11 } },
+                    ticks:       { display: false },
+                },
             },
             plugins: {
                 legend: { position: 'bottom', labels: { color: 'rgba(255,255,255,0.8)' } },
-                tooltip: { callbacks: { label: (c) => ' Favorabilidad: ' + c.raw.toFixed(1) + '/100' } }
-            }
-        }
+                tooltip: { callbacks: { label: (c) => ' Favorabilidad: ' + c.raw.toFixed(1) + '/100' } },
+            },
+            animation: { duration: 700 },
+        },
     });
 }
 
-function renderLLMDimensiones(dimensiones) {
-    const grid = document.getElementById('llm-dimensiones-grid');
+function renderLLMDimensiones(dimensiones, gridId, chartPrefix) {
+    gridId      = gridId      || 'llm-dimensiones-grid';
+    chartPrefix = chartPrefix || 'llm-dim-';
+    const grid = document.getElementById(gridId);
     if (!grid) return;
 
-    // Destruir charts anteriores de dimensiones LLM
-    Object.keys(analisisState.charts).filter(k => k.startsWith('llm-dim-')).forEach(k => destroyChart(k));
+    // Destruir charts anteriores
+    Object.keys(analisisState.charts).filter(k => k.startsWith(chartPrefix)).forEach(k => destroyChart(k));
     grid.innerHTML = '';
 
     dimensiones.forEach((dim, idx) => {
-        const sent = dim.sentimiento || {indice: 0, positivo_pct: 0, neutro_pct: 0, negativo_pct: 0};
-        const items = (dim.distribucion && dim.distribucion.items ? dim.distribucion.items : []).slice(0, 7);
+        const sent = dim.sentimiento || { indice: 0, positivo_pct: 0, neutro_pct: 0, negativo_pct: 0 };
+        const items = ((dim.distribucion && dim.distribucion.items) ? dim.distribucion.items : []).slice(0, 7);
         const sentClass = sent.indice >= 15 ? 'sent-positive' : sent.indice <= -15 ? 'sent-negative' : 'sent-neutral';
         const sentLabel = sent.indice >= 15 ? 'Favorable' : sent.indice <= -15 ? 'Cr&iacute;tico' : 'Ambivalente';
-        const chartId = 'chart-llm-dim-' + idx;
+        const chartId   = 'chart-' + chartPrefix + idx;
 
         const card = document.createElement('div');
         card.className = 'card analisis-dim-card';
@@ -2607,47 +2822,44 @@ function renderLLMDimensiones(dimensiones) {
             </div>
             <div class="analisis-dim-meters">
                 <div class="analisis-sent-row">
-                    <span class="analisis-sent-label sent-pos-label">Positivo ${sent.positivo_pct}%</span>
+                    <span class="analisis-sent-label sent-pos-label">✔ Positivo&nbsp;${sent.positivo_pct}%</span>
                     <div class="analisis-sent-track"><div class="analisis-sent-fill sent-pos-fill" style="width:${sent.positivo_pct}%"></div></div>
                 </div>
                 <div class="analisis-sent-row">
-                    <span class="analisis-sent-label sent-neu-label">Neutro ${sent.neutro_pct}%</span>
+                    <span class="analisis-sent-label sent-neu-label">~ Neutro&nbsp;${sent.neutro_pct}%</span>
                     <div class="analisis-sent-track"><div class="analisis-sent-fill sent-neu-fill" style="width:${sent.neutro_pct}%"></div></div>
                 </div>
                 <div class="analisis-sent-row">
-                    <span class="analisis-sent-label sent-neg-label">Negativo ${sent.negativo_pct}%</span>
+                    <span class="analisis-sent-label sent-neg-label">✖ Negativo&nbsp;${sent.negativo_pct}%</span>
                     <div class="analisis-sent-track"><div class="analisis-sent-fill sent-neg-fill" style="width:${sent.negativo_pct}%"></div></div>
                 </div>
             </div>
-            <canvas id="${chartId}" height="150"></canvas>
-            <p class="analisis-interpretacion">${escapeHtml(dim.interpretacion || '')}</p>
+            ${items.length > 0 ? `<canvas id="${chartId}" height="130"></canvas>` : ''}
+            ${dim.interpretacion ? `<p class="analisis-interpretacion">${escapeHtml(dim.interpretacion)}</p>` : ''}
         `;
         grid.appendChild(card);
 
         if (items.length > 0 && typeof Chart !== 'undefined') {
             const chartCtx = document.getElementById(chartId);
             if (chartCtx) {
-                analisisState.charts['llm-dim-' + idx] = new Chart(chartCtx, {
+                analisisState.charts[chartPrefix + idx] = new Chart(chartCtx, {
                     type: 'bar',
                     data: {
-                        labels: items.map(it => truncate(it.label, 30)),
-                        datasets: [{
-                            data: items.map(it => it.pct),
+                        labels: items.map(it => truncate(it.label, 28)),
+                        datasets: [{ data: items.map(it => it.pct),
                             backgroundColor: items.map(it => sentColor(it.sentimiento)),
-                            borderRadius: 4,
-                        }],
+                            borderRadius: 4 }],
                     },
                     options: {
-                        indexAxis: 'y',
-                        responsive: true,
-                        maintainAspectRatio: false,
+                        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
                         scales: {
                             x: { max: 100, display: false },
-                            y: { grid: { display: false }, ticks: { font: { size: 10 }, color: 'rgba(255,255,255,0.7)' } }
+                            y: { grid: { display: false }, ticks: { font: { size: 10 }, color: 'rgba(255,255,255,0.7)' } },
                         },
-                        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => ' ' + c.parsed.x + '%' } } },
-                        animation: { duration: 600 }
-                    }
+                        plugins: { legend: { display: false },
+                            tooltip: { callbacks: { label: (c) => ' ' + c.parsed.x + '%' } } },
+                        animation: { duration: 500 },
+                    },
                 });
             }
         }

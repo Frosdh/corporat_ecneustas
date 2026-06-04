@@ -185,6 +185,17 @@ try {
             }
             respond(get_llm_nvidia($_GET['sector'] ?? 'general'));
 
+        case 'llm_nvidia_stream':
+            require_auth();
+            if (!user_can_access_dashboard()) {
+                http_response_code(403);
+                header('Content-Type: text/event-stream');
+                echo "data: " . json_encode(['type' => 'error', 'error' => 'No tienes acceso.']) . "\n\n";
+                exit;
+            }
+            stream_llm_nvidia($_GET['sector'] ?? 'general');
+            exit;
+
         case 'surveys':
             require_admin();
             respond(['ok' => true, 'surveys' => get_surveys($_GET)]);

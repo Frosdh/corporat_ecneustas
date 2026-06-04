@@ -2596,7 +2596,8 @@ function ia_minera_entrenar_y_analizar(string $sector = 'general'): array
         2 => ["pipe", "w"]  // stderr
     ];
     $jsonData = json_encode($rows, JSON_UNESCAPED_UNICODE);
-    $process = proc_open("python \"$scriptPath\"", $descriptorspec, $pipes);
+    $pythonCmdLocal = get_python_cmd();
+    $process = proc_open("$pythonCmdLocal \"$scriptPath\"", $descriptorspec, $pipes);
     if (is_resource($process)) {
         fwrite($pipes[0], $jsonData);
         fclose($pipes[0]);
@@ -3403,10 +3404,23 @@ function get_plan_gemini(string $sector = 'general'): array
 // ============================================================
 //  INTEGRACION NVIDIA NEMOTRON LLM
 // ============================================================
+/**
+ * Detecta el comando Python disponible en el servidor.
+ */
+function get_python_cmd(): string {
+    foreach (['python3', 'python', '/usr/bin/python3', '/usr/local/bin/python3'] as $cmd) {
+        $out = shell_exec("$cmd --version 2>&1");
+        if ($out && stripos($out, 'python') !== false) {
+            return $cmd;
+        }
+    }
+    return 'python3'; // fallback
+}
+
 function get_llm_nvidia(string $sector = 'general'): array
 {
-    // Aumentar el límite de tiempo a 3 minutos para permitir que la IA responda sin causar Gateway Timeout (504)
-    set_time_limit(180);
+    // Aumentar el límite de tiempo a 5 minutos para el LLM con reasoning
+    set_time_limit(300);
 
     $stmt = db()->prepare("SELECT * FROM surveys WHERE ? = 'general' OR sector = ?");
     $stmt->execute([$sector, $sector]);
@@ -3416,37 +3430,156 @@ function get_llm_nvidia(string $sector = 'general'): array
         return ['ok' => false, 'error' => 'No hay encuestas para analizar en este sector.'];
     }
 
-    $inputData = json_encode($surveys, JSON_UNESCAPED_UNICODE);
-    
+    $inputData  = json_encode($surveys, JSON_UNESCAPED_UNICODE);
     $scriptPath = __DIR__ . '/ia_nvidia.py';
+    $pythonCmd  = get_python_cmd();
+
     $descriptorspec = [
-        0 => ["pipe", "r"],  // stdin
-        1 => ["pipe", "w"],  // stdout
-        2 => ["pipe", "w"]   // stderr
+        0 => ["pipe", "r"],
+        1 => ["pipe", "w"],
+        2 => ["pipe", "w"],
     ];
 
-    $process = proc_open("python \"$scriptPath\"", $descriptorspec, $pipes);
+    $process = proc_open("$pythonCmd \"$scriptPath\"", $descriptorspec, $pipes);
 
-    if (is_resource($process)) {
-        fwrite($pipes[0], $inputData);
-        fclose($pipes[0]);
-
-        $output = stream_get_contents($pipes[1]);
-        fclose($pipes[1]);
-
-        $error = stream_get_contents($pipes[2]);
-        fclose($pipes[2]);
-
-        proc_close($process);
-
-        $result = json_decode($output, true);
-        if (json_last_error() === JSON_ERROR_NONE) {
-            $result['total_encuestas'] = count($surveys);
-            return $result;
-        }
-
-        return ['ok' => false, 'error' => "Error parseando JSON de Python. \nRaw: $output \nErr: $error"];
+    if (!is_resource($process)) {
+        return ['ok' => false, 'error' => 'No se pudo ejecutar el script de Python. Verifique que Python esté instalado.'];
     }
 
-    return ['ok' => false, 'error' => 'No se pudo ejecutar el script de Python.'];
+    fwrite($pipes[0], $inputData);
+    fclose($pipes[0]);
+
+    // Leer líneas NDJSON — el último "result" es la respuesta final
+    $stdout = stream_get_contents($pipes[1]);
+    fclose($pipes[1]);
+    $stderr = stream_get_contents($pipes[2]);
+    fclose($pipes[2]);
+    proc_close($process);
+
+    // Procesar líneas NDJSON: buscar la línea type=result
+    $finalResult = null;
+    $statsResult = null;
+    $lines = explode("\n", trim($stdout));
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if (!$line) continue;
+        $obj = json_decode($line, true);
+        if (!is_array($obj)) continue;
+        if (($obj['type'] ?? '') === 'result') {
+            $finalResult = $obj;
+        } elseif (($obj['type'] ?? '') === 'stats') {
+            $statsResult = $obj['stats'] ?? null;
+        } elseif (($obj['type'] ?? '') === 'error') {
+            return ['ok' => false, 'error' => $obj['error'] ?? 'Error desconocido de Python.'];
+        }
+    }
+
+    if ($finalResult) {
+        $finalResult['total_encuestas'] = count($surveys);
+        return $finalResult;
+    }
+
+    // Si no hay result pero hay stats, devolver stats estadísticos
+    if ($statsResult) {
+        $statsResult['ok']             = true;
+        $statsResult['motor']          = 'Estadístico (LLM no disponible)';
+        $statsResult['total_encuestas']= count($surveys);
+        return $statsResult;
+    }
+
+    return ['ok' => false, 'error' => "Sin respuesta del script. Raw: " . substr($stdout, 0, 300) . " Err: " . substr($stderr, 0, 200)];
+}
+
+/**
+ * Endpoint SSE: transmite eventos NDJSON de ia_nvidia.py como Server-Sent Events.
+ * El frontend usa EventSource para recibir el progreso en tiempo real.
+ */
+function stream_llm_nvidia(string $sector = 'general'): void
+{
+    set_time_limit(360);
+
+    // Cabeceras SSE
+    header('Content-Type: text/event-stream; charset=utf-8');
+    header('Cache-Control: no-cache');
+    header('X-Accel-Buffering: no'); // Deshabilitar buffering en Nginx
+    if (ob_get_level()) ob_end_flush();
+
+    $stmt = db()->prepare("SELECT * FROM surveys WHERE ? = 'general' OR sector = ?");
+    $stmt->execute([$sector, $sector]);
+    $surveys = $stmt->fetchAll();
+
+    if (empty($surveys)) {
+        echo "data: " . json_encode(['type' => 'error', 'error' => 'No hay encuestas para analizar.']) . "\n\n";
+        flush();
+        return;
+    }
+
+    $inputData  = json_encode($surveys, JSON_UNESCAPED_UNICODE);
+    $scriptPath = __DIR__ . '/ia_nvidia.py';
+    $pythonCmd  = get_python_cmd();
+
+    $descriptorspec = [
+        0 => ["pipe", "r"],
+        1 => ["pipe", "w"],
+        2 => ["pipe", "w"],
+    ];
+
+    $process = proc_open("$pythonCmd \"$scriptPath\"", $descriptorspec, $pipes);
+
+    if (!is_resource($process)) {
+        echo "data: " . json_encode(['type' => 'error', 'error' => 'No se pudo ejecutar Python.']) . "\n\n";
+        flush();
+        return;
+    }
+
+    fwrite($pipes[0], $inputData);
+    fclose($pipes[0]);
+
+    // Leer línea por línea y emitir como SSE
+    stream_set_blocking($pipes[1], false);
+    $buffer = '';
+    $timeout = time() + 300; // 5 min máx
+
+    while (time() < $timeout) {
+        $chunk = fread($pipes[1], 4096);
+        if ($chunk !== false && $chunk !== '') {
+            $buffer .= $chunk;
+            // Procesar líneas completas
+            while (($pos = strpos($buffer, "\n")) !== false) {
+                $line = trim(substr($buffer, 0, $pos));
+                $buffer = substr($buffer, $pos + 1);
+                if ($line === '') continue;
+                // Validar que sea JSON
+                $obj = json_decode($line, true);
+                if (is_array($obj)) {
+                    echo "data: $line\n\n";
+                    flush();
+                    // Si es el resultado final o error, terminar
+                    if (in_array($obj['type'] ?? '', ['result', 'error'])) {
+                        fclose($pipes[1]);
+                        fclose($pipes[2]);
+                        proc_close($process);
+                        return;
+                    }
+                }
+            }
+        } elseif (feof($pipes[1])) {
+            break;
+        } else {
+            usleep(50000); // 50ms
+        }
+    }
+
+    // Procesar buffer restante
+    if ($buffer !== '') {
+        $obj = json_decode(trim($buffer), true);
+        if (is_array($obj)) {
+            echo "data: " . trim($buffer) . "\n\n";
+            flush();
+        }
+    }
+
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+    proc_close($process);
 }
