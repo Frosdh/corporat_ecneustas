@@ -3399,3 +3399,51 @@ function get_plan_gemini(string $sector = 'general'): array
 
     return $result;
 }
+
+// ============================================================
+//  INTEGRACION NVIDIA NEMOTRON LLM
+// ============================================================
+function get_llm_nvidia(string $sector = 'general'): array
+{
+    $stmt = db()->prepare("SELECT * FROM surveys WHERE ? = 'general' OR sector = ?");
+    $stmt->execute([$sector, $sector]);
+    $surveys = $stmt->fetchAll();
+
+    if (empty($surveys)) {
+        return ['ok' => false, 'error' => 'No hay encuestas para analizar en este sector.'];
+    }
+
+    $inputData = json_encode($surveys, JSON_UNESCAPED_UNICODE);
+    
+    $scriptPath = __DIR__ . '/ia_nvidia.py';
+    $descriptorspec = [
+        0 => ["pipe", "r"],  // stdin
+        1 => ["pipe", "w"],  // stdout
+        2 => ["pipe", "w"]   // stderr
+    ];
+
+    $process = proc_open("python \"$scriptPath\"", $descriptorspec, $pipes);
+
+    if (is_resource($process)) {
+        fwrite($pipes[0], $inputData);
+        fclose($pipes[0]);
+
+        $output = stream_get_contents($pipes[1]);
+        fclose($pipes[1]);
+
+        $error = stream_get_contents($pipes[2]);
+        fclose($pipes[2]);
+
+        proc_close($process);
+
+        $result = json_decode($output, true);
+        if (json_last_error() === JSON_ERROR_NONE) {
+            $result['total_encuestas'] = count($surveys);
+            return $result;
+        }
+
+        return ['ok' => false, 'error' => 'Error parseando JSON de Python', 'raw_output' => $output, 'python_err' => $error];
+    }
+
+    return ['ok' => false, 'error' => 'No se pudo ejecutar el script de Python.'];
+}

@@ -889,11 +889,82 @@ header('Expires: 0');
 
             <section id="tab-llm" class="tab-panel hidden">
                 <div class="section-title">
-                    <h3>Integración LLM</h3>
-                    <p>Consultas y análisis avanzados mediante IA conversacional.</p>
+                    <h3>Integración LLM (NVIDIA Nemotron-3-Super-120B)</h3>
+                    <p>Análisis avanzado, extracción de sentimientos y plan estratégico impulsado por inteligencia artificial.</p>
                 </div>
-                <div class="card">
-                    <p>Módulo LLM en construcción...</p>
+
+                <div class="card filter-panel">
+                    <div class="form-grid">
+                        <div>
+                            <label class="field-label" for="llm-sector-filter">Sector a analizar</label>
+                            <select id="llm-sector-filter">
+                                <option value="general">Todo San Bartolomé</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="inline-actions">
+                        <button id="llm-generate-btn" class="primary-button" type="button">Generar Análisis con NVIDIA LLM</button>
+                    </div>
+                </div>
+
+                <div id="llm-loading" class="hidden">
+                    <div class="ia-loading">
+                        <span class="ia-spinner"></span>
+                        <div style="margin-top: 10px;">
+                            <strong>Conectando con NVIDIA API...</strong><br>
+                            <small>Nemotron-3-Super-120B está leyendo las encuestas, razonando y generando el análisis. Esto puede tardar unos segundos.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="llm-error" class="hidden ia-error"></div>
+
+                <div id="llm-results" class="hidden">
+                    <!-- Resumen -->
+                    <div class="card">
+                        <h4>Resumen Ejecutivo</h4>
+                        <p id="llm-resumen" style="font-size: 1.1rem; color: var(--text-color);"></p>
+                        
+                        <div style="margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <div class="mini-kpi">
+                                <span>Predicción Global</span>
+                                <strong id="llm-prediccion">--</strong>
+                            </div>
+                            <div class="mini-kpi" style="border-left: 4px solid #0f9f6e;">
+                                <span>Aceptación</span>
+                                <strong id="llm-prob-aceptacion">--%</strong>
+                            </div>
+                            <div class="mini-kpi" style="border-left: 4px solid #d97706;">
+                                <span>Neutral</span>
+                                <strong id="llm-prob-neutral">--%</strong>
+                            </div>
+                            <div class="mini-kpi" style="border-left: 4px solid #c43d45;">
+                                <span>Rechazo</span>
+                                <strong id="llm-prob-rechazo">--%</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Factores y Recomendaciones -->
+                    <div class="form-grid" style="margin-top: 20px;">
+                        <div class="card">
+                            <h4>Principales Factores Detectados</h4>
+                            <ul id="llm-factores" style="padding-left: 20px; color: var(--text-muted); line-height: 1.6;"></ul>
+                        </div>
+                        <div class="card">
+                            <h4>Recomendaciones IA</h4>
+                            <ul id="llm-recomendaciones" style="padding-left: 20px; color: var(--text-muted); line-height: 1.6;"></ul>
+                        </div>
+                    </div>
+
+                    <!-- Plan Estrategico -->
+                    <div class="card" style="margin-top: 20px; border-top: 4px solid #0e4eb0;">
+                        <h3 id="llm-plan-titulo" style="color: #0e4eb0; margin-bottom: 10px;">Plan Estratégico</h3>
+                        <p id="llm-plan-diagnostico" style="margin-bottom: 20px;"></p>
+                        
+                        <h4>Acciones Finales</h4>
+                        <ul id="llm-plan-acciones" style="padding-left: 20px; color: var(--text-muted); line-height: 1.6;"></ul>
+                    </div>
                 </div>
             </section>
 

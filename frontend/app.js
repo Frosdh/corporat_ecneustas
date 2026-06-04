@@ -2025,6 +2025,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sf) sf.addEventListener('change', () => loadAnalisis(true));
     const pdfBtn = document.getElementById('analisis-pdf-btn');
     if (pdfBtn) pdfBtn.addEventListener('click', () => generateAnalisisPDF());
+
+    // Eventos para el nuevo modulo LLM Nvidia
+    const llmBtn = document.getElementById('llm-generate-btn');
+    if (llmBtn) llmBtn.addEventListener('click', () => generateLLMNvidia());
 });
 
 async function loadAnalisis() {
@@ -2442,6 +2446,78 @@ function renderDonutGlobal(sent) {
             animation: { duration: 700 },
         },
     });
+}
+
+// ==========================================
+// NVIDIA NEMOTRON LLM
+// ==========================================
+async function generateLLMNvidia() {
+    const sector = document.getElementById('llm-sector-filter')?.value ?? 'general';
+    const btn = document.getElementById('llm-generate-btn');
+    const loading = document.getElementById('llm-loading');
+    const errBox = document.getElementById('llm-error');
+    const results = document.getElementById('llm-results');
+
+    if (btn) btn.disabled = true;
+    if (loading) loading.classList.remove('hidden');
+    if (errBox) errBox.classList.add('hidden');
+    if (results) results.classList.add('hidden');
+
+    try {
+        const payload = await requestJson('llm_nvidia', { params: { sector } });
+        
+        if (!payload || !payload.ok) {
+            throw new Error(payload?.error || 'Error desconocido de la API.');
+        }
+
+        renderLLMNvidia(payload);
+        if (results) results.classList.remove('hidden');
+
+    } catch (error) {
+        if (errBox) {
+            errBox.textContent = 'Error: ' + error.message;
+            errBox.classList.remove('hidden');
+        }
+    } finally {
+        if (btn) btn.disabled = false;
+        if (loading) loading.classList.add('hidden');
+    }
+}
+
+function renderLLMNvidia(payload) {
+    // Resumen
+    setText('llm-resumen', payload.resumen_ejecutivo);
+    setText('llm-prediccion', payload.prediccion_global);
+
+    const probs = payload.probabilidades_globales || {};
+    setText('llm-prob-aceptacion', (probs.Aceptacion ?? '--') + '%');
+    setText('llm-prob-neutral', (probs.Neutral ?? '--') + '%');
+    setText('llm-prob-rechazo', (probs.Rechazo ?? '--') + '%');
+
+    // Factores
+    const factoresBox = document.getElementById('llm-factores');
+    if (factoresBox) {
+        const facts = payload.importancia_factores || [];
+        factoresBox.innerHTML = facts.map(f => `<li><strong>${escapeHtml(f.factor)}:</strong> ${f.score_pct}% de peso predictivo</li>`).join('');
+    }
+
+    // Recomendaciones
+    const recsBox = document.getElementById('llm-recomendaciones');
+    if (recsBox) {
+        const recs = payload.recomendaciones_ia || [];
+        recsBox.innerHTML = recs.map(r => `<li>${escapeHtml(r)}</li>`).join('');
+    }
+
+    // Plan
+    const plan = payload.plan_estrategico || {};
+    setText('llm-plan-titulo', plan.titulo || 'Plan Estratégico');
+    setText('llm-plan-diagnostico', plan.diagnostico_contextual || '');
+
+    const accionesBox = document.getElementById('llm-plan-acciones');
+    if (accionesBox) {
+        const acciones = plan.recomendaciones_finales || [];
+        accionesBox.innerHTML = acciones.map(a => `<li>${escapeHtml(a)}</li>`).join('');
+    }
 }
 
 function renderDimensiones(dimensiones) {
