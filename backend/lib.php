@@ -3591,16 +3591,17 @@ function stream_llm_nvidia(string $sector = 'general'): void
     fwrite($pipes[0], $inputData);
     fclose($pipes[0]);
 
-    // Leer lÃ­nea por lÃ­nea y emitir como SSE
+    // Leer línea por línea y emitir como SSE
     stream_set_blocking($pipes[1], false);
     $buffer = '';
-    $timeout = time() + 300; // 5 min mÃ¡x
+    $timeout = time() + 300; // 5 min máx
+    $lastHeartbeat = time();
 
     while (time() < $timeout) {
         $chunk = fread($pipes[1], 4096);
         if ($chunk !== false && $chunk !== '') {
             $buffer .= $chunk;
-            // Procesar lÃ­neas completas
+            // Procesar líneas completas
             while (($pos = strpos($buffer, "\n")) !== false) {
                 $line = trim(substr($buffer, 0, $pos));
                 $buffer = substr($buffer, $pos + 1);
@@ -3622,7 +3623,12 @@ function stream_llm_nvidia(string $sector = 'general'): void
         } elseif (feof($pipes[1])) {
             break;
         } else {
-            usleep(30000);
+            if (time() - $lastHeartbeat >= 10) {
+                echo ": heartbeat\n\n";
+                flush();
+                $lastHeartbeat = time();
+            }
+            usleep(50000);
         }
     }
 

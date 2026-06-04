@@ -250,6 +250,11 @@ async function bootstrapApp() {
     if (payload.dashboard) {
         renderDashboard(payload.dashboard);
         fetchTotalEncuestas(); // corrige el total con el valor real de la base
+        
+        // Auto-iniciar analisis LLM en segundo plano
+        if (typeof generateLLMNvidia === 'function' && document.getElementById('llm-generate-btn')) {
+            setTimeout(generateLLMNvidia, 1000);
+        }
     }
     renderOfflineQueue();
     await syncPendingSurveys(false);

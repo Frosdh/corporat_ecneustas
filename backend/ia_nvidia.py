@@ -453,13 +453,16 @@ def _call_via_urllib(prompt):
     req_data = {
         "model": NVIDIA_MODEL,
         "messages": [
-            {"role": "system", "content":
-                "You are a precise JSON-outputting engine. Output only a single valid JSON object. No markdown."},
+            {"role": "system", "content": "You are a precise JSON-outputting engine. Output only a single valid JSON object. No markdown."},
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.7,
         "top_p": 0.95,
-        "max_tokens": 6000,
+        "max_tokens": 16384,
+        "extra_body": {
+            "chat_template_kwargs": {"enable_thinking": True},
+            "reasoning_budget": 8192
+        },
         "stream": True,
     }
     api_url = NVIDIA_BASE_URL + "/chat/completions"
@@ -517,14 +520,21 @@ def call_nvidia(prompt):
 
 
 def extract_json(text):
-    text = text.strip()
-    text = re.sub(r'^```(?:json)?\s*', '', text)
-    text = re.sub(r'\s*```$', '', text)
     start = text.find('{')
-    end   = text.rfind('}')
-    if start == -1 or end == -1:
+    if start == -1:
         raise ValueError("No se encontro JSON en la respuesta. Inicio: " + text[:300])
-    return text[start:end+1]
+    
+    end = text.rfind('}')
+    while end > start:
+        candidate = text[start:end+1]
+        try:
+            import json
+            json.loads(candidate)
+            return candidate
+        except ValueError:
+            end = text.rfind('}', start, end)
+            
+    raise ValueError("JSON incompleto o invalido en la respuesta.")
 
 
 def main():
