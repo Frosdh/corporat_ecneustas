@@ -161,6 +161,7 @@ async function requestJson(action, options = {}) {
         method: options.method || 'GET',
         headers: options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
+        signal: options.signal,
         body: options.body instanceof FormData ? options.body : (options.body ? JSON.stringify(options.body) : undefined),
     });
     const payload = await response.json();
@@ -2036,11 +2037,26 @@ document.addEventListener('DOMContentLoaded', () => {
     if (llmBtn) llmBtn.addEventListener('click', () => generateLLMNvidia());
 });
 
-async function loadAnalisis() {
+let _analisisAbortController = null;
+async function loadAnalisis(force = false) {
     const sector = document.getElementById('analisis-sector-filter')?.value ?? 'general';
+    
+    // Evitar cargar si ya es el mismo sector y no se fuerza
+    if (!force && window._analisisCurrentSector === sector && document.getElementById('analisis-content') && !document.getElementById('analisis-content').classList.contains('hidden')) {
+        return;
+    }
+    window._analisisCurrentSector = sector;
+
+    // Abortar peticiones anteriores si hay multiples clics rapidos
+    if (_analisisAbortController) {
+        _analisisAbortController.abort();
+    }
+    _analisisAbortController = new AbortController();
+    const signal = _analisisAbortController.signal;
+
     setAnalisisUI('loading');
     try {
-        const payload = await requestJson('analisis', { params: { sector } });
+        const payload = await requestJson('analisis', { params: { sector }, signal });
         analisisState.data = payload.analisis;
         if (!analisisState.data || analisisState.data.total === 0) {
             setAnalisisUI('empty');
@@ -2049,24 +2065,26 @@ async function loadAnalisis() {
         renderAnalisis(analisisState.data);
         setAnalisisUI('content');
         // Cargar IA minera en paralelo (no bloquea el render principal)
-        requestJson('ia_minera', { params: { sector } })
+        requestJson('ia_minera', { params: { sector }, signal })
             .then(iaPayload => {
                 analisisState.iaMinera = iaPayload;
                 renderIAMinera(iaPayload);
             })
-            .catch(err => console.warn('IA minera no disponible:', err));
+            .catch(err => { if (err.name !== 'AbortError') console.warn('IA minera no disponible:', err); });
         // Cargar plan Gemini en paralelo
         const geminiBox = document.getElementById('gemini-plan-box');
         if (geminiBox) {
             geminiBox.classList.remove('hidden');
             geminiBox.innerHTML = '<div class="ia-loading"><span class="ia-spinner"></span> Gemini est&aacute; analizando regulaci&oacute;n, mejores pr&aacute;cticas y generando el plan estrat&eacute;gico...</div>';
-            requestJson('plan_gemini', { params: { sector } })
+            requestJson('plan_gemini', { params: { sector }, signal })
                 .then(gPayload => {
                     analisisState.planGemini = gPayload;
                     renderPlanGemini(gPayload);
                 })
                 .catch(err => {
-                    geminiBox.innerHTML = '<div class="ia-error">&#9888; Plan Gemini no disponible: ' + err.message + '</div>';
+                    if (err.name !== 'AbortError') {
+                        geminiBox.innerHTML = '<div class="ia-error">&#9888; Plan Gemini no disponible: ' + err.message + '</div>';
+                    }
                 });
         }
         
@@ -3270,11 +3288,25 @@ function renderRadarDimensiones(dimensiones) {
 // ============================================================
 const preguntasCharts = {};
 
-async function loadPreguntas() {
+let _preguntasAbortController = null;
+async function loadPreguntas(force = false) {
     const sector = document.getElementById('preguntas-sector-filter')?.value ?? 'general';
+    
+    // Evitar recargar si ya estamos viendo el mismo sector
+    if (!force && window._preguntasCurrentSector === sector && document.getElementById('preguntas-content') && !document.getElementById('preguntas-content').classList.contains('hidden')) {
+        return;
+    }
+    window._preguntasCurrentSector = sector;
+
+    if (_preguntasAbortController) {
+        _preguntasAbortController.abort();
+    }
+    _preguntasAbortController = new AbortController();
+    const signal = _preguntasAbortController.signal;
+
     setPreguntasUI('loading');
     try {
-        const payload = await requestJson('preguntas', { params: { sector } });
+        const payload = await requestJson('preguntas', { params: { sector }, signal });
         const data = payload.preguntas;
         if (!data || data.total === 0) {
             setPreguntasUI('empty');
@@ -3283,8 +3315,10 @@ async function loadPreguntas() {
         renderPreguntas(data);
         setPreguntasUI('content');
     } catch (err) {
-        setPreguntasUI('empty');
-        console.error('Error en preguntas:', err);
+        if (err.name !== 'AbortError') {
+            setPreguntasUI('empty');
+            console.error('Error en preguntas:', err);
+        }
     }
 }
 

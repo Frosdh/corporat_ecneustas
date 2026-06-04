@@ -66,6 +66,7 @@ try {
 
         case 'bootstrap':
             require_auth();
+            session_write_close();
             respond([
                 'ok' => true,
                 'user' => current_user(),
@@ -83,6 +84,7 @@ try {
             if (!user_can_access_dashboard()) {
                 respond(['ok' => false, 'message' => 'No tienes acceso al dashboard.'], 403);
             }
+            session_write_close();
             respond([
                 'ok' => true,
                 'dashboard' => get_dashboard($_GET['sector'] ?? 'general'),
@@ -193,8 +195,10 @@ try {
             if (!user_can_access_dashboard()) {
                 respond(['ok' => false, 'message' => 'No tienes acceso al analisis.'], 403);
             }
+            session_write_close();
             respond([
                 'ok'      => true,
+                'graficas'=> get_analisis_graficas($_GET['sector'] ?? 'general'),
                 'analisis'=> get_analisis_experto($_GET['sector'] ?? 'general'),
             ]);
 
@@ -203,6 +207,7 @@ try {
             if (!user_can_access_dashboard()) {
                 respond(['ok' => false, 'message' => 'No tienes acceso.'], 403);
             }
+            session_write_close();
             respond([
                 'ok'       => true,
                 'preguntas'=> get_preguntas_data($_GET['sector'] ?? 'general'),
@@ -213,6 +218,7 @@ try {
             if (!user_can_access_dashboard()) {
                 respond(['ok' => false, 'message' => 'No tienes acceso.'], 403);
             }
+            session_write_close();
             respond(ia_minera_entrenar_y_analizar($_GET['sector'] ?? 'general'));
 
         case 'plan_gemini':

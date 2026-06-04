@@ -3623,7 +3623,11 @@ function stream_llm_nvidia(string $sector = 'general'): void
         } elseif (feof($pipes[1])) {
             break;
         } else {
-            if (time() - $lastHeartbeat >= 10) {
+            // Verificar si el cliente se desconectó
+            if (connection_aborted()) {
+                break;
+            }
+            if (time() - $lastHeartbeat >= 1) {
                 echo ": heartbeat\n\n";
                 flush();
                 $lastHeartbeat = time();
