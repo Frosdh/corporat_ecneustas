@@ -2518,6 +2518,84 @@ function renderLLMNvidia(payload) {
         const acciones = plan.recomendaciones_finales || [];
         accionesBox.innerHTML = acciones.map(a => `<li>${escapeHtml(a)}</li>`).join('');
     }
+
+    // Graficas de sentimientos (Dimensiones)
+    if (payload.dimensiones && payload.dimensiones.length > 0) {
+        renderLLMDimensiones(payload.dimensiones);
+    }
+}
+
+function renderLLMDimensiones(dimensiones) {
+    const grid = document.getElementById('llm-dimensiones-grid');
+    if (!grid) return;
+
+    // Destruir charts anteriores de dimensiones LLM
+    Object.keys(analisisState.charts).filter(k => k.startsWith('llm-dim-')).forEach(k => destroyChart(k));
+    grid.innerHTML = '';
+
+    dimensiones.forEach((dim, idx) => {
+        const sent = dim.sentimiento || {indice: 0, positivo_pct: 0, neutro_pct: 0, negativo_pct: 0};
+        const items = (dim.distribucion && dim.distribucion.items ? dim.distribucion.items : []).slice(0, 7);
+        const sentClass = sent.indice >= 15 ? 'sent-positive' : sent.indice <= -15 ? 'sent-negative' : 'sent-neutral';
+        const sentLabel = sent.indice >= 15 ? 'Favorable' : sent.indice <= -15 ? 'Cr&iacute;tico' : 'Ambivalente';
+        const chartId = 'chart-llm-dim-' + idx;
+
+        const card = document.createElement('div');
+        card.className = 'card analisis-dim-card';
+        card.innerHTML = `
+            <div class="analisis-dim-header">
+                <h4 class="analisis-dim-titulo">${escapeHtml(dim.titulo)}</h4>
+                <span class="analisis-sent-badge ${sentClass}">
+                    ${sentLabel} (${sent.indice > 0 ? '+' : ''}${sent.indice} pts)
+                </span>
+            </div>
+            <div class="analisis-dim-meters">
+                <div class="analisis-sent-row">
+                    <span class="analisis-sent-label sent-pos-label">Positivo ${sent.positivo_pct}%</span>
+                    <div class="analisis-sent-track"><div class="analisis-sent-fill sent-pos-fill" style="width:${sent.positivo_pct}%"></div></div>
+                </div>
+                <div class="analisis-sent-row">
+                    <span class="analisis-sent-label sent-neu-label">Neutro ${sent.neutro_pct}%</span>
+                    <div class="analisis-sent-track"><div class="analisis-sent-fill sent-neu-fill" style="width:${sent.neutro_pct}%"></div></div>
+                </div>
+                <div class="analisis-sent-row">
+                    <span class="analisis-sent-label sent-neg-label">Negativo ${sent.negativo_pct}%</span>
+                    <div class="analisis-sent-track"><div class="analisis-sent-fill sent-neg-fill" style="width:${sent.negativo_pct}%"></div></div>
+                </div>
+            </div>
+            <canvas id="${chartId}" height="150"></canvas>
+            <p class="analisis-interpretacion">${escapeHtml(dim.interpretacion || '')}</p>
+        `;
+        grid.appendChild(card);
+
+        if (items.length > 0 && typeof Chart !== 'undefined') {
+            const chartCtx = document.getElementById(chartId);
+            if (chartCtx) {
+                analisisState.charts['llm-dim-' + idx] = new Chart(chartCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: items.map(it => truncate(it.label, 30)),
+                        datasets: [{
+                            data: items.map(it => it.pct),
+                            backgroundColor: items.map(it => sentColor(it.sentimiento)),
+                            borderRadius: 4,
+                        }],
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { max: 100, display: false },
+                            y: { grid: { display: false }, ticks: { font: { size: 10 }, color: 'rgba(255,255,255,0.7)' } }
+                        },
+                        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => ' ' + c.parsed.x + '%' } } },
+                        animation: { duration: 600 }
+                    }
+                });
+            }
+        }
+    });
 }
 
 function renderDimensiones(dimensiones) {

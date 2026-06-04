@@ -957,6 +957,12 @@ header('Expires: 0');
                         </div>
                     </div>
 
+                    <!-- Graficas / Dimensiones -->
+                    <div style="margin-top: 20px;">
+                        <h3>Análisis de Sentimiento por Dimensión</h3>
+                        <div id="llm-dimensiones-grid" class="analisis-grid"></div>
+                    </div>
+
                     <!-- Plan Estrategico -->
                     <div class="card" style="margin-top: 20px; border-top: 4px solid #0e4eb0;">
                         <h3 id="llm-plan-titulo" style="color: #0e4eb0; margin-bottom: 10px;">Plan Estratégico</h3>

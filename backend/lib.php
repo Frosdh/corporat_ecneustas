@@ -3405,6 +3405,9 @@ function get_plan_gemini(string $sector = 'general'): array
 // ============================================================
 function get_llm_nvidia(string $sector = 'general'): array
 {
+    // Aumentar el límite de tiempo a 3 minutos para permitir que la IA responda sin causar Gateway Timeout (504)
+    set_time_limit(180);
+
     $stmt = db()->prepare("SELECT * FROM surveys WHERE ? = 'general' OR sector = ?");
     $stmt->execute([$sector, $sector]);
     $surveys = $stmt->fetchAll();

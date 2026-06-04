@@ -1,7 +1,8 @@
 import sys
 import json
 import re
-from openai import OpenAI
+import urllib.request
+import urllib.error
 
 def main():
     try:
@@ -23,7 +24,7 @@ def main():
     
     # Reducir el tamaño del payload para no exceder el límite de tokens
     trimmed_encuestas = []
-    for e in encuestas[:300]:  # Limitar a las ultimas 300 encuestas
+    for e in encuestas[:800]:  # Limitar a las ultimas 800 encuestas para mayor cobertura
         trimmed_encuestas.append({
             "sector": e.get("sector"),
             "problema": e.get("primary_problem"),
@@ -50,6 +51,17 @@ def main():
         "importancia_factores": [
             {{"factor": "Nombre del factor (ej. Temor Ambiental)", "score_pct": 85}}
         ],
+        "dimensiones": [
+            {{
+                "titulo": "Dimensión Analizada (ej. Impacto Ambiental)",
+                "sentimiento": {{"indice": -20, "positivo_pct": 20, "neutro_pct": 30, "negativo_pct": 50}},
+                "distribucion": {{"items": [
+                    {{"label": "Sub-factor (ej. Contaminación del agua)", "pct": 70, "sentimiento": "negativo"}},
+                    {{"label": "Sub-factor (ej. Reforestación)", "pct": 30, "sentimiento": "positivo"}}
+                ]}},
+                "interpretacion": "Breve interpretación de esta dimensión"
+            }}
+        ],
         "recomendaciones_ia": [
             "Recomendacion accionable 1", "Recomendacion accionable 2", "Recomendacion 3"
         ],
@@ -61,47 +73,49 @@ def main():
     }}
     """
 
-    client = OpenAI(
-      base_url = "https://integrate.api.nvidia.com/v1",
-      api_key = "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"
-    )
+    api_url = "https://integrate.api.nvidia.com/v1/chat/completions"
+    api_key = "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"
+
+    req_data = {
+        "model": "nvidia/nemotron-3-super-120b-a12b",
+        "messages": [
+            {"role": "system", "content": "You are a precise JSON-outputting analytical engine. Your output must parse perfectly with JSON.parse() and contain no other text."},
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.5,
+        "top_p": 0.90,
+        "max_tokens": 2048
+    }
+
+    req = urllib.request.Request(api_url, json.dumps(req_data).encode('utf-8'))
+    req.add_header('Content-Type', 'application/json')
+    req.add_header('Authorization', f'Bearer {api_key}')
 
     try:
-        completion = client.chat.completions.create(
-          model="nvidia/nemotron-3-super-120b-a12b",
-          messages=[
-              {"role": "system", "content": "You are a precise JSON-outputting analytical engine. Your output must parse perfectly with JSON.parse() and contain no other text."},
-              {"role": "user", "content": prompt}
-          ],
-          temperature=0.7,
-          top_p=0.95,
-          max_tokens=8192,
-          extra_body={"chat_template_kwargs":{"enable_thinking":True},"reasoning_budget":4096},
-          stream=True
-        )
+        with urllib.request.urlopen(req) as response:
+            result_body = response.read().decode('utf-8')
+            result_json = json.loads(result_body)
+            
+            # Obtener solo el contenido final (ignora el reasoning_content si lo hay)
+            final_content = result_json["choices"][0]["message"]["content"]
 
-        final_content = ""
-        for chunk in completion:
-            if not chunk.choices:
-                continue
-            # Ignoramos el razonamiento interno, solo acumulamos el contenido final
-            if chunk.choices[0].delta.content is not None:
-                final_content += chunk.choices[0].delta.content
+            # Extraer JSON de la respuesta (por si el LLM pone ```json ... ```)
+            match = re.search(r"```(?:json)?\s*(.*?)\s*```", final_content, re.DOTALL | re.IGNORECASE)
+            if match:
+                json_str = match.group(1)
+            else:
+                json_str = final_content.strip()
 
-        # Extraer JSON de la respuesta (por si el LLM pone ```json ... ```)
-        match = re.search(r"```(?:json)?\s*(.*?)\s*```", final_content, re.DOTALL | re.IGNORECASE)
-        if match:
-            json_str = match.group(1)
-        else:
-            json_str = final_content.strip()
-
-        # Parsear para verificar que sea valido
-        parsed = json.loads(json_str)
-        parsed["motor"] = "NVIDIA Nemotron-3-Super-120B"
-        print(json.dumps(parsed))
+            # Parsear para verificar que sea valido
+            parsed = json.loads(json_str)
+            parsed["motor"] = "NVIDIA Nemotron-3-Super-120B"
+            print(json.dumps(parsed))
 
     except Exception as e:
-        print(json.dumps({"ok": False, "error": f"NVIDIA API Error: {str(e)}", "raw": final_content if 'final_content' in locals() else ""}))
+        err_msg = str(e)
+        if isinstance(e, urllib.error.HTTPError):
+            err_msg += " - " + e.read().decode('utf-8')
+        print(json.dumps({"ok": False, "error": f"NVIDIA API Error: {err_msg}"}))
 
 if __name__ == "__main__":
     main()
