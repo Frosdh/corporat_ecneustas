@@ -2834,7 +2834,7 @@ function renderLLMDimensiones(dimensiones, gridId, chartPrefix) {
                     <div class="analisis-sent-track"><div class="analisis-sent-fill sent-neg-fill" style="width:${sent.negativo_pct}%"></div></div>
                 </div>
             </div>
-            ${items.length > 0 ? `<canvas id="${chartId}" height="130"></canvas>` : ''}
+            ${items.length > 0 ? `<canvas id="${chartId}" height="100"></canvas>` : ''}
             ${dim.interpretacion ? `<p class="analisis-interpretacion">${escapeHtml(dim.interpretacion)}</p>` : ''}
         `;
         grid.appendChild(card);
@@ -2904,7 +2904,7 @@ function renderDimensiones(dimensiones) {
                     <div class="analisis-sent-track"><div class="analisis-sent-fill sent-neg-fill" style="width:${sent.negativo_pct}%"></div></div>
                 </div>
             </div>
-            <canvas id="${chartId}" height="150"></canvas>
+            <canvas id="${chartId}" height="110"></canvas>
             <p class="analisis-interpretacion">${escapeHtml(dim.interpretacion)}</p>
         `;
         grid.appendChild(card);

@@ -947,20 +947,20 @@ header('Expires: 0');
                     <div class="form-grid" style="margin-bottom:18px;">
                         <div class="card">
                             <h4 style="text-align:center;">Sentimiento Global</h4>
-                            <div style="position:relative;height:260px;display:flex;justify-content:center;">
+                            <div style="position:relative;height:170px;display:flex;justify-content:center;">
                                 <canvas id="llm-donut-stats"></canvas>
                             </div>
                         </div>
                         <div class="card">
                             <h4 style="text-align:center;">Distribuci&oacute;n por Zona</h4>
-                            <div style="position:relative;height:260px;">
+                            <div style="position:relative;height:170px;">
                                 <canvas id="llm-zonas-chart"></canvas>
                             </div>
                         </div>
                     </div>
 
                     <!-- Caja de razonamiento -->
-                    <div id="llm-thinking-box" class="hidden" style="background:#0f172a;border:1px solid #1e3a5f;border-radius:8px;padding:14px;margin-bottom:18px;max-height:200px;overflow-y:auto;font-size:0.78rem;color:#94a3b8;font-family:monospace;white-space:pre-wrap;line-height:1.6;">
+                    <div id="llm-thinking-box" class="hidden" style="background:#0f172a;border:1px solid #1e3a5f;border-radius:8px;padding:14px;margin-bottom:18px;max-height:170px;overflow-y:auto;font-size:0.78rem;color:#94a3b8;font-family:monospace;white-space:pre-wrap;line-height:1.6;">
                     </div>
 
                     <!-- Dimensiones estad&iacute;sticas (pre-LLM) -->
@@ -990,7 +990,7 @@ header('Expires: 0');
                     <!-- Radar + Dimensiones LLM -->
                     <div class="card" style="margin-bottom:18px;">
                         <h4 style="text-align:center;">Radar de Favorabilidad por Dimensi&oacute;n</h4>
-                        <div style="position:relative;height:360px;display:flex;justify-content:center;">
+                        <div style="position:relative;height:170px;display:flex;justify-content:center;">
                             <canvas id="llm-radar-chart"></canvas>
                         </div>
                     </div>

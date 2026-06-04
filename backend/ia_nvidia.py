@@ -446,30 +446,68 @@ def _call_via_openai(prompt):
 
 
 def _call_via_urllib(prompt):
+    """Fallback con streaming SSE via urllib (sin paquete openai)."""
     import urllib.request
-    emit({"type": "thinking", "text": "Conectando con NVIDIA API (modo directo sin streaming)..."})
+    emit({"type": "thinking", "text": "Conectando con NVIDIA API via urllib+streaming..."})
+
     req_data = {
         "model": NVIDIA_MODEL,
         "messages": [
-            {"role": "system", "content": "Output only a single valid JSON object, no markdown."},
+            {"role": "system", "content":
+                "You are a precise JSON-outputting engine. Output only a single valid JSON object. No markdown."},
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.7,
         "top_p": 0.95,
-        "max_tokens": 8192,
+        "max_tokens": 6000,
+        "stream": True,
     }
     api_url = NVIDIA_BASE_URL + "/chat/completions"
     req = urllib.request.Request(
         api_url,
         data=json.dumps(req_data).encode('utf-8'),
-        headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + NVIDIA_API_KEY}
+        headers={
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + NVIDIA_API_KEY,
+            'Accept': 'text/event-stream',
+        }
     )
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        body = json.loads(resp.read().decode('utf-8'))
-    choices = body.get("choices", [])
-    if not choices:
-        raise ValueError("NVIDIA API no devolvio choices.")
-    return choices[0]["message"].get("content", "")
+
+    content_parts = []
+    thinking_buf  = ""
+
+    with urllib.request.urlopen(req, timeout=180) as resp:
+        for raw_line in resp:
+            line = raw_line.decode('utf-8').strip()
+            if not line or not line.startswith('data: '):
+                continue
+            data_str = line[6:]
+            if data_str == '[DONE]':
+                break
+            try:
+                chunk = json.loads(data_str)
+            except Exception:
+                continue
+            choices = chunk.get('choices', [])
+            if not choices:
+                continue
+            delta = choices[0].get('delta', {})
+            # reasoning
+            reasoning = delta.get('reasoning_content', '')
+            if reasoning:
+                thinking_buf += reasoning
+                if len(thinking_buf) >= 200:
+                    emit({"type": "thinking", "text": thinking_buf})
+                    thinking_buf = ""
+            # content
+            txt = delta.get('content', '')
+            if txt:
+                content_parts.append(txt)
+
+    if thinking_buf:
+        emit({"type": "thinking", "text": thinking_buf})
+
+    return "".join(content_parts)
 
 
 def call_nvidia(prompt):

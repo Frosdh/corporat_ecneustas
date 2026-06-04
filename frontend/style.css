@@ -2573,3 +2573,22 @@ fieldset {
     font-size: 0.92rem;
     color: #93c5fd;
 }
+
+/* Limitar tamaño máximo de gráficas en sección LLM */
+#tab-llm canvas {
+    max-height: 200px !important;
+    max-width: 100% !important;
+}
+#tab-llm .analisis-dim-card canvas {
+    max-height: 110px !important;
+}
+#llm-radar-chart {
+    max-height: 260px !important;
+}
+#llm-donut-stats {
+    max-height: 170px !important;
+    max-width: 280px !important;
+}
+#llm-zonas-chart {
+    max-height: 170px !important;
+}
