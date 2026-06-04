@@ -922,96 +922,133 @@ header('Expires: 0');
 
                 <!-- Error -->
                 <div id="llm-error" class="hidden ia-error"></div>
-
-                <!-- Resultados -->
                 <div id="llm-results" class="hidden">
-
-                    <!-- Badge motor -->
-                    <div style="text-align:right;margin-bottom:8px;">
-                        <span id="llm-motor-badge" style="background:#1e3a5f;color:#60a5fa;padding:4px 14px;border-radius:20px;font-size:0.8rem;font-weight:600;"></span>
+                    <div style="text-align:right;margin-bottom:12px;">
+                        <span id="llm-motor-badge" class="analisis-label-pill" style="background:#1e3a5f;color:#60a5fa;"></span>
                     </div>
 
-                    <!-- KPIs globales -->
-                    <div class="card" style="margin-bottom:18px;">
-                        <h4>Resumen Ejecutivo NVIDIA</h4>
-                        <p id="llm-resumen" style="font-size:1.05rem;color:var(--text-color);line-height:1.7;"></p>
-                        <div style="margin-top:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
-                            <div class="mini-kpi"><span>Predicci&oacute;n Global</span><strong id="llm-prediccion">--</strong></div>
-                            <div class="mini-kpi" style="border-left:4px solid #22c55e;"><span>Aceptaci&oacute;n</span><strong id="llm-prob-aceptacion">--%</strong></div>
-                            <div class="mini-kpi" style="border-left:4px solid #f59e0b;"><span>Neutral</span><strong id="llm-prob-neutral">--%</strong></div>
-                            <div class="mini-kpi" style="border-left:4px solid #ef4444;"><span>Rechazo</span><strong id="llm-prob-rechazo">--%</strong></div>
+                    <!-- KPI Row -->
+                    <div class="analisis-kpi-row" style="margin-bottom:20px;">
+                        <div class="analisis-kpi-card">
+                            <div class="kpi-icon-wrap kpi-blue">?</div>
+                            <div class="kpi-info">
+                                <span class="kpi-label">Predicci&oacute;n</span>
+                                <strong id="llm-prediccion" class="kpi-value">--</strong>
+                            </div>
+                        </div>
+                        <div class="analisis-kpi-card">
+                            <div class="kpi-icon-wrap kpi-green">+</div>
+                            <div class="kpi-info">
+                                <span class="kpi-label">Aceptaci&oacute;n</span>
+                                <strong id="llm-prob-aceptacion" class="kpi-value kpi-green-val">--</strong>
+                            </div>
+                        </div>
+                        <div class="analisis-kpi-card">
+                            <div class="kpi-icon-wrap kpi-orange">~</div>
+                            <div class="kpi-info">
+                                <span class="kpi-label">Neutral</span>
+                                <strong id="llm-prob-neutral" class="kpi-value kpi-problem-text">--</strong>
+                            </div>
+                        </div>
+                        <div class="analisis-kpi-card">
+                            <div class="kpi-icon-wrap kpi-red">-</div>
+                            <div class="kpi-info">
+                                <span class="kpi-label">Rechazo</span>
+                                <strong id="llm-prob-rechazo" class="kpi-value kpi-red-val">--</strong>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Gr&aacute;ficas globales: Donut + Zonas barras -->
-                    <div class="form-grid" style="margin-bottom:18px;">
-                        <div class="card">
-                            <h4 style="text-align:center;">Sentimiento Global</h4>
-                            <div style="position:relative;height:170px;display:flex;justify-content:center;">
-                                <canvas id="llm-donut-stats"></canvas>
-                            </div>
+                    <!-- Resumen Ejecutivo -->
+                    <div class="analisis-ejecutivo-card" style="margin-bottom:24px;">
+                        <div class="analisis-ejecutivo-left">
+                            <div class="analisis-label-pill">RESUMEN EJECUTIVO NVIDIA</div>
+                            <h3 id="llm-resumen" class="analisis-narrativa" style="font-size:1.1rem; line-height:1.6; font-weight:400; color:var(--text-color);"></h3>
                         </div>
-                        <div class="card">
-                            <h4 style="text-align:center;">Distribuci&oacute;n por Zona</h4>
-                            <div style="position:relative;height:170px;">
-                                <canvas id="llm-zonas-chart"></canvas>
-                            </div>
+                        <div class="analisis-ejecutivo-right">
+                            <canvas id="llm-donut-stats" width="230" height="230"></canvas>
                         </div>
                     </div>
 
                     <!-- Caja de razonamiento -->
-                    <div id="llm-thinking-box" class="hidden" style="background:#0f172a;border:1px solid #1e3a5f;border-radius:8px;padding:14px;margin-bottom:18px;max-height:170px;overflow-y:auto;font-size:0.78rem;color:#94a3b8;font-family:monospace;white-space:pre-wrap;line-height:1.6;">
-                    </div>
+                    <div id="llm-thinking-box" class="hidden" style="background:#0f172a;border:1px solid #1e3a5f;border-radius:8px;padding:14px;margin-bottom:18px;max-height:170px;overflow-y:auto;font-size:0.78rem;color:#94a3b8;font-family:monospace;white-space:pre-wrap;line-height:1.6;"></div>
 
-                    <!-- Dimensiones estad&iacute;sticas (pre-LLM) -->
-                    <div style="margin-bottom:18px;">
-                        <h3 style="margin-bottom:12px;">Sentimientos por Dimensi&oacute;n &mdash; <small style="color:var(--text-muted);font-size:0.85rem;">Calculado localmente antes de la IA</small></h3>
-                        <div id="llm-stats-dimensiones-grid" class="analisis-grid"></div>
+                    <div class="analisis-section-row">
+                        <div>
+                            <h3 class="analisis-section-header">Sentimientos por Dimensi&oacute;n (Pre-LLM)</h3>
+                            <p class="analisis-section-desc">Calculado localmente antes de consultar a NVIDIA</p>
+                        </div>
                     </div>
+                    <div id="llm-stats-dimensiones-grid" class="analisis-dim-grid" style="margin-bottom:24px;"></div>
 
                     <!-- Factores + Recomendaciones -->
-                    <div class="form-grid" style="margin-bottom:18px;">
-                        <div class="card">
-                            <h4>Factores Cr&iacute;ticos Identificados por la IA</h4>
-                            <ul id="llm-factores" style="list-style:none;padding:0;margin-top:10px;"></ul>
-                        </div>
-                        <div class="card">
-                            <h4>Recomendaciones NVIDIA LLM</h4>
-                            <ul id="llm-recomendaciones" style="padding-left:18px;color:var(--text-muted);line-height:1.7;"></ul>
+                    <div class="analisis-section-row">
+                        <div>
+                            <h3 class="analisis-section-header">Hallazgos Cr&iacute;ticos y Estrategia</h3>
+                            <p class="analisis-section-desc">Evaluaci&oacute;n de factores de riesgo y recomendaciones directas</p>
                         </div>
                     </div>
-
-                    <!-- An&aacute;lisis por zona (LLM) -->
-                    <div class="card" style="margin-bottom:18px;">
-                        <h4>An&aacute;lisis por Zona &mdash; <small style="color:#60a5fa;font-size:0.82rem;">Generado por NVIDIA LLM</small></h4>
-                        <div id="llm-zonas-llm-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:12px;"></div>
-                    </div>
-
-                    <!-- Radar + Dimensiones LLM -->
-                    <div class="card" style="margin-bottom:18px;">
-                        <h4 style="text-align:center;">Radar de Favorabilidad por Dimensi&oacute;n</h4>
-                        <div style="position:relative;height:170px;display:flex;justify-content:center;">
-                            <canvas id="llm-radar-chart"></canvas>
+                    <div class="analisis-mining-grid" style="margin-bottom:24px;">
+                        <div class="card analisis-mining-card">
+                            <h4 class="analisis-card-title analisis-title-red">Factores Cr&iacute;ticos</h4>
+                            <ul id="llm-factores" style="list-style:disc;padding-left:18px;margin-top:10px;line-height:1.7;"></ul>
+                        </div>
+                        <div class="card analisis-mining-card">
+                            <h4 class="analisis-card-title analisis-title-green">Recomendaciones</h4>
+                            <ul id="llm-recomendaciones" style="list-style:disc;padding-left:18px;margin-top:10px;line-height:1.7;"></ul>
                         </div>
                     </div>
 
-                    <div style="margin-bottom:18px;">
-                        <h3 style="margin-bottom:12px;">An&aacute;lisis Detallado por Dimensi&oacute;n &mdash; <small style="color:#60a5fa;font-size:0.82rem;">NVIDIA Nemotron LLM</small></h3>
-                        <div id="llm-dimensiones-grid" class="analisis-grid"></div>
+                    <!-- Análisis por zona LLM -->
+                    <div class="analisis-section-row">
+                        <div>
+                            <h3 class="analisis-section-header">Evaluaci&oacute;n Zonal (NVIDIA)</h3>
+                        </div>
+                    </div>
+                    <div id="llm-zonas-llm-grid" class="analisis-dim-grid" style="margin-bottom:24px;"></div>
+                    
+                    <div class="analisis-section-row">
+                        <div>
+                            <h3 class="analisis-section-header">Densidad de Encuestas por Zona</h3>
+                        </div>
+                    </div>
+                    <div class="card analisis-chart-card" style="margin-bottom:24px;">
+                        <div style="position:relative;height:250px;">
+                            <canvas id="llm-zonas-chart"></canvas>
+                        </div>
                     </div>
 
-                    <!-- Plan estrat&eacute;gico -->
-                    <div class="card" style="margin-top:20px;border-top:4px solid #3b82f6;">
-                        <h3 id="llm-plan-titulo" style="color:#3b82f6;margin-bottom:10px;">Plan Estrat&eacute;gico</h3>
-                        <p id="llm-plan-diagnostico" style="margin-bottom:20px;line-height:1.7;"></p>
+                    <!-- Radar -->
+                    <div class="analisis-section-row">
+                        <div class="premium-radar-header">
+                            <h3 class="analisis-section-header">Radar de Favorabilidad</h3>
+                            <p class="analisis-section-desc">Balance multidimensional generado por LLM</p>
+                        </div>
+                    </div>
+                    <div class="card analisis-radar-card" style="margin-bottom:24px;">
+                        <canvas id="llm-radar-chart" height="110"></canvas>
+                    </div>
 
-                        <!-- Fases -->
-                        <h4 style="margin-bottom:10px;">Fases de Implementaci&oacute;n</h4>
-                        <div id="llm-plan-fases" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-bottom:20px;"></div>
+                    <div class="analisis-section-row">
+                        <div>
+                            <h3 class="analisis-section-header">An&aacute;lisis Detallado por Dimensi&oacute;n</h3>
+                        </div>
+                    </div>
+                    <div id="llm-dimensiones-grid" class="analisis-dim-grid" style="margin-bottom:24px;"></div>
 
-                        <!-- Indicadores -->
-                        <h4 style="margin-bottom:10px;">Indicadores de Seguimiento</h4>
-                        <div style="overflow-x:auto;margin-bottom:20px;">
+                    <!-- Plan Estratégico -->
+                    <div class="analisis-section-row">
+                        <div class="premium-radar-header">
+                            <h3 id="llm-plan-titulo" class="analisis-section-header" style="color:#3b82f6;">Plan Estrat&eacute;gico</h3>
+                            <p id="llm-plan-diagnostico" class="analisis-section-desc"></p>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-bottom:24px;">
+                        <h4 style="margin-bottom:12px; color:var(--text-color);">Fases de Implementaci&oacute;n</h4>
+                        <div id="llm-plan-fases" class="analisis-dim-grid" style="margin-bottom:24px;"></div>
+
+                        <h4 style="margin-bottom:12px; color:var(--text-color);">Indicadores de Seguimiento</h4>
+                        <div style="overflow-x:auto;margin-bottom:24px;">
                             <table style="width:100%;border-collapse:collapse;font-size:0.88rem;">
                                 <thead>
                                     <tr style="border-bottom:1px solid rgba(255,255,255,0.15);color:var(--text-muted);">
@@ -1024,14 +1061,14 @@ header('Expires: 0');
                             </table>
                         </div>
 
-                        <h4>Acciones Finales</h4>
+                        <h4 style="margin-bottom:12px; color:var(--text-color);">Acciones Finales</h4>
                         <ul id="llm-plan-acciones" style="padding-left:20px;color:var(--text-muted);line-height:1.8;"></ul>
                     </div>
 
-                    <!-- Conclusi&oacute;n -->
-                    <div class="card" style="margin-top:18px;border-left:4px solid #22c55e;background:rgba(34,197,94,0.05);">
-                        <h4>&#128161; Conclusi&oacute;n NVIDIA</h4>
-                        <p id="llm-conclusion" style="line-height:1.7;"></p>
+                    <!-- Conclusión -->
+                    <div class="card" style="margin-top:24px;border-left:4px solid #22c55e;background:rgba(34,197,94,0.05);">
+                        <h4>&#128161; Conclusi&oacute;n General</h4>
+                        <p id="llm-conclusion" style="line-height:1.7;margin-top:8px;"></p>
                     </div>
 
                 </div><!-- /llm-results -->

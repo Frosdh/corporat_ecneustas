@@ -2665,13 +2665,13 @@ function renderLLMNvidia(payload) {
     const fasesBox = document.getElementById('llm-plan-fases');
     if (fasesBox && plan.fases && plan.fases.length > 0) {
         fasesBox.innerHTML = plan.fases.map(f => `
-            <div class="llm-fase-card">
-                <div class="llm-fase-header">
-                    <strong>${escapeHtml(f.fase)}</strong>
-                    <span class="llm-fase-periodo">${escapeHtml(f.periodo)}</span>
+            <div class="card analisis-dim-card" style="padding: 12px; border-top: 3px solid #3b82f6;">
+                <div class="analisis-dim-header" style="margin-bottom:8px;">
+                    <h4 class="analisis-dim-titulo" style="font-size:1rem;color:var(--text-color);">${escapeHtml(f.fase)}</h4>
+                    <span class="analisis-sent-badge sent-neutral" style="background:rgba(59,130,246,0.15);color:#60a5fa;border:none;">${escapeHtml(f.periodo)}</span>
                 </div>
-                <ul class="llm-fase-acciones">
-                    ${(f.acciones || []).map(a => `<li>${escapeHtml(a)}</li>`).join('')}
+                <ul style="list-style:disc;padding-left:18px;margin-top:10px;font-size:0.85rem;color:var(--text-muted);line-height:1.6;">
+                    ${(f.acciones || []).map(a => `<li style="margin-bottom:4px;">${escapeHtml(a)}</li>`).join('')}
                 </ul>
             </div>`).join('');
     }
@@ -2767,19 +2767,20 @@ function renderLLMAnalissiZonas(zonas) {
     box.innerHTML = zonas.map(z => {
         const pred = z.prediccion || (z.aceptacion_pct >= z.rechazo_pct ? 'Aceptacion' : 'Rechazo');
         const color = pred === 'Aceptacion' ? '#22c55e' : pred === 'Rechazo' ? '#ef4444' : '#f59e0b';
+        const sentClass = pred === 'Aceptacion' ? 'sent-positive' : pred === 'Rechazo' ? 'sent-negative' : 'sent-neutral';
         return `
-        <div class="llm-zona-card" style="border-left:4px solid ${color};">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                <strong style="font-size:1rem;">${escapeHtml(z.zona || z.sector || '')}</strong>
-                <span style="background:${color};color:#fff;padding:2px 10px;border-radius:12px;font-size:0.8rem;font-weight:600;">${escapeHtml(pred)}</span>
+        <div class="card analisis-dim-card" style="border-left:4px solid ${color}; padding:14px;">
+            <div class="analisis-dim-header" style="margin-bottom:10px;">
+                <h4 class="analisis-dim-titulo" style="font-size:1rem;color:var(--text-color);">${escapeHtml(z.zona || z.sector || '')}</h4>
+                <span class="analisis-sent-badge ${sentClass}" style="border:none;">${escapeHtml(pred)}</span>
             </div>
-            <div style="display:flex;gap:12px;font-size:0.82rem;color:var(--text-muted);margin-bottom:6px;">
-                <span>✓ ${z.aceptacion_pct ?? 0}%</span>
-                <span>~ ${z.neutral_pct ?? 0}%</span>
-                <span>✗ ${z.rechazo_pct ?? 0}%</span>
-                <span style="margin-left:auto;">${z.n ?? ''} encuestas</span>
+            <div style="display:flex;gap:12px;font-size:0.82rem;color:var(--text-muted);margin-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.05);padding-bottom:10px;">
+                <span style="color:#22c55e;">✓ ${z.aceptacion_pct ?? 0}%</span>
+                <span style="color:#f59e0b;">~ ${z.neutral_pct ?? 0}%</span>
+                <span style="color:#ef4444;">✗ ${z.rechazo_pct ?? 0}%</span>
+                <span style="margin-left:auto;color:#94a3b8;font-weight:600;">${z.n ?? ''} encs</span>
             </div>
-            ${z.hallazgo_clave ? `<p style="font-size:0.85rem;color:var(--text-color);margin:0;line-height:1.5;">${escapeHtml(z.hallazgo_clave)}</p>` : ''}
+            ${z.hallazgo_clave ? `<p style="font-size:0.85rem;color:var(--text-muted);margin:0;line-height:1.6;">${escapeHtml(z.hallazgo_clave)}</p>` : ''}
         </div>`;
     }).join('');
 }

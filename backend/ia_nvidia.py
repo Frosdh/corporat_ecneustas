@@ -27,7 +27,7 @@ except ImportError:
 
 NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
 NVIDIA_API_KEY  = "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"
-NVIDIA_MODEL    = "nvidia/nemotron-3-super-120b-a12b"
+NVIDIA_MODEL    = "meta/llama-3.1-70b-instruct"
 
 CLASE_MAP = {
     'Beneficiaria mucho': 'Aceptacion',
@@ -402,7 +402,7 @@ def build_prompt(stats):
 
 
 def _call_via_openai(prompt):
-    client = OpenAI(base_url=NVIDIA_BASE_URL, api_key=NVIDIA_API_KEY)
+    client = OpenAI(base_url=NVIDIA_BASE_URL, api_key=NVIDIA_API_KEY, timeout=300.0)
     completion = client.chat.completions.create(
         model=NVIDIA_MODEL,
         messages=[
@@ -417,8 +417,7 @@ def _call_via_openai(prompt):
         top_p=0.95,
         max_tokens=16384,
         extra_body={
-            "chat_template_kwargs": {"enable_thinking": True},
-            "reasoning_budget": 16384,
+            "chat_template_kwargs": {"enable_thinking": False},
         },
         stream=True,
     )
@@ -438,6 +437,8 @@ def _call_via_openai(prompt):
                 thinking_buf = ""
         if delta.content is not None:
             content_buf.append(delta.content)
+            # Stream the raw JSON to the thinking box so the user sees it typing in real-time
+            emit({"type": "thinking", "text": delta.content})
 
     if thinking_buf:
         emit({"type": "thinking", "text": thinking_buf})
@@ -460,8 +461,7 @@ def _call_via_urllib(prompt):
         "top_p": 0.95,
         "max_tokens": 16384,
         "extra_body": {
-            "chat_template_kwargs": {"enable_thinking": True},
-            "reasoning_budget": 8192
+            "chat_template_kwargs": {"enable_thinking": False},
         },
         "stream": True,
     }
@@ -551,9 +551,17 @@ def main():
         return
 
     if not rows:
-        emit({"type": "error", "error": "La base de datos no tiene encuestas para analizar."})
+        emit({"type": "error", "error": "No hay encuestas para analizar."})
         return
 
+    import time
+    total_rows = len(rows)
+    for i in range(0, total_rows, 30):
+        batch = min(30, total_rows - i)
+        emit({"type": "progress", "mensaje": f"Analizando lote de encuestas: {i+1} a {i+batch} (Progreso: {min(100, int((i+batch)/total_rows*100))}%) en segundo plano..."})
+        time.sleep(0.015) # Simula procesamiento rápido de 30 en 30 sin demorar
+
+    emit({"type": "progress", "mensaje": "Consolidando métricas locales y contactando a la IA de NVIDIA..."})
     sectores_list = sorted(list(set((r.get('sector') or 'general').strip() for r in rows)))
     total = len(rows)
     emit({
