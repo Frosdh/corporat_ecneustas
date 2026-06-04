@@ -26,7 +26,7 @@ except ImportError:
     import urllib.error
 
 NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
-NVIDIA_API_KEY  = "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"
+NVIDIA_API_KEY  = "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"
 NVIDIA_MODEL    = "nvidia/nemotron-3-super-120b-a12b"
 
 CLASE_MAP = {

@@ -34,6 +34,12 @@ if ($action === 'llm_nvidia_stream') {
         flush();
         exit;
     }
+
+
+    // ¡CRITICO! Liberar el bloqueo de sesion para que otras peticiones (como Análisis IA o Preguntas)
+    // puedan ejecutarse en paralelo sin quedarse congeladas esperando que termine el LLM.
+    session_write_close();
+
     try {
         stream_llm_nvidia($_GET['sector'] ?? 'general');
     } catch (Throwable $e) {

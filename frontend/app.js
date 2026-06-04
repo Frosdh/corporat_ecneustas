@@ -2474,6 +2474,18 @@ function generateLLMNvidia() {
     const progBox = document.getElementById('llm-progress-msg');
     const zonasProg = document.getElementById('llm-zonas-progress');
 
+    // Evitar peticiones duplicadas si ya esta procesando el mismo sector
+    if (_llmEventSource && window._llmCurrentSector === sector) {
+        return; // Ya esta cargando
+    }
+    
+    // Evitar recargar si ya tenemos los resultados del mismo sector en pantalla y no hay error
+    if (window._llmCurrentSector === sector && results && !results.classList.contains('hidden')) {
+        return; 
+    }
+
+    window._llmCurrentSector = sector;
+
     // Cancelar si hay una solicitud en curso
     if (_llmEventSource) { _llmEventSource.close(); _llmEventSource = null; }
 
