@@ -1043,7 +1043,7 @@ header('Expires: 0');
                     </div>
                     <div class="card analisis-radar-card" style="margin-bottom:24px;padding:24px 16px 16px;">
                         <p style="font-size:0.8rem;color:var(--text-muted);margin:0 0 12px;text-align:center;">Balance multidimensional &mdash; An&aacute;lisis IA</p>
-                        <div style="position:relative;width:100%;height:420px;max-width:640px;margin:0 auto;">
+                        <div style="position:relative;width:100%;height:600px;max-width:850px;margin:0 auto;">
                             <canvas id="llm-radar-chart"></canvas>
                         </div>
                     </div>

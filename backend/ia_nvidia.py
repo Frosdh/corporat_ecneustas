@@ -16,6 +16,7 @@ Protocolo NDJSON (una línea JSON por evento):
   {"type":"error",    "error":"..."}
 """
 
+from asyncio import exceptions
 import os
 import sys
 import json
@@ -794,3 +795,5 @@ if __name__ == "__main__":
         import traceback
         err_msg = traceback.format_exc()
         emit({"type": "error", "error": f"Error fatal en Python: {str(e)}\n{err_msg}"})
+
+

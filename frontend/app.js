@@ -2883,35 +2883,76 @@ function renderLLMAnalissiZonas(zonas) {
     if (!box) return;
     if (!zonas || !zonas.length) { box.innerHTML = ''; return; }
 
-    box.innerHTML = zonas.map(z => {
+    Object.keys(analisisState.charts).filter(k => k.startsWith('llm-zona-gauge-')).forEach(k => destroyChart(k));
+
+    box.innerHTML = zonas.map((z, i) => {
         const pred = z.prediccion || (z.aceptacion_pct >= z.rechazo_pct ? 'Aceptacion' : 'Rechazo');
         const color = pred === 'Aceptacion' ? '#22c55e' : pred === 'Rechazo' ? '#ef4444' : '#f59e0b';
         const icon  = pred === 'Aceptacion' ? '✅' : pred === 'Rechazo' ? '❌' : '⚠️';
         const acept = z.aceptacion_pct ?? 0;
         const neutr = z.neutral_pct ?? 0;
         const rech  = z.rechazo_pct ?? 0;
+        const chartId = 'zona-gauge-' + i;
+
         return `
-        <div class="card analisis-dim-card" style="border-top:3px solid ${color};padding:16px;position:relative;overflow:hidden;">
-            <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,${color}80,${color});"></div>
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
-                <h4 style="font-size:1rem;font-weight:700;color:var(--text-color);margin:0;">${icon} ${escapeHtml(z.zona || z.sector || '')}</h4>
-                <span style="font-size:0.72rem;background:rgba(255,255,255,0.06);color:#94a3b8;border-radius:20px;padding:2px 10px;white-space:nowrap;">${z.n ?? 0} enc.</span>
+        <div class="card analisis-dim-card" style="border-top:3px solid ${color};padding:20px;position:relative;overflow:hidden;text-align:center;">
+            <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,${color}80,${color});"></div>
+            <div style="margin-bottom:12px;">
+                <h4 style="font-size:1.15rem;font-weight:700;color:var(--text-color);margin:0;margin-bottom:8px;">${icon} ${escapeHtml(z.zona || z.sector || '')}</h4>
+                <span style="font-size:0.75rem;background:rgba(255,255,255,0.08);color:#94a3b8;border-radius:20px;padding:4px 14px;white-space:nowrap;letter-spacing:0.5px;">${z.n ?? 0} encuestas evaluadas</span>
             </div>
-            <div style="margin-bottom:10px;">
-                <div style="display:flex;justify-content:space-between;font-size:0.78rem;color:rgba(255,255,255,0.5);margin-bottom:4px;">
-                    <span style="color:#4ade80;">Acepta ${acept}%</span>
-                    <span style="color:#fbbf24;">${neutr}%</span>
-                    <span style="color:#f87171;">Rechaza ${rech}%</span>
-                </div>
-                <div style="display:flex;height:8px;border-radius:6px;overflow:hidden;gap:1px;">
-                    <div style="width:${acept}%;background:#22c55e;transition:width 0.6s;"></div>
-                    <div style="width:${neutr}%;background:#f59e0b;transition:width 0.6s;"></div>
-                    <div style="width:${rech}%;background:#ef4444;transition:width 0.6s;"></div>
+            
+            <div style="position:relative;width:100%;height:140px;margin-bottom:16px;margin-top:16px;">
+                <canvas id="${chartId}"></canvas>
+                <div style="position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:1.4rem;font-weight:800;color:${color};">
+                    ${acept}%<br><span style="font-size:0.75rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">Aceptación</span>
                 </div>
             </div>
-            ${z.hallazgo_clave ? `<p style="font-size:0.82rem;color:var(--text-muted);margin:0;line-height:1.55;border-top:1px solid rgba(255,255,255,0.06);padding-top:8px;">${escapeHtml(z.hallazgo_clave)}</p>` : ''}
+            <div style="display:flex;justify-content:center;gap:12px;font-size:0.75rem;margin-bottom:14px;color:rgba(255,255,255,0.6);">
+                <span><span style="color:#22c55e;">●</span> ${acept}%</span>
+                <span><span style="color:#f59e0b;">●</span> ${neutr}%</span>
+                <span><span style="color:#ef4444;">●</span> ${rech}%</span>
+            </div>
+            
+            ${z.hallazgo_clave ? `<p style="font-size:0.88rem;color:var(--text-muted);margin:0;line-height:1.6;border-top:1px solid rgba(255,255,255,0.08);padding-top:14px;text-align:left;">${escapeHtml(z.hallazgo_clave)}</p>` : ''}
         </div>`;
     }).join('');
+
+    setTimeout(() => {
+        if(typeof Chart === 'undefined') return;
+        zonas.forEach((z, i) => {
+            const ctx = document.getElementById('zona-gauge-' + i);
+            if (!ctx) return;
+            const acept = z.aceptacion_pct ?? 0;
+            const neutr = z.neutral_pct ?? 0;
+            const rech  = z.rechazo_pct ?? 0;
+            
+            analisisState.charts['llm-zona-gauge-' + i] = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Aceptación', 'Neutral', 'Rechazo'],
+                    datasets: [{
+                        data: [acept, neutr, rech],
+                        backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'],
+                        borderWidth: 0,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    circumference: 180,
+                    rotation: -90,
+                    cutout: '80%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed}%` } }
+                    },
+                    animation: { duration: 1200, easing: 'easeOutCubic' }
+                }
+            });
+        });
+    }, 100);
 }
 
 function renderLLMRadarChart(dimensiones) {
@@ -3007,80 +3048,155 @@ function renderLLMDimensiones(dimensiones, gridId, chartPrefix) {
     grid.innerHTML = '';
 
     dimensiones.forEach((dim, idx) => {
-        const sent = dim.sentimiento || { indice: 0, positivo_pct: 0, neutro_pct: 0, negativo_pct: 0 };
-        const items = ((dim.distribucion && dim.distribucion.items) ? dim.distribucion.items : []).slice(0, 7);
-        const idxVal   = sent.indice ?? 0;
-        const sentClass = idxVal >= 15 ? 'sent-positive' : idxVal <= -15 ? 'sent-negative' : 'sent-neutral';
-        const sentLabel = idxVal >= 15 ? '🟢 Favorable' : idxVal <= -15 ? '🔴 Crítico' : '🟡 Ambivalente';
+        const sent        = dim.sentimiento || { indice: 0, positivo_pct: 0, neutro_pct: 0, negativo_pct: 0 };
+        const items       = ((dim.distribucion && dim.distribucion.items) ? dim.distribucion.items : []).slice(0, 7);
+        const idxVal      = sent.indice ?? 0;
+        const sentClass   = idxVal >= 15 ? 'sent-positive' : idxVal <= -15 ? 'sent-negative' : 'sent-neutral';
+        const sentLabel   = idxVal >= 15 ? '🟢 Favorable' : idxVal <= -15 ? '🔴 Crítico' : '🟡 Ambivalente';
         const accentColor = idxVal >= 15 ? '#22c55e' : idxVal <= -15 ? '#ef4444' : '#f59e0b';
-        const chartId   = 'chart-' + chartPrefix + idx;
-
-        // Gauge arc semicircular simple usando porcentaje (0-100)
-        const gaugeVal  = Math.round(((idxVal + 100) / 2));
-        const gaugeDeg  = Math.round(gaugeVal * 1.8); // 0-180°
-        const gaugeColor= idxVal >= 15 ? '#22c55e' : idxVal <= -15 ? '#ef4444' : '#f59e0b';
+        const gaugeId     = 'gauge-' + chartPrefix + idx;
+        const barId       = 'bar-'   + chartPrefix + idx;
+        const gaugeVal    = Math.round(((idxVal + 100) / 2));
 
         const card = document.createElement('div');
         card.className = 'card analisis-dim-card';
-        card.style.cssText = `border-top:3px solid ${accentColor};position:relative;overflow:hidden;`;
+        card.style.cssText = `border-top:3px solid ${accentColor};padding:20px;position:relative;overflow:hidden;`;
+
         card.innerHTML = `
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
-                <h4 class="analisis-dim-titulo" style="margin:0;font-size:0.95rem;">${escapeHtml(dim.titulo)}</h4>
-                <span class="analisis-sent-badge ${sentClass}" style="white-space:nowrap;font-size:0.75rem;">
-                    ${sentLabel} <span style="opacity:0.8;">${idxVal > 0 ? '+' : ''}${idxVal}pts</span>
+            <div style="position:absolute;top:0;right:0;width:110px;height:110px;
+                        background:radial-gradient(circle at top right,${accentColor}22,transparent 70%);
+                        pointer-events:none;"></div>
+
+            <div class="analisis-dim-header" style="margin-bottom:14px;">
+                <h4 class="analisis-dim-titulo" style="font-size:1rem;font-weight:700;color:#f1f5f9;margin:0 0 6px;line-height:1.35;">
+                    ${escapeHtml(dim.titulo)}
+                </h4>
+                <span class="analisis-sent-badge ${sentClass}" style="font-size:0.78rem;padding:3px 10px;border-radius:20px;">
+                    ${sentLabel}&nbsp;&nbsp;(${idxVal >= 0 ? '+' : ''}${idxVal} pts)
                 </span>
             </div>
-            <div style="margin-bottom:10px;">
-                <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
-                    <span style="font-size:0.75rem;color:#4ade80;min-width:52px;">✔ ${sent.positivo_pct}%</span>
-                    <div style="flex:1;height:7px;background:rgba(255,255,255,0.07);border-radius:4px;overflow:hidden;">
-                        <div style="width:${sent.positivo_pct}%;height:100%;background:linear-gradient(90deg,#16a34a,#22c55e);border-radius:4px;transition:width 0.6s;"></div>
+
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+                <div style="position:relative;width:106px;height:106px;flex-shrink:0;">
+                    <canvas id="${gaugeId}" width="106" height="106"></canvas>
+                    <div style="position:absolute;inset:0;display:flex;flex-direction:column;
+                                align-items:center;justify-content:center;padding-top:18px;">
+                        <span style="font-size:1.4rem;font-weight:800;color:${accentColor};line-height:1;">
+                            ${idxVal >= 0 ? '+' : ''}${idxVal}
+                        </span>
+                        <span style="font-size:0.58rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.6px;margin-top:2px;">índice</span>
                     </div>
                 </div>
-                <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
-                    <span style="font-size:0.75rem;color:#fbbf24;min-width:52px;">~ ${sent.neutro_pct}%</span>
-                    <div style="flex:1;height:7px;background:rgba(255,255,255,0.07);border-radius:4px;overflow:hidden;">
-                        <div style="width:${sent.neutro_pct}%;height:100%;background:linear-gradient(90deg,#d97706,#f59e0b);border-radius:4px;transition:width 0.6s;"></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:7px;">
+                    <div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                            <span style="font-size:0.73rem;color:#4ade80;font-weight:600;">✔ Positivo</span>
+                            <span style="font-size:0.73rem;color:#4ade80;font-weight:700;">${sent.positivo_pct}%</span>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.07);border-radius:4px;height:6px;overflow:hidden;">
+                            <div style="width:${sent.positivo_pct}%;height:100%;background:linear-gradient(90deg,#16a34a,#4ade80);border-radius:4px;"></div>
+                        </div>
                     </div>
-                </div>
-                <div style="display:flex;align-items:center;gap:6px;">
-                    <span style="font-size:0.75rem;color:#f87171;min-width:52px;">✖ ${sent.negativo_pct}%</span>
-                    <div style="flex:1;height:7px;background:rgba(255,255,255,0.07);border-radius:4px;overflow:hidden;">
-                        <div style="width:${sent.negativo_pct}%;height:100%;background:linear-gradient(90deg,#b91c1c,#ef4444);border-radius:4px;transition:width 0.6s;"></div>
+                    <div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                            <span style="font-size:0.73rem;color:#fbbf24;font-weight:600;">◑ Neutro</span>
+                            <span style="font-size:0.73rem;color:#fbbf24;font-weight:700;">${sent.neutro_pct}%</span>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.07);border-radius:4px;height:6px;overflow:hidden;">
+                            <div style="width:${sent.neutro_pct}%;height:100%;background:linear-gradient(90deg,#b45309,#fbbf24);border-radius:4px;"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                            <span style="font-size:0.73rem;color:#f87171;font-weight:600;">✖ Negativo</span>
+                            <span style="font-size:0.73rem;color:#f87171;font-weight:700;">${sent.negativo_pct}%</span>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.07);border-radius:4px;height:6px;overflow:hidden;">
+                            <div style="width:${sent.negativo_pct}%;height:100%;background:linear-gradient(90deg,#b91c1c,#f87171);border-radius:4px;"></div>
+                        </div>
                     </div>
                 </div>
             </div>
-            ${items.length > 0 ? `<canvas id="${chartId}" height="90" style="margin-top:6px;"></canvas>` : ''}
-            ${dim.interpretacion ? `<p class="analisis-interpretacion" style="margin-top:10px;font-size:0.82rem;color:var(--text-muted);line-height:1.55;border-top:1px solid rgba(255,255,255,0.06);padding-top:8px;">${escapeHtml(dim.interpretacion)}</p>` : ''}
+
+            ${items.length > 0 ? `
+            <div style="margin-bottom:12px;">
+                <p style="font-size:0.68rem;font-weight:700;color:rgba(255,255,255,0.35);text-transform:uppercase;
+                           letter-spacing:1px;margin:0 0 7px;">Distribución de respuestas</p>
+                <div style="position:relative;height:${Math.max(60, items.length * 22)}px;">
+                    <canvas id="${barId}"></canvas>
+                </div>
+            </div>` : ''}
+
+            ${dim.interpretacion ? `
+            <div style="background:rgba(255,255,255,0.035);border-left:3px solid ${accentColor};
+                        border-radius:0 6px 6px 0;padding:9px 12px;margin-top:6px;">
+                <p style="font-size:0.78rem;color:rgba(255,255,255,0.6);margin:0;line-height:1.55;">
+                    ${escapeHtml(dim.interpretacion)}
+                </p>
+            </div>` : ''}
         `;
         grid.appendChild(card);
 
-        if (items.length > 0 && typeof Chart !== 'undefined') {
-            const chartCtx = document.getElementById(chartId);
-            if (chartCtx) {
-                analisisState.charts[chartPrefix + idx] = new Chart(chartCtx, {
-                    type: 'bar',
+        if (typeof Chart !== 'undefined') {
+            // --- Gauge (doughnut semicircular) ---
+            const gCtx = document.getElementById(gaugeId);
+            if (gCtx) {
+                analisisState.charts[chartPrefix + 'g' + idx] = new Chart(gCtx, {
+                    type: 'doughnut',
                     data: {
-                        labels: items.map(it => truncate(it.label, 28)),
-                        datasets: [{ data: items.map(it => it.pct),
-                            backgroundColor: items.map(it => sentColor(it.sentimiento)),
-                            borderRadius: 5 }],
+                        datasets: [{
+                            data: [gaugeVal, 100 - gaugeVal],
+                            backgroundColor: [accentColor, 'rgba(255,255,255,0.06)'],
+                            borderWidth: 0,
+                            borderRadius: [5, 0],
+                        }],
                     },
                     options: {
-                        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                        scales: {
-                            x: { max: 100, display: false },
-                            y: { grid: { display: false }, ticks: { font: { size: 10 }, color: 'rgba(255,255,255,0.65)' } },
-                        },
-                        plugins: { legend: { display: false },
-                            tooltip: { callbacks: { label: (c) => ' ' + c.parsed.x + '%' } } },
-                        animation: { duration: 500, easing: 'easeOutQuart' },
+                        cutout: '72%',
+                        rotation: -90,
+                        circumference: 180,
+                        responsive: false,
+                        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                        animation: { duration: 900, easing: 'easeInOutQuart' },
                     },
                 });
+            }
+
+            // --- Barras de distribución ---
+            if (items.length > 0) {
+                const bCtx = document.getElementById(barId);
+                if (bCtx) {
+                    analisisState.charts[chartPrefix + idx] = new Chart(bCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: items.map(it => truncate(it.label, 28)),
+                            datasets: [{
+                                data: items.map(it => it.pct),
+                                backgroundColor: items.map(it => sentColor(it.sentimiento)),
+                                borderRadius: 5,
+                            }],
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { max: 100, display: false },
+                                y: { grid: { display: false }, ticks: { font: { size: 10 }, color: 'rgba(255,255,255,0.6)' } },
+                            },
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: { callbacks: { label: (c) => ' ' + c.parsed.x + '%' } },
+                            },
+                            animation: { duration: 500, easing: 'easeOutQuart' },
+                        },
+                    });
+                }
             }
         }
     });
 }
+
 
 function renderDimensiones(dimensiones) {
     const grid = document.getElementById('analisis-dimensiones-grid');

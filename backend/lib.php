@@ -3623,11 +3623,14 @@ function stream_llm_nvidia(string $sector = 'general'): void
     if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < $cacheTtl) {
         $cached = file_get_contents($cacheFile);
         if ($cached !== false) {
-            echo "data: " . json_encode(['type' => 'progress', 'mensaje' => 'Cargando resultado en cache...']) . "\n\n";
-            flush();
-            echo "data: $cached\n\n";
-            flush();
-            return;
+            $parsed = json_decode($cached, true);
+            if (json_last_error() === JSON_ERROR_NONE && isset($parsed['type']) && $parsed['type'] === 'result') {
+                echo "data: " . json_encode(['type' => 'progress', 'mensaje' => 'Cargando resultado en cache...']) . "\n\n";
+                flush();
+                echo "data: $cached\n\n";
+                flush();
+                return;
+            }
         }
     }
 
