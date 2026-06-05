@@ -991,6 +991,28 @@ header('Expires: 0');
                     <!-- Caja de razonamiento -->
                     <div id="llm-thinking-box" class="hidden" style="background:#0f172a;border:1px solid #1e3a5f;border-radius:8px;padding:14px;margin-bottom:18px;max-height:170px;overflow-y:auto;font-size:0.78rem;color:#94a3b8;font-family:monospace;white-space:pre-wrap;line-height:1.6;"></div>
 
+                    <!-- ===== GRÁFICA: IMPORTANCIA DE FACTORES ===== -->
+                    <div class="analisis-section-row" style="margin-top:8px;">
+                        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                            <div>
+                                <h3 class="analisis-section-header">&#128202; Importancia de Factores</h3>
+                                <p class="analisis-section-desc">Peso relativo de cada dimensi&oacute;n en la percepci&oacute;n comunitaria seg&uacute;n el sector seleccionado. A mayor puntaje, mayor influencia sobre la aceptaci&oacute;n o rechazo del proyecto minero.</p>
+                            </div>
+                            <span id="llm-factores-sector-badge" style="font-size:0.72rem;font-weight:700;padding:4px 12px;border-radius:20px;border:1px solid #6F4E37;color:#6F4E37;background:rgba(111,78,55,0.08);white-space:nowrap;align-self:flex-start;margin-top:4px;">&#128507; Todas las zonas</span>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-bottom:24px;background:#fff;border:1px solid #D7CCC8;padding:20px;">
+                        <!-- Leyenda de colores -->
+                        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;font-size:0.75rem;font-weight:600;">
+                            <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#b91c1c;margin-right:5px;vertical-align:middle;"></span>Cr&iacute;tico (&ge;75%)</span>
+                            <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#d97706;margin-right:5px;vertical-align:middle;"></span>Relevante (55-74%)</span>
+                            <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#16a34a;margin-right:5px;vertical-align:middle;"></span>Moderado (&lt;55%)</span>
+                        </div>
+                        <div style="position:relative;height:320px;">
+                            <canvas id="llm-factores-chart"></canvas>
+                        </div>
+                    </div>
+
                     <div class="analisis-section-row">
                         <div>
                             <h3 class="analisis-section-header">Sentimientos por Dimensi&oacute;n</h3>
@@ -1112,6 +1134,36 @@ header('Expires: 0');
                         <div style="background:#fff;padding:20px 24px;">
                             <p id="llm-conclusion" style="margin:0;line-height:1.8;color:#3E2723;font-size:0.95rem;"></p>
                         </div>
+                    </div>
+
+                    <!-- ===== EJES ESTRATÉGICOS ===== -->
+                    <div id="llm-ejes-section" class="hidden" style="margin-top:28px;">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #D7CCC8;">
+                            <span style="font-size:1.4rem;">&#9889;</span>
+                            <div>
+                                <h3 style="margin:0;font-size:1.05rem;font-weight:800;color:#4E342E;">Ejes Estrat&eacute;gicos del Proyecto Minero</h3>
+                                <p style="margin:2px 0 0;font-size:0.8rem;color:#8D6E63;">Ordenados por prioridad seg&uacute;n el an&aacute;lisis de dimensiones cr&iacute;ticas de las encuestas</p>
+                            </div>
+                        </div>
+                        <div id="llm-ejes-grid" style="display:flex;flex-direction:column;gap:16px;"></div>
+                    </div>
+
+                    <!-- ===== MEJORES PRÁCTICAS MINERAS ===== -->
+                    <div id="llm-practicas-section" class="hidden" style="margin-top:28px;">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #D7CCC8;">
+                            <span style="font-size:1.4rem;">&#127759;</span>
+                            <div>
+                                <h3 style="margin:0;font-size:1.05rem;font-weight:800;color:#4E342E;">Mejores Pr&aacute;cticas Mineras de Referencia</h3>
+                                <p style="margin:2px 0 0;font-size:0.8rem;color:#8D6E63;">Marcos internacionales y casos nacionales aplicables al contexto de San Bartolom&eacute;</p>
+                            </div>
+                        </div>
+                        <!-- Tabs locales/internacionales -->
+                        <div style="display:flex;gap:8px;margin-bottom:16px;">
+                            <button id="tab-practicas-int" onclick="switchPracticas('int')" style="flex:1;padding:8px;border-radius:8px;border:2px solid #0e4eb0;background:#0e4eb0;color:#fff;font-weight:700;font-size:0.82rem;cursor:pointer;">&#127760; Internacionales</button>
+                            <button id="tab-practicas-loc" onclick="switchPracticas('loc')" style="flex:1;padding:8px;border-radius:8px;border:2px solid #D7CCC8;background:#fff;color:#4E342E;font-weight:700;font-size:0.82rem;cursor:pointer;">&#127466;&#127464; Ecuador / Locales</button>
+                        </div>
+                        <div id="llm-practicas-int" style="display:flex;flex-direction:column;gap:12px;"></div>
+                        <div id="llm-practicas-loc" style="display:none;flex-direction:column;gap:12px;"></div>
                     </div>
 
                     <!-- ===== RECOMENDACIONES MINERAS ===== -->

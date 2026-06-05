@@ -2320,6 +2320,249 @@ function renderIAMinera(payload) {
     </div>`;
 }
 
+
+function renderFactoresChart(factores) {
+    const ctx = document.getElementById('llm-factores-chart');
+    if (!ctx || !factores.length || typeof Chart === 'undefined') return;
+    const existing = Chart.getChart(ctx);
+    if (existing) existing.destroy();
+
+    const sector = document.getElementById('llm-sector-filter')?.value || 'general';
+    const sectorLabel = sector === 'general' ? 'Todas las zonas' : sector;
+    const badge = document.getElementById('llm-factores-sector-badge');
+    if (badge) badge.textContent = '🗺️ ' + sectorLabel;
+
+    // Ajustar alto según número de factores
+    const h = Math.max(280, factores.length * 46 + 60);
+    if (ctx.parentElement) ctx.parentElement.style.height = h + 'px';
+
+    const sorted = [...factores].sort((a,b) => b.score_pct - a.score_pct);
+    const labels = sorted.map(f => f.factor);
+    const values = sorted.map(f => f.score_pct);
+    const colors  = values.map(v => v>=75 ? 'rgba(185,28,28,0.85)' : v>=55 ? 'rgba(217,119,6,0.85)' : 'rgba(22,163,74,0.85)');
+    const borders = values.map(v => v>=75 ? '#b91c1c' : v>=55 ? '#d97706' : '#15803d');
+    const niveles = values.map(v => v>=75 ? 'Critico' : v>=55 ? 'Relevante' : 'Moderado');
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'Importancia (%)', data: values, backgroundColor: colors, borderColor: borders, borderWidth: 1.5, borderRadius: 6, borderSkipped: false }] },
+        options: {
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(255,248,225,0.97)', titleColor: '#3E2723', bodyColor: '#6F4E37', borderColor: '#D7CCC8', borderWidth: 1, padding: 10,
+                    callbacks: {
+                        title: items => labels[items[0].dataIndex] || '',
+                        label: c => '  Influencia: ' + c.parsed.x + '%  [' + niveles[c.dataIndex] + ']',
+                        afterLabel: () => '  Zona: ' + sectorLabel,
+                    },
+                },
+            },
+            scales: {
+                x: { max: 100, ticks: { color:'#8D6E63', font:{size:11}, callback: v => v+'%' }, grid:{color:'#EDE0D0'}, border:{color:'#D7CCC8'}, title:{display:true,text:'Nivel de influencia (%)',color:'#8D6E63',font:{size:11}} },
+                y: { ticks: { color:'#3E2723', font:{size:12,weight:'600'} }, grid:{display:false}, border:{color:'#D7CCC8'} },
+            },
+            animation: { duration: 800, easing: 'easeOutQuart' },
+        },
+    });
+}
+
+// ── EJES ESTRATEGICOS ─────────────────────────────────────────
+function renderEjesEstrategicos(ejes) {
+    const section = document.getElementById('llm-ejes-section');
+    const grid    = document.getElementById('llm-ejes-grid');
+    if (!section || !grid || !ejes.length) return;
+    section.classList.remove('hidden');
+
+    const prioColors = {
+        CRITICA: { border:'#b91c1c', bg:'#fff1f2', badge:'#b91c1c', badgeBg:'#fee2e2', icon:'&#128308;' },
+        MEDIA:   { border:'#d97706', bg:'#fffbeb', badge:'#d97706', badgeBg:'#fef3c7', icon:'&#128993;' },
+        BAJA:    { border:'#16a34a', bg:'#f0fdf4', badge:'#16a34a', badgeBg:'#dcfce7', icon:'&#128994;' },
+    };
+    const iconMap = { mining:'&#9935;&#65039;', governance:'&#127963;&#65039;', trust:'&#129309;', investment:'&#128176;', economy:'&#127807;', knowledge:'&#128218;' };
+
+    grid.innerHTML = ejes.map(e => {
+        const c  = prioColors[e.prioridad] || prioColors.MEDIA;
+        const ic = iconMap[e.icono] || '&#11088;';
+        return `<div style="background:${c.bg};border:1px solid ${c.border}44;border-left:5px solid ${c.border};border-radius:14px;padding:18px 20px;">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+                <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">
+                    <span style="font-size:1.8rem;flex-shrink:0;">${ic}</span>
+                    <div>
+                        <h4 style="margin:0 0 3px;font-size:0.95rem;font-weight:800;color:#3E2723;">${escapeHtml(e.titulo)}</h4>
+                        <p style="margin:0;font-size:0.82rem;color:#6F4E37;line-height:1.5;">${escapeHtml(e.descripcion)}</p>
+                    </div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
+                    <span style="font-size:0.7rem;font-weight:800;background:${c.badgeBg};color:${c.badge};border:1px solid ${c.badge}55;border-radius:20px;padding:3px 10px;white-space:nowrap;">${c.icon} ${e.prioridad}</span>
+                    <span style="font-size:0.68rem;color:#8D6E63;background:#FFF8E1;border:1px solid #EDE0D0;border-radius:20px;padding:2px 8px;">&#205;ndice: ${e.indice>0?'+':''}${e.indice} pts</span>
+                </div>
+            </div>
+            <div style="margin-bottom:12px;">
+                <div style="font-size:0.72rem;font-weight:700;color:#8D6E63;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Acciones Clave</div>
+                <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;">
+                    ${(e.acciones||[]).map(a=>`<li style="display:flex;align-items:flex-start;gap:8px;font-size:0.84rem;color:#3E2723;line-height:1.5;"><span style="flex-shrink:0;color:${c.border};font-weight:900;margin-top:2px;">&#9654;</span><span>${escapeHtml(a)}</span></li>`).join('')}
+                </ul>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;padding-top:10px;border-top:1px solid ${c.border}33;">
+                <span style="font-size:0.7rem;color:#8D6E63;">&#128209; Normativa:</span>
+                <span style="font-size:0.75rem;font-weight:600;color:#4E342E;">${escapeHtml(e.normativa||'')}</span>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// ── MEJORES PRACTICAS MINERAS ─────────────────────────────────
+function renderMejoresPracticas(practicas) {
+    const section = document.getElementById('llm-practicas-section');
+    if (!section) return;
+    section.classList.remove('hidden');
+
+    const nivelColors = {
+        Internacional: { bg:'#eff6ff', border:'#0e4eb0', badge:'#0e4eb0' },
+        Nacional:      { bg:'#f0fdf4', border:'#16a34a', badge:'#16a34a' },
+        Regional:      { bg:'#fdf4ff', border:'#7c3aed', badge:'#7c3aed' },
+    };
+    const renderList = (items, containerId) => {
+        const el = document.getElementById(containerId);
+        if (!el) return;
+        el.innerHTML = (items||[]).map(p => {
+            const c = nivelColors[p.nivel] || nivelColors.Internacional;
+            return `<div style="background:${c.bg};border:1px solid ${c.border}44;border-radius:12px;padding:16px 18px;">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:0;">
+                        <h4 style="margin:0 0 3px;font-size:0.92rem;font-weight:800;color:#1e293b;">${escapeHtml(p.nombre)}</h4>
+                        <div style="font-size:0.75rem;color:#64748b;font-style:italic;">${escapeHtml(p.entidad)}</div>
+                    </div>
+                    <span style="font-size:0.7rem;font-weight:800;background:${c.badge};color:#fff;border-radius:20px;padding:3px 10px;white-space:nowrap;flex-shrink:0;">${escapeHtml(p.nivel)}</span>
+                </div>
+                <p style="margin:0 0 10px;font-size:0.83rem;color:#334155;line-height:1.55;">${escapeHtml(p.descripcion)}</p>
+                <div style="background:rgba(255,255,255,0.7);border:1px solid ${c.border}33;border-radius:8px;padding:10px 12px;">
+                    <div style="font-size:0.7rem;font-weight:700;color:#1e293b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">&#128204; Aplicabilidad en San Bartolom&#233;</div>
+                    <p style="margin:0;font-size:0.82rem;color:#475569;line-height:1.5;">${escapeHtml(p.aplicabilidad)}</p>
+                </div>
+                ${p.url?`<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;font-size:0.75rem;color:${c.badge};font-weight:600;text-decoration:none;">&#128279; Ver referencia &#8594;</a>`:''}
+            </div>`;
+        }).join('');
+    };
+    renderList(practicas.internacionales, 'llm-practicas-int');
+    renderList(practicas.locales,         'llm-practicas-loc');
+}
+
+window.switchPracticas = function(tab) {
+    const intEl=document.getElementById('llm-practicas-int'), locEl=document.getElementById('llm-practicas-loc');
+    const btnI=document.getElementById('tab-practicas-int'), btnL=document.getElementById('tab-practicas-loc');
+    if (!intEl||!locEl) return;
+    if (tab==='int') {
+        intEl.style.display='flex'; locEl.style.display='none';
+        btnI.style.cssText='flex:1;padding:8px;border-radius:8px;border:2px solid #0e4eb0;background:#0e4eb0;color:#fff;font-weight:700;font-size:0.82rem;cursor:pointer;';
+        btnL.style.cssText='flex:1;padding:8px;border-radius:8px;border:2px solid #D7CCC8;background:#fff;color:#4E342E;font-weight:700;font-size:0.82rem;cursor:pointer;';
+    } else {
+        intEl.style.display='none'; locEl.style.display='flex';
+        btnL.style.cssText='flex:1;padding:8px;border-radius:8px;border:2px solid #16a34a;background:#16a34a;color:#fff;font-weight:700;font-size:0.82rem;cursor:pointer;';
+        btnI.style.cssText='flex:1;padding:8px;border-radius:8px;border:2px solid #D7CCC8;background:#fff;color:#4E342E;font-weight:700;font-size:0.82rem;cursor:pointer;';
+    }
+};
+
+// ── RECOMENDACIONES MINERAS ───────────────────────────────────
+function renderRecMineras(rec) {
+    const section = document.getElementById('llm-rec-mineras-section');
+    if (!section) return;
+    section.classList.remove('hidden');
+
+    const esc = (s) => escapeHtml(String(s || ''));
+
+    // ── Viabilidad ──
+    const v = rec.viabilidad_social || {};
+    const vColors = { ALTA: { bg:'#dcfce7', border:'#16a34a', text:'#14532d', badge:'#16a34a' },
+                      MEDIA:{ bg:'#fef3c7', border:'#d97706', text:'#92400e', badge:'#d97706' },
+                      BAJA: { bg:'#fee2e2', border:'#b91c1c', text:'#7f1d1d', badge:'#b91c1c' } };
+    const vc = vColors[v.nivel] || vColors.BAJA;
+    const viabEl = document.getElementById('llm-rec-viabilidad');
+    if (viabEl) viabEl.innerHTML = `
+        <div style="background:${vc.bg};border:2px solid ${vc.border};border-radius:14px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+            <div>
+                <div style="font-size:0.72rem;font-weight:700;color:${vc.text};text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">Viabilidad Social del Proyecto Minero</div>
+                <p style="margin:0;font-size:0.88rem;color:${vc.text};line-height:1.5;">${esc(v.resumen)}</p>
+            </div>
+            <span style="font-size:1.1rem;font-weight:800;background:${vc.badge};color:#fff;border-radius:12px;padding:8px 20px;white-space:nowrap;flex-shrink:0;">
+                ${v.nivel === 'ALTA' ? '&#9989;' : v.nivel === 'MEDIA' ? '&#9888;&#65039;' : '&#10060;'} ${esc(v.nivel)}
+            </span>
+        </div>`;
+
+    // ── Fortalezas ──
+    const fortEl = document.getElementById('llm-rec-fortalezas');
+    if (fortEl) fortEl.innerHTML = (rec.fortalezas || []).map(f => `
+        <li style="display:flex;align-items:flex-start;gap:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 12px;">
+            <span style="color:#16a34a;font-weight:800;flex-shrink:0;margin-top:1px;">&#9650;</span>
+            <span style="font-size:0.84rem;color:#166534;line-height:1.5;">${esc(f)}</span>
+        </li>`).join('');
+
+    // ── Riesgos críticos ──
+    const riesEl = document.getElementById('llm-rec-riesgos');
+    if (riesEl) riesEl.innerHTML = (rec.riesgos_criticos || []).map(r => `
+        <li style="display:flex;align-items:flex-start;gap:10px;background:#fff1f2;border:1px solid #fecaca;border-radius:10px;padding:10px 12px;">
+            <span style="color:#b91c1c;font-weight:800;flex-shrink:0;margin-top:1px;">&#9660;</span>
+            <span style="font-size:0.84rem;color:#7f1d1d;line-height:1.5;">${esc(r)}</span>
+        </li>`).join('');
+
+    // ── Acciones inmediatas ──
+    const acEl = document.getElementById('llm-rec-acciones');
+    const acIcons = ['&#128270;','&#9888;&#65039;','&#128176;','&#128101;','&#128203;'];
+    if (acEl) acEl.innerHTML = (rec.acciones_inmediatas || []).map((a, i) => `
+        <li style="display:flex;align-items:flex-start;gap:14px;background:#fff;border:1px solid #EDE0D0;border-left:4px solid ${i===0?'#b91c1c':'#6F4E37'};border-radius:10px;padding:12px 16px;">
+            <span style="font-size:1.3rem;flex-shrink:0;">${acIcons[i % acIcons.length]}</span>
+            <div>
+                <span style="font-size:0.68rem;font-weight:800;color:${i===0?'#b91c1c':'#8D6E63'};text-transform:uppercase;letter-spacing:.08em;">${i===0?'&#9889; PRIORITARIO':'Acci&#243;n '+(i+1)}</span>
+                <p style="margin:3px 0 0;font-size:0.87rem;color:#3E2723;line-height:1.55;">${esc(a)}</p>
+            </div>
+        </li>`).join('');
+
+    // ── Pasos licenciamiento ──
+    const pasEl = document.getElementById('llm-rec-pasos');
+    const stepColors = ['#0e4eb0','#0369a1','#0891b2','#059669','#16a34a','#d97706','#6F4E37'];
+    if (pasEl) pasEl.innerHTML = (rec.pasos_licenciamiento || []).map((p, i) => `
+        <li style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;background:#fff;border:1px solid #EDE0D0;border-radius:10px;border-left:4px solid ${stepColors[i%stepColors.length]};">
+            <span style="flex-shrink:0;min-width:24px;height:24px;border-radius:50%;background:${stepColors[i%stepColors.length]};color:#fff;font-size:0.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;">${i+1}</span>
+            <span style="font-size:0.85rem;color:#3E2723;line-height:1.5;">${esc(p)}</span>
+        </li>`).join('');
+
+    // ── Estrategia por zona ──
+    const zonaEl = document.getElementById('llm-rec-zonas');
+    if (zonaEl) zonaEl.innerHTML = (rec.estrategia_por_zona || []).map(z => {
+        const rc = z.rechazo > 60 ? '#b91c1c' : z.rechazo > 40 ? '#d97706' : '#16a34a';
+        const bg = z.rechazo > 60 ? '#fff1f2' : z.rechazo > 40 ? '#fffbeb' : '#f0fdf4';
+        return `<div style="background:${bg};border:1px solid ${rc}44;border-top:3px solid ${rc};border-radius:12px;padding:14px 16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+                <strong style="font-size:0.88rem;color:#3E2723;">${esc(z.zona)}</strong>
+                <div style="display:flex;gap:6px;font-size:0.72rem;font-weight:700;">
+                    <span style="background:rgba(34,197,94,0.15);color:#16a34a;border-radius:20px;padding:2px 8px;">&#9989; ${z.aceptacion}%</span>
+                    <span style="background:rgba(239,68,68,0.15);color:#b91c1c;border-radius:20px;padding:2px 8px;">&#10007; ${z.rechazo}%</span>
+                </div>
+            </div>
+            <p style="margin:0;font-size:0.82rem;color:#5D4037;line-height:1.5;">&#128204; ${esc(z.estrategia)}</p>
+        </div>`;
+    }).join('');
+
+    // ── Semáforo de indicadores ──
+    const semEl = document.getElementById('llm-rec-semaforo');
+    const semColors = { verde:'#16a34a', naranja:'#d97706', rojo:'#b91c1c' };
+    const semBg     = { verde:'#f0fdf4', naranja:'#fffbeb', rojo:'#fff1f2' };
+    const semIcon   = { verde:'&#128994;', naranja:'&#128993;', rojo:'&#128308;' };
+    if (semEl) semEl.innerHTML = (rec.indicadores_licencia_social || []).map(ind => {
+        const sc = ind.semaforo || 'rojo';
+        return `<div style="display:flex;align-items:center;gap:14px;background:${semBg[sc]};border:1px solid ${semColors[sc]}33;border-radius:10px;padding:12px 16px;">
+            <span style="font-size:1.4rem;flex-shrink:0;">${semIcon[sc]}</span>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:0.82rem;font-weight:700;color:#3E2723;">${esc(ind.indicador)}</div>
+                <div style="font-size:0.75rem;color:#8D6E63;margin-top:2px;">Actual: <strong style="color:${semColors[sc]};">${esc(ind.actual)}</strong> &nbsp;&#8594;&nbsp; Meta: <strong>${esc(ind.meta)}</strong></div>
+            </div>
+            <span style="font-size:0.72rem;font-weight:800;background:${semColors[sc]};color:#fff;border-radius:20px;padding:4px 12px;white-space:nowrap;">${sc.toUpperCase()}</span>
+        </div>`;
+    }).join('');
+}
+
 function renderPlanGemini(payload) {
     const box = document.getElementById('gemini-plan-box');
     if (!box) return;
@@ -2778,10 +3021,19 @@ function renderLLMNvidia(payload) {
     setText('llm-resumen', payload.resumen_ejecutivo || '');
     setText('llm-conclusion', payload.conclusion || '');
 
-    // Renderizar recomendaciones mineras si vienen en el payload
-    if (payload.recomendaciones_mineras) {
+    // Grafica importancia de factores
+    if (payload.importancia_factores && payload.importancia_factores.length)
+        renderFactoresChart(payload.importancia_factores);
+    // Ejes estrategicos
+    if (payload.ejes_estrategicos && payload.ejes_estrategicos.length)
+        renderEjesEstrategicos(payload.ejes_estrategicos);
+    // Mejores practicas
+    if (payload.mejores_practicas)
+        renderMejoresPracticas(payload.mejores_practicas);
+    // Recomendaciones mineras
+    if (payload.recomendaciones_mineras)
         renderRecMineras(payload.recomendaciones_mineras);
-    }
+
     setText('llm-prediccion', payload.prediccion_global || '--');
 
     // Enriquecer card de conclusión con resumen visual
@@ -2960,102 +3212,6 @@ function renderLLMNvidia(payload) {
 }
 
 /** Recomendaciones mineras basadas en datos de encuestas */
-function renderRecMineras(rec) {
-    const section = document.getElementById('llm-rec-mineras-section');
-    if (!section) return;
-    section.classList.remove('hidden');
-
-    const esc = (s) => escapeHtml(String(s || ''));
-
-    // ── Viabilidad ──
-    const v = rec.viabilidad_social || {};
-    const vColors = { ALTA: { bg:'#dcfce7', border:'#16a34a', text:'#14532d', badge:'#16a34a' },
-                      MEDIA:{ bg:'#fef3c7', border:'#d97706', text:'#92400e', badge:'#d97706' },
-                      BAJA: { bg:'#fee2e2', border:'#b91c1c', text:'#7f1d1d', badge:'#b91c1c' } };
-    const vc = vColors[v.nivel] || vColors.BAJA;
-    const viabEl = document.getElementById('llm-rec-viabilidad');
-    if (viabEl) viabEl.innerHTML = `
-        <div style="background:${vc.bg};border:2px solid ${vc.border};border-radius:14px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-            <div>
-                <div style="font-size:0.72rem;font-weight:700;color:${vc.text};text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">Viabilidad Social del Proyecto Minero</div>
-                <p style="margin:0;font-size:0.88rem;color:${vc.text};line-height:1.5;">${esc(v.resumen)}</p>
-            </div>
-            <span style="font-size:1.1rem;font-weight:800;background:${vc.badge};color:#fff;border-radius:12px;padding:8px 20px;white-space:nowrap;flex-shrink:0;">
-                ${v.nivel === 'ALTA' ? '&#9989;' : v.nivel === 'MEDIA' ? '&#9888;&#65039;' : '&#10060;'} ${esc(v.nivel)}
-            </span>
-        </div>`;
-
-    // ── Fortalezas ──
-    const fortEl = document.getElementById('llm-rec-fortalezas');
-    if (fortEl) fortEl.innerHTML = (rec.fortalezas || []).map(f => `
-        <li style="display:flex;align-items:flex-start;gap:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 12px;">
-            <span style="color:#16a34a;font-weight:800;flex-shrink:0;margin-top:1px;">&#9650;</span>
-            <span style="font-size:0.84rem;color:#166534;line-height:1.5;">${esc(f)}</span>
-        </li>`).join('');
-
-    // ── Riesgos críticos ──
-    const riesEl = document.getElementById('llm-rec-riesgos');
-    if (riesEl) riesEl.innerHTML = (rec.riesgos_criticos || []).map(r => `
-        <li style="display:flex;align-items:flex-start;gap:10px;background:#fff1f2;border:1px solid #fecaca;border-radius:10px;padding:10px 12px;">
-            <span style="color:#b91c1c;font-weight:800;flex-shrink:0;margin-top:1px;">&#9660;</span>
-            <span style="font-size:0.84rem;color:#7f1d1d;line-height:1.5;">${esc(r)}</span>
-        </li>`).join('');
-
-    // ── Acciones inmediatas ──
-    const acEl = document.getElementById('llm-rec-acciones');
-    const acIcons = ['&#128270;','&#9888;&#65039;','&#128176;','&#128101;','&#128203;'];
-    if (acEl) acEl.innerHTML = (rec.acciones_inmediatas || []).map((a, i) => `
-        <li style="display:flex;align-items:flex-start;gap:14px;background:#fff;border:1px solid #EDE0D0;border-left:4px solid ${i===0?'#b91c1c':'#6F4E37'};border-radius:10px;padding:12px 16px;">
-            <span style="font-size:1.3rem;flex-shrink:0;">${acIcons[i % acIcons.length]}</span>
-            <div>
-                <span style="font-size:0.68rem;font-weight:800;color:${i===0?'#b91c1c':'#8D6E63'};text-transform:uppercase;letter-spacing:.08em;">${i===0?'&#9889; PRIORITARIO':'Acci&#243;n '+(i+1)}</span>
-                <p style="margin:3px 0 0;font-size:0.87rem;color:#3E2723;line-height:1.55;">${esc(a)}</p>
-            </div>
-        </li>`).join('');
-
-    // ── Pasos licenciamiento ──
-    const pasEl = document.getElementById('llm-rec-pasos');
-    const stepColors = ['#0e4eb0','#0369a1','#0891b2','#059669','#16a34a','#d97706','#6F4E37'];
-    if (pasEl) pasEl.innerHTML = (rec.pasos_licenciamiento || []).map((p, i) => `
-        <li style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;background:#fff;border:1px solid #EDE0D0;border-radius:10px;border-left:4px solid ${stepColors[i%stepColors.length]};">
-            <span style="flex-shrink:0;min-width:24px;height:24px;border-radius:50%;background:${stepColors[i%stepColors.length]};color:#fff;font-size:0.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;">${i+1}</span>
-            <span style="font-size:0.85rem;color:#3E2723;line-height:1.5;">${esc(p)}</span>
-        </li>`).join('');
-
-    // ── Estrategia por zona ──
-    const zonaEl = document.getElementById('llm-rec-zonas');
-    if (zonaEl) zonaEl.innerHTML = (rec.estrategia_por_zona || []).map(z => {
-        const rc = z.rechazo > 60 ? '#b91c1c' : z.rechazo > 40 ? '#d97706' : '#16a34a';
-        const bg = z.rechazo > 60 ? '#fff1f2' : z.rechazo > 40 ? '#fffbeb' : '#f0fdf4';
-        return `<div style="background:${bg};border:1px solid ${rc}44;border-top:3px solid ${rc};border-radius:12px;padding:14px 16px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
-                <strong style="font-size:0.88rem;color:#3E2723;">${esc(z.zona)}</strong>
-                <div style="display:flex;gap:6px;font-size:0.72rem;font-weight:700;">
-                    <span style="background:rgba(34,197,94,0.15);color:#16a34a;border-radius:20px;padding:2px 8px;">&#9989; ${z.aceptacion}%</span>
-                    <span style="background:rgba(239,68,68,0.15);color:#b91c1c;border-radius:20px;padding:2px 8px;">&#10007; ${z.rechazo}%</span>
-                </div>
-            </div>
-            <p style="margin:0;font-size:0.82rem;color:#5D4037;line-height:1.5;">&#128204; ${esc(z.estrategia)}</p>
-        </div>`;
-    }).join('');
-
-    // ── Semáforo de indicadores ──
-    const semEl = document.getElementById('llm-rec-semaforo');
-    const semColors = { verde:'#16a34a', naranja:'#d97706', rojo:'#b91c1c' };
-    const semBg     = { verde:'#f0fdf4', naranja:'#fffbeb', rojo:'#fff1f2' };
-    const semIcon   = { verde:'&#128994;', naranja:'&#128993;', rojo:'&#128308;' };
-    if (semEl) semEl.innerHTML = (rec.indicadores_licencia_social || []).map(ind => {
-        const sc = ind.semaforo || 'rojo';
-        return `<div style="display:flex;align-items:center;gap:14px;background:${semBg[sc]};border:1px solid ${semColors[sc]}33;border-radius:10px;padding:12px 16px;">
-            <span style="font-size:1.4rem;flex-shrink:0;">${semIcon[sc]}</span>
-            <div style="flex:1;min-width:0;">
-                <div style="font-size:0.82rem;font-weight:700;color:#3E2723;">${esc(ind.indicador)}</div>
-                <div style="font-size:0.75rem;color:#8D6E63;margin-top:2px;">Actual: <strong style="color:${semColors[sc]};">${esc(ind.actual)}</strong> &nbsp;&#8594;&nbsp; Meta: <strong>${esc(ind.meta)}</strong></div>
-            </div>
-            <span style="font-size:0.72rem;font-weight:800;background:${semColors[sc]};color:#fff;border-radius:20px;padding:4px 12px;white-space:nowrap;">${sc.toUpperCase()}</span>
-        </div>`;
-    }).join('');
-}
 
 /** Donut de sentimiento (positivo/neutro/negativo) */
 function renderLLMSentimientoDonut(sentData, canvasId) {
@@ -5361,7 +5517,7 @@ ${chartsCode}
 
         // Esperar a que carguen Chart.js y se dibujen las gráficas antes de imprimir
         iframe.onload = () => setTimeout(doPrint, 1200);
-        // Respaldo si onload no dispara (document.write a veces no lo lanza)
+        // Respaldo         // Respaldo si onload no dispara (document.write a veces no lo lanza)
         setTimeout(doPrint, 2000);
 
     } catch (err) {

@@ -619,13 +619,181 @@ def generate_instant_analysis(stats):
     # Filtrar Nones
     rec_mineras["riesgos_criticos"] = [r for r in rec_mineras["riesgos_criticos"] if r]
 
+    # ── EJES ESTRATEGICOS (basados en dimensiones criticas) ────
+    EJE_DEF = {
+        "Percepcion Minera": {
+            "icono": "mining",
+            "titulo": "Eje 1: Transformacion de la Percepcion Minera",
+            "descripcion": "Revertir la imagen negativa de la mineria mediante evidencia de proyectos responsables y beneficios documentados.",
+            "acciones": [
+                "Campana 'Mineria que transforma': casos de exito mineros en Ecuador (Mirador, Fruta del Norte)",
+                "Talleres de mineria responsable con metodologia ICMM en todas las zonas de la parroquia",
+                "Publicacion trimestral de indicadores ambientales y sociales del proyecto en espacios comunitarios",
+            ],
+            "normativa": "Ley de Mineria Ecuador Art. 86-88; ICMM 10 Principios",
+        },
+        "Clima Politico": {
+            "icono": "governance",
+            "titulo": "Eje 2: Gobernanza y Clima Politico Favorable",
+            "descripcion": "Fortalecer la institucionalidad local y reducir tensiones politicas que bloquean el avance del proyecto.",
+            "acciones": [
+                "Mesa Tecnica Minera Parroquial: alcalde, GADP, ARCOM, empresa y comunidad",
+                "Protocolo de resolucion de conflictos con mediador neutral certificado por el Ministerio de Gobierno",
+                "Agenda de compromisos publicos verificables firmados ante notario",
+            ],
+            "normativa": "Codigo Organico de Organizacion Territorial (COOTAD); Acuerdo Ministerial 154",
+        },
+        "Confianza Institucional": {
+            "icono": "trust",
+            "titulo": "Eje 3: Fortalecimiento de la Confianza Institucional",
+            "descripcion": "Construir confianza en las instituciones publicas y en la empresa operadora mediante transparencia y rendicion de cuentas.",
+            "acciones": [
+                "Auditoria social semestral independiente con veedores comunitarios capacitados por ARCOM",
+                "Portal de transparencia en linea: inversiones, empleos generados y cumplimiento ambiental",
+                "Comite de seguimiento de acuerdos con representacion de todas las zonas parroquiales",
+            ],
+            "normativa": "Convenio 169 OIT Art. 15; IFC Performance Standard 1",
+        },
+        "Apertura a Inversion": {
+            "icono": "investment",
+            "titulo": "Eje 4: Modelo de Participacion Economica Comunitaria",
+            "descripcion": "Disenar mecanismos de participacion economica que conviertan a la comunidad en socia del proyecto.",
+            "acciones": [
+                "Fondo de Desarrollo Parroquial: 5-10% de utilidades netas anuales para obras priorizadas por la comunidad",
+                "Programa de empleo local: minimo 80% mano de obra parroquial en fase de construccion",
+                "Cooperativa de proveedores locales para suministro de bienes y servicios al proyecto",
+            ],
+            "normativa": "Ley de Mineria Art. 28 (regalias); Reglamento General de Mineria Art. 67",
+        },
+        "Situacion Economica": {
+            "icono": "economy",
+            "titulo": "Eje 5: Desarrollo Economico Complementario",
+            "descripcion": "Integrar el proyecto minero con la economia agropecuaria local para no generar dependencia ni desplazamiento.",
+            "acciones": [
+                "Plan de convivencia minero-agricola: delimitar zonas de influencia y proteger areas productivas",
+                "Fondo de compensacion por afectaciones productivas con tasacion independiente",
+                "Programa de diversificacion economica post-mineria: agroturismo, artesania, agricultura organica",
+            ],
+            "normativa": "Plan Nacional de Desarrollo 2021-2025; Agenda Minera Ecuador 2022",
+        },
+        "Conocimiento Minero": {
+            "icono": "knowledge",
+            "titulo": "Eje 6: Educacion Tecnica y Transferencia de Conocimiento",
+            "descripcion": "Elevar el nivel de conocimiento tecnico minero de la comunidad para reducir el rechazo basado en desinformacion.",
+            "acciones": [
+                f"Escuela de Mineria Comunitaria: modulos de geologia basica, proceso minero, impacto ambiental y derechos",
+                "Becas tecnicas en mineria para jovenes de la parroquia en universidades nacionales (ESPOCH, UPS)",
+                f"Plataforma digital interactiva con simulador del ciclo minero adaptado al contexto de San Bartolome",
+            ],
+            "normativa": "Plan Nacional de Ciencia y Tecnologia; SENESCYT convenios mineros",
+        },
+    }
+
+    ejes = []
+    # Priorizar dimensiones criticas primero
+    dims_ordenadas = sorted(dims, key=lambda d: d["sentimiento"]["indice"])
+    for d in dims_ordenadas:
+        t = d["titulo"]
+        for key, eje_data in EJE_DEF.items():
+            if key.lower() in t.lower() or t.lower() in key.lower():
+                idx_val = d["sentimiento"]["indice"]
+                eje_data_copy = dict(eje_data)
+                eje_data_copy["indice"] = idx_val
+                eje_data_copy["prioridad"] = "CRITICA" if idx_val <= -15 else ("MEDIA" if idx_val <= 15 else "BAJA")
+                eje_data_copy["dimension"] = t
+                if eje_data_copy not in ejes:
+                    ejes.append(eje_data_copy)
+                break
+    # Agregar ejes sin dimension matched (siempre incluir al menos 4)
+    for key, eje_data in EJE_DEF.items():
+        if not any(e.get("titulo") == eje_data["titulo"] for e in ejes):
+            eje_data_copy = dict(eje_data)
+            eje_data_copy["indice"] = 0
+            eje_data_copy["prioridad"] = "MEDIA"
+            eje_data_copy["dimension"] = key
+            ejes.append(eje_data_copy)
+
+    # ── MEJORES PRACTICAS MINERAS ─────────────────────────────
+    mejores_practicas = {
+        "internacionales": [
+            {
+                "nombre": "ICMM 10 Principios de Mineria Responsable",
+                "entidad": "International Council on Mining & Metals",
+                "descripcion": "Marco global de sostenibilidad para la industria minera: derechos humanos, biodiversidad, gestion de residuos y participacion comunitaria.",
+                "aplicabilidad": f"Aplicar Principio 3 (participacion comunitaria) y Principio 6 (salud y seguridad) como base del contrato social con San Bartolome.",
+                "url": "https://www.icmm.com/en-gb/our-principles",
+                "nivel": "Internacional",
+            },
+            {
+                "nombre": "IFC Performance Standards (PS1-PS8)",
+                "entidad": "International Finance Corporation - Banco Mundial",
+                "descripcion": "Estandares de desempeno ambiental y social para proyectos de inversion: evaluacion de impacto, condiciones laborales, salud comunitaria.",
+                "aplicabilidad": f"PS1 (evaluacion de impacto) y PS5 (adquisicion de tierras) son criticos dado el nivel de rechazo actual ({pr}%).",
+                "url": "https://www.ifc.org/performancestandards",
+                "nivel": "Internacional",
+            },
+            {
+                "nombre": "Principios del Ecuador (Equator Principles)",
+                "entidad": "Equator Principles Association",
+                "descripcion": "Marco de gestion de riesgo ambiental y social para financiamiento de proyectos de infraestructura y mineria.",
+                "aplicabilidad": "Requerido por bancos financiadores internacionales. Cumplirlos facilita acceso a creditos y legitima el proyecto ante inversionistas.",
+                "url": "https://equator-principles.com",
+                "nivel": "Internacional",
+            },
+            {
+                "nombre": "Convenio 169 OIT - Consulta Previa",
+                "entidad": "Organizacion Internacional del Trabajo",
+                "descripcion": "Establece el derecho de pueblos indigenas y comunidades a ser consultados antes de proyectos que afecten su territorio.",
+                "aplicabilidad": "Obligatorio en Ecuador (ratificado 1998). El proceso CPLI debe ejecutarse antes de cualquier tramite de concesion minera.",
+                "url": "https://www.ilo.org/indigenous/Conventions/no169/",
+                "nivel": "Internacional",
+            },
+        ],
+        "locales": [
+            {
+                "nombre": "Proyecto Mirador - EcuaCorriente",
+                "entidad": "CRCC-Tongguan / ARCOM Ecuador",
+                "descripcion": "Primera mina a gran escala en Ecuador (Zamora Chinchipe). Modelo de gestion social con fondo de compensacion comunitaria y monitoreo ambiental.",
+                "aplicabilidad": f"Replicar su esquema de mesas de dialogo zonales y fondo de royalties del 5% para financiar obras en San Bartolome.",
+                "url": "https://www.arcom.gob.ec",
+                "nivel": "Nacional",
+            },
+            {
+                "nombre": "Proyecto Fruta del Norte - Lundin Gold",
+                "entidad": "Lundin Gold / Ministerio de Energia",
+                "descripcion": "Mina de oro en Zamora Chinchipe con modelo de responsabilidad social: 70% empleo local, fondo de desarrollo y programa ambiental.",
+                "aplicabilidad": "Adaptar el programa '70% empleo local' al contexto de San Bartolome para reducir el rechazo basado en preocupaciones economicas.",
+                "url": "https://www.lundingold.com",
+                "nivel": "Nacional",
+            },
+            {
+                "nombre": "Agenda Minera Ecuador 2022-2025",
+                "entidad": "Ministerio de Energia y Recursos Naturales No Renovables",
+                "descripcion": "Hoja de ruta nacional para mineria responsable: lineamientos de licenciamiento social, participacion comunitaria y beneficios territoriales.",
+                "aplicabilidad": "Alinear el plan de San Bartolome con los estandares de la Agenda Minera para facilitar tramites ante ARCOM y obtener apoyo institucional.",
+                "url": "https://www.recursosyenergia.gob.ec",
+                "nivel": "Nacional",
+            },
+            {
+                "nombre": "Ley de Mineria Ecuador (Reg. 517/2009 + reformas)",
+                "entidad": "Asamblea Nacional del Ecuador / ARCOM",
+                "descripcion": "Marco legal minero: concesiones, regalias anticipadas (5% sobre ventas), fondos de compensacion, consulta previa y cierre de minas.",
+                "aplicabilidad": f"Art. 93: comunidades reciben el 60% del 12% de regalias. Con {n} encuestas y {n_zonas} zonas, esto representa un argumento economico directo.",
+                "url": "https://www.arcom.gob.ec/legislacion",
+                "nivel": "Nacional",
+            },
+        ],
+    }
+
     return {
         "resumen_ejecutivo":        resumen,
-        "importancia_factores":     factores[:5],
+        "importancia_factores":     factores,
         "interpretaciones_dim":     interpretaciones_dim,
         "hallazgos_zona":           hallazgos_zona,
         "recomendaciones_ia":       recs[:5],
         "plan_estrategico":         plan,
         "conclusion":               conclusion,
         "recomendaciones_mineras":  rec_mineras,
+        "ejes_estrategicos":        ejes,
+        "mejores_practicas":        mejores_practicas,
     }
