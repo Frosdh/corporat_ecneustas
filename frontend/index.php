@@ -1041,9 +1041,9 @@ header('Expires: 0');
                             <h3 class="analisis-section-header">Radar de Favorabilidad</h3>
                         </div>
                     </div>
-                    <div class="card analisis-radar-card" style="margin-bottom:24px;padding:24px 16px 16px;">
-                        <p style="font-size:0.8rem;color:var(--text-muted);margin:0 0 12px;text-align:center;">Balance multidimensional &mdash; An&aacute;lisis IA</p>
-                        <div style="position:relative;width:100%;height:600px;max-width:850px;margin:0 auto;">
+                    <div class="card analisis-radar-card" style="margin-bottom:24px;padding:24px 16px 16px;flex-direction:column;">
+                        <p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 16px;text-align:center;">Balance multidimensional &mdash; An&aacute;lisis IA</p>
+                        <div style="position:relative;width:100%;height:700px;max-width:900px;margin:0 auto;">
                             <canvas id="llm-radar-chart"></canvas>
                         </div>
                     </div>

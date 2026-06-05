@@ -2041,7 +2041,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Eventos para el nuevo modulo LLM Nvidia
     const llmBtn = document.getElementById('llm-generate-btn');
-    if (llmBtn) llmBtn.addEventListener('click', () => generateLLMNvidia());
+    if (llmBtn) llmBtn.addEventListener('click', () => generateLLMNvidia(true));
     const llmFilter = document.getElementById('llm-sector-filter');
     if (llmFilter) llmFilter.addEventListener('change', () => {
         // Forzar nueva carga al cambiar zona — siempre resetear el sector guardado
@@ -2501,7 +2501,7 @@ function renderDonutGlobal(sent) {
 // Dos fases: 1) stats instantáneo, 2) LLM completo en fetch normal
 let _llmEventSource = null;
 
-function generateLLMNvidia() {
+function generateLLMNvidia(force = false) {
     const sector  = document.getElementById('llm-sector-filter')?.value ?? 'general';
     const btn     = document.getElementById('llm-generate-btn');
     const loading = document.getElementById('llm-loading');
@@ -2512,12 +2512,12 @@ function generateLLMNvidia() {
     const zonasProg = document.getElementById('llm-zonas-progress');
 
     // Evitar peticiones duplicadas si ya esta procesando el mismo sector
-    if (_llmEventSource && window._llmCurrentSector === sector) {
+    if (!force && _llmEventSource && window._llmCurrentSector === sector) {
         return; // Ya esta cargando
     }
     
     // Evitar recargar si ya tenemos los resultados del mismo sector en pantalla y no hay error
-    if (window._llmCurrentSector === sector && results && !results.classList.contains('hidden')) {
+    if (!force && window._llmCurrentSector === sector && results && !results.classList.contains('hidden')) {
         return; 
     }
 
@@ -2533,6 +2533,47 @@ function generateLLMNvidia() {
     if (thinking) { thinking.classList.add('hidden'); thinking.textContent = ''; }
     if (progBox) progBox.textContent = 'Iniciando análisis NVIDIA...';
     if (zonasProg) zonasProg.innerHTML = '';
+
+    // ── RESET TOTAL: destruir todas las gráficas anteriores y limpiar los grids ──
+    // Destruir todos los charts LLM anteriores (claves exactas de analisisState.charts)
+    ['llm-radar', 'llm-zonas', 'llm-donut-global', 'llm-donut-llm-radar-chart'].forEach(k => destroyChart(k));
+    Object.keys(analisisState.charts).filter(k =>
+        k.startsWith('llm-dim-') || k.startsWith('llm-stats-dim-') ||
+        k.startsWith('llm-zona-gauge-') || k.startsWith('llm-donut-')
+    ).forEach(k => destroyChart(k));
+
+    // Limpiar el canvas del radar manualmente
+    const radarCanvas = document.getElementById('llm-radar-chart');
+    if (radarCanvas && typeof Chart !== 'undefined') {
+        const existingRadar = Chart.getChart(radarCanvas);
+        if (existingRadar) existingRadar.destroy();
+    }
+
+    // Poner todos los grids en estado de espera (placeholder)
+    ['llm-stats-dimensiones-grid', 'llm-dimensiones-grid', 'llm-zonas-llm-grid'].forEach(id => {
+        const grid = document.getElementById(id);
+        if (grid) {
+            grid.innerHTML = `
+                <div style="grid-column:1/-1;text-align:center;padding:48px 24px;
+                            background:rgba(0,0,0,0.03);border-radius:12px;
+                            border:2px dashed rgba(0,0,0,0.1);">
+                    <div style="font-size:2rem;margin-bottom:12px;opacity:0.3;">&#9881;</div>
+                    <p style="color:var(--text-muted,rgba(0,0,0,0.45));font-size:0.9rem;margin:0 0 4px;font-weight:600;">
+                        Esperando an&aacute;lisis de IA
+                    </p>
+                    <p style="color:var(--text-muted,rgba(0,0,0,0.3));font-size:0.78rem;margin:0;">
+                        Zona: <strong>${sector}</strong>
+                    </p>
+                </div>`;
+        }
+    });
+
+    // Limpiar textos y listas que la IA llena
+    ['llm-resumen', 'llm-conclusion', 'llm-factores', 'llm-recomendaciones',
+     'llm-plan-fases', 'llm-plan-indicadores', 'llm-plan-acciones'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+    });
 
     // Construir URL SSE
     const base = apiUrl('llm_nvidia_stream', { params: { sector } });
@@ -2554,10 +2595,8 @@ function generateLLMNvidia() {
                 break;
 
             case 'stats':
-                // ── MOSTRAR RESULTADOS INMEDIATAMENTE — no esperar al LLM ──
-                if (obj.stats) renderLLMStats(obj.stats);
                 if (results) results.classList.remove('hidden');
-                // Ocultar spinner y habilitar botón YA — el LLM sigue en background
+                if (obj.stats) renderLLMStats(obj.stats);
                 if (loading) loading.classList.add('hidden');
                 if (btn) btn.disabled = false;
                 // Mostrar indicador "IA enriqueciendo..." no bloqueante
@@ -2577,17 +2616,22 @@ function generateLLMNvidia() {
                 break;
 
             case 'result':
-                renderLLMNvidia(obj);
                 if (results) results.classList.remove('hidden');
                 if (btn) btn.disabled = false;
                 if (loading) loading.classList.add('hidden');
                 if (thinking) thinking.classList.add('hidden');
-                
+
                 // CRÍTICO: Cerrar conexión para que el navegador no intente reconectar y lance onerror
-                es.close(); 
+                es.close();
                 _llmEventSource = null;
                 const aiBoxResult = document.getElementById('llm-ai-enriching');
                 if (aiBoxResult) aiBoxResult.style.display = 'none';
+
+                // Renderizar DESPUÉS de que el browser haya recalculado el layout (container visible)
+                // para que Chart.js mida las dimensiones reales del canvas
+                requestAnimationFrame(() => {
+                    setTimeout(() => renderLLMNvidia(obj), 50);
+                });
                 break;
 
             case 'llm_update':
@@ -2677,27 +2721,34 @@ function renderLLMStats(stats) {
     // Gráfica barras por sector
     renderLLMZonasChart(stats.sectores_detalle || []);
 
-    // ── ACTUALIZAR TODAS LAS GRÁFICAS INMEDIATAMENTE con datos locales ──
-    // Análisis por zona (tarjetas) — no espera al LLM
-    if (stats.sectores_detalle && stats.sectores_detalle.length > 0) {
-        renderLLMAnalissiZonas(stats.sectores_detalle.map(s => ({
-            zona:           s.sector,
-            n:              s.n,
-            prediccion:     s.aceptacion_pct >= s.rechazo_pct ? 'Aceptacion' : 'Rechazo',
-            aceptacion_pct: s.aceptacion_pct,
-            neutral_pct:    s.neutral_pct,
-            rechazo_pct:    s.rechazo_pct,
-            hallazgo_clave: '',
-        })));
-    }
+    // En lugar de renderizar inmediatamente con stats locales, ponemos placeholders
+    // para que sea la IA quien llene todo (según la petición del usuario).
+    
+    const gridsToWait = ['llm-stats-dimensiones-grid', 'llm-dimensiones-grid', 'llm-zonas-llm-grid'];
+    gridsToWait.forEach(id => {
+        const grid = document.getElementById(id);
+        if (grid) {
+            grid.innerHTML = `
+                <div style="grid-column:1/-1;text-align:center;padding:48px 24px;
+                            background:rgba(255,255,255,0.03);border-radius:12px;
+                            border:2px dashed rgba(255,255,255,0.12);">
+                    <div style="font-size:2rem;margin-bottom:12px;opacity:0.4;">&#9881;</div>
+                    <p style="color:rgba(255,255,255,0.4);font-size:0.9rem;margin:0 0 4px;font-weight:600;">
+                        Esperando an&aacute;lisis de IA
+                    </p>
+                    <p style="color:rgba(255,255,255,0.25);font-size:0.78rem;margin:0;">
+                        Los resultados detallados aparecer&aacute;n aqu&iacute; cuando NVIDIA finalice el an&aacute;lisis.
+                    </p>
+                </div>`;
+        }
+    });
 
-    // Radar de favorabilidad — no espera al LLM
-    if (stats.sentimientos_dimensiones && stats.sentimientos_dimensiones.length > 0) {
-        renderLLMRadarChart(stats.sentimientos_dimensiones);
-        // Dimensiones detalladas (grid principal) — no espera al LLM
-        renderLLMDimensiones(stats.sentimientos_dimensiones, 'llm-dimensiones-grid', 'llm-dim-');
-        // Dimensiones estadísticas previas (sección pre-LLM)
-        renderLLMDimensiones(stats.sentimientos_dimensiones, 'llm-stats-dimensiones-grid', 'llm-stats-dim-');
+    // Limpiar radar chart para que empiece en blanco
+    const radarCtx = document.getElementById('llm-radar-chart');
+    if (radarCtx && typeof Chart !== 'undefined') {
+        destroyChart('llm-radar-chart-obj');
+        const ctx2d = radarCtx.getContext('2d');
+        if (ctx2d) ctx2d.clearRect(0, 0, radarCtx.width, radarCtx.height);
     }
 }
 
@@ -2767,6 +2818,9 @@ function renderLLMNvidia(payload) {
 
     // Dimensiones con gráficas
     if (payload.dimensiones && payload.dimensiones.length > 0) {
+        // Llenamos el grid superior de Sentimientos por Dimensión
+        renderLLMDimensiones(payload.dimensiones, 'llm-stats-dimensiones-grid', 'llm-stats-dim-');
+        // Llenamos el grid inferior de Análisis Detallado
         renderLLMDimensiones(payload.dimensiones, 'llm-dimensiones-grid', 'llm-dim-');
         renderLLMRadarChart(payload.dimensiones);
     }
@@ -2822,7 +2876,7 @@ function renderLLMSentimientoDonut(sentData, canvasId) {
     analisisState.charts['llm-donut-' + canvasId] = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['✅ Aceptación', '⚠️ Neutro', '❌ Rechazo'],
+            labels: ['Aceptación', 'Neutro', 'Rechazo'],
             datasets: [{
                 data: [pos, neu, neg],
                 backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'],
@@ -2836,7 +2890,15 @@ function renderLLMSentimientoDonut(sentData, canvasId) {
             plugins: {
                 legend: {
                     position: 'bottom',
-                    labels: { color: 'rgba(255,255,255,0.8)', font: { size: 11 }, padding: 12, boxWidth: 14 },
+                    labels: {
+                        color: 'rgba(255,255,255,0.9)',
+                        font: { size: 12, weight: '600' },
+                        padding: 16,
+                        boxWidth: 12,
+                        boxHeight: 12,
+                        usePointStyle: true,
+                        pointStyleWidth: 12,
+                    },
                 },
                 tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed.toFixed(1)}%` } },
             },
@@ -2977,7 +3039,7 @@ function renderLLMRadarChart(dimensiones) {
         data: {
             labels,
             datasets: [{
-                label: 'Índice de Favorabilidad',
+                label: '\u00cdndice de Favorabilidad',
                 data: dataFavor,
                 backgroundColor: 'rgba(59,130,246,0.18)',
                 borderColor: 'rgba(99,179,255,0.95)',
@@ -3026,7 +3088,7 @@ function renderLLMRadarChart(dimensiones) {
                         label: (c) => {
                             const raw = c.raw;
                             const idx = (raw * 2) - 100;
-                            const lbl = idx >= 15 ? '🟢 Favorable' : idx <= -15 ? '🔴 Crítico' : '🟡 Ambivalente';
+                            const lbl = idx >= 15 ? 'Favorable' : idx <= -15 ? 'Critico' : 'Ambivalente';
                             return ` ${lbl}  (${idx >= 0 ? '+' : ''}${idx.toFixed(0)} pts)`;
                         },
                     },
@@ -3052,7 +3114,7 @@ function renderLLMDimensiones(dimensiones, gridId, chartPrefix) {
         const items       = ((dim.distribucion && dim.distribucion.items) ? dim.distribucion.items : []).slice(0, 7);
         const idxVal      = sent.indice ?? 0;
         const sentClass   = idxVal >= 15 ? 'sent-positive' : idxVal <= -15 ? 'sent-negative' : 'sent-neutral';
-        const sentLabel   = idxVal >= 15 ? '🟢 Favorable' : idxVal <= -15 ? '🔴 Crítico' : '🟡 Ambivalente';
+        const sentLabel   = idxVal >= 15 ? 'Favorable' : idxVal <= -15 ? 'Critico' : 'Ambivalente';
         const accentColor = idxVal >= 15 ? '#22c55e' : idxVal <= -15 ? '#ef4444' : '#f59e0b';
         const gaugeId     = 'gauge-' + chartPrefix + idx;
         const barId       = 'bar-'   + chartPrefix + idx;
@@ -3068,7 +3130,7 @@ function renderLLMDimensiones(dimensiones, gridId, chartPrefix) {
                         pointer-events:none;"></div>
 
             <div class="analisis-dim-header" style="margin-bottom:14px;">
-                <h4 class="analisis-dim-titulo" style="font-size:1rem;font-weight:700;color:#f1f5f9;margin:0 0 6px;line-height:1.35;">
+                <h4 class="analisis-dim-titulo" style="font-size:1rem;font-weight:700;color:var(--text-color, #1e293b);margin:0 0 6px;line-height:1.35;">
                     ${escapeHtml(dim.titulo)}
                 </h4>
                 <span class="analisis-sent-badge ${sentClass}" style="font-size:0.78rem;padding:3px 10px;border-radius:20px;">
@@ -3084,34 +3146,34 @@ function renderLLMDimensiones(dimensiones, gridId, chartPrefix) {
                         <span style="font-size:1.4rem;font-weight:800;color:${accentColor};line-height:1;">
                             ${idxVal >= 0 ? '+' : ''}${idxVal}
                         </span>
-                        <span style="font-size:0.58rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.6px;margin-top:2px;">índice</span>
+                        <span style="font-size:0.58rem;color:var(--text-muted, rgba(0,0,0,0.45));text-transform:uppercase;letter-spacing:0.6px;margin-top:2px;">índice</span>
                     </div>
                 </div>
                 <div style="flex:1;display:flex;flex-direction:column;gap:7px;">
                     <div>
                         <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
-                            <span style="font-size:0.73rem;color:#4ade80;font-weight:600;">✔ Positivo</span>
+                            <span style="font-size:0.73rem;color:#4ade80;font-weight:600;">&#9679; Positivo</span>
                             <span style="font-size:0.73rem;color:#4ade80;font-weight:700;">${sent.positivo_pct}%</span>
                         </div>
-                        <div style="background:rgba(255,255,255,0.07);border-radius:4px;height:6px;overflow:hidden;">
+                        <div style="background:var(--border-color, rgba(0,0,0,0.06));border-radius:4px;height:6px;overflow:hidden;">
                             <div style="width:${sent.positivo_pct}%;height:100%;background:linear-gradient(90deg,#16a34a,#4ade80);border-radius:4px;"></div>
                         </div>
                     </div>
                     <div>
                         <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
-                            <span style="font-size:0.73rem;color:#fbbf24;font-weight:600;">◑ Neutro</span>
+                            <span style="font-size:0.73rem;color:#fbbf24;font-weight:600;">&#9679; Neutro</span>
                             <span style="font-size:0.73rem;color:#fbbf24;font-weight:700;">${sent.neutro_pct}%</span>
                         </div>
-                        <div style="background:rgba(255,255,255,0.07);border-radius:4px;height:6px;overflow:hidden;">
+                        <div style="background:var(--border-color, rgba(0,0,0,0.06));border-radius:4px;height:6px;overflow:hidden;">
                             <div style="width:${sent.neutro_pct}%;height:100%;background:linear-gradient(90deg,#b45309,#fbbf24);border-radius:4px;"></div>
                         </div>
                     </div>
                     <div>
                         <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
-                            <span style="font-size:0.73rem;color:#f87171;font-weight:600;">✖ Negativo</span>
+                            <span style="font-size:0.73rem;color:#f87171;font-weight:600;">&#9679; Negativo</span>
                             <span style="font-size:0.73rem;color:#f87171;font-weight:700;">${sent.negativo_pct}%</span>
                         </div>
-                        <div style="background:rgba(255,255,255,0.07);border-radius:4px;height:6px;overflow:hidden;">
+                        <div style="background:var(--border-color, rgba(0,0,0,0.06));border-radius:4px;height:6px;overflow:hidden;">
                             <div style="width:${sent.negativo_pct}%;height:100%;background:linear-gradient(90deg,#b91c1c,#f87171);border-radius:4px;"></div>
                         </div>
                     </div>
@@ -3120,7 +3182,7 @@ function renderLLMDimensiones(dimensiones, gridId, chartPrefix) {
 
             ${items.length > 0 ? `
             <div style="margin-bottom:12px;">
-                <p style="font-size:0.68rem;font-weight:700;color:rgba(255,255,255,0.35);text-transform:uppercase;
+                <p style="font-size:0.68rem;font-weight:700;color:var(--text-muted, rgba(0,0,0,0.5));text-transform:uppercase;
                            letter-spacing:1px;margin:0 0 7px;">Distribución de respuestas</p>
                 <div style="position:relative;height:${Math.max(60, items.length * 22)}px;">
                     <canvas id="${barId}"></canvas>
@@ -3128,9 +3190,9 @@ function renderLLMDimensiones(dimensiones, gridId, chartPrefix) {
             </div>` : ''}
 
             ${dim.interpretacion ? `
-            <div style="background:rgba(255,255,255,0.035);border-left:3px solid ${accentColor};
+            <div style="background:var(--bg-lighter, rgba(0,0,0,0.025));border-left:3px solid ${accentColor};
                         border-radius:0 6px 6px 0;padding:9px 12px;margin-top:6px;">
-                <p style="font-size:0.78rem;color:rgba(255,255,255,0.6);margin:0;line-height:1.55;">
+                <p style="font-size:0.78rem;color:var(--text-color, #334155);margin:0;line-height:1.55;">
                     ${escapeHtml(dim.interpretacion)}
                 </p>
             </div>` : ''}
@@ -3530,7 +3592,7 @@ function renderRadarDimensiones(dimensiones) {
         data: {
             labels,
             datasets: [{
-                label: 'Índice Neto de Sentimiento (pts)',
+                label: '\u00cdndice Neto de Sentimiento (pts)',
                 data: vals,
                 backgroundColor: 'rgba(56, 189, 248, 0.25)',
                 borderColor: '#38bdf8',
@@ -3905,7 +3967,7 @@ async function generateAnalisisPDF() {
         const sgn = v => { const x = n(v); return (x >= 0 ? '+' : '') + x; };
 
         function sentColor(i) { const x = n(i); return x >= 15 ? '#0f9f6e' : x <= -15 ? '#c43d45' : '#d97706'; }
-        function sentLabel(i) { const x = n(i); return x >= 15 ? 'FAVORABLE' : x <= -15 ? 'CRÍTICO' : 'AMBIVALENTE'; }
+        function sentLabel(i) { const x = n(i); return x >= 15 ? 'FAVORABLE' : x <= -15 ? 'CRITICO' : 'AMBIVALENTE'; }
 
         function barRow(label, pctVal, count, color) {
             const w = Math.min(100, Math.max(0, n(pctVal)));
