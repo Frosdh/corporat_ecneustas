@@ -2966,7 +2966,7 @@ function renderLLMStats(stats) {
         predEl.style.color = pred === 'Aceptacion' ? '#22c55e' : pred === 'Rechazo' ? '#ef4444' : '#f59e0b';
     }
 
-    // Actualizar barra de sentimiento global
+    // Actualizar barra de sentimiento global con etiquetas
     const bA = document.getElementById('llm-bar-acept');
     const bN = document.getElementById('llm-bar-neutr');
     const bR = document.getElementById('llm-bar-rech');
@@ -2975,6 +2975,20 @@ function renderLLMStats(stats) {
         bA.style.width = pa + '%';
         bN.style.width = pn + '%';
         bR.style.width = pr + '%';
+        // Etiquetas dentro de la barra
+        const lA = document.getElementById('llm-bar-acept-label');
+        const lN = document.getElementById('llm-bar-neutr-label');
+        const lR = document.getElementById('llm-bar-rech-label');
+        if (lA) lA.textContent = pa >= 8 ? pa + '%' : '';
+        if (lN) lN.textContent = pn >= 8 ? pn + '%' : '';
+        if (lR) lR.textContent = pr >= 8 ? pr + '%' : '';
+        // Leyenda con valores
+        const vA = document.getElementById('llm-sent-acept-val');
+        const vN = document.getElementById('llm-sent-neutr-val');
+        const vR = document.getElementById('llm-sent-rech-val');
+        if (vA) vA.textContent = pa + '%';
+        if (vN) vN.textContent = pn + '%';
+        if (vR) vR.textContent = pr + '%';
     }
 
     // Gráfica donut sentimiento global estadístico
@@ -3088,14 +3102,29 @@ function renderLLMNvidia(payload) {
         predEl2.style.color = pred2 === 'Aceptacion' ? '#22c55e' : pred2 === 'Rechazo' ? '#ef4444' : '#f59e0b';
     }
 
-    // Actualizar barra de sentimiento global
+    // Actualizar barra de sentimiento con etiquetas
     const bA2 = document.getElementById('llm-bar-acept');
     const bN2 = document.getElementById('llm-bar-neutr');
     const bR2 = document.getElementById('llm-bar-rech');
     if (bA2 && bN2 && bR2) {
-        bA2.style.width = (probs.Aceptacion ?? 0) + '%';
-        bN2.style.width = (probs.Neutral    ?? 0) + '%';
-        bR2.style.width = (probs.Rechazo    ?? 0) + '%';
+        const pa2 = probs.Aceptacion ?? 0;
+        const pn2 = probs.Neutral    ?? 0;
+        const pr2 = probs.Rechazo    ?? 0;
+        bA2.style.width = pa2 + '%';
+        bN2.style.width = pn2 + '%';
+        bR2.style.width = pr2 + '%';
+        const lA2 = document.getElementById('llm-bar-acept-label');
+        const lN2 = document.getElementById('llm-bar-neutr-label');
+        const lR2 = document.getElementById('llm-bar-rech-label');
+        if (lA2) lA2.textContent = pa2 >= 8 ? pa2 + '%' : '';
+        if (lN2) lN2.textContent = pn2 >= 8 ? pn2 + '%' : '';
+        if (lR2) lR2.textContent = pr2 >= 8 ? pr2 + '%' : '';
+        const vA2 = document.getElementById('llm-sent-acept-val');
+        const vN2 = document.getElementById('llm-sent-neutr-val');
+        const vR2 = document.getElementById('llm-sent-rech-val');
+        if (vA2) vA2.textContent = pa2 + '%';
+        if (vN2) vN2.textContent = pn2 + '%';
+        if (vR2) vR2.textContent = pr2 + '%';
     }
 
     // Actualizar donut de stats con datos del LLM
@@ -5482,34 +5511,8 @@ ${chartsCode}
 
         const iframe = document.createElement('iframe');
         iframe.id = 'pdf-print-frame';
-        // Tamaño real A4 (~96dpi) fuera de pantalla para que las gráficas se rendericen con ancho válido
-        iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;height:1123px;border:0;';
-        document.body.appendChild(iframe);
+        // Tamaño real A4 (~96dpi) fuera de pantalla para que las gráficas se render
 
-        const idoc = iframe.contentWindow.document;
-        idoc.open('text/html;charset=utf-8', 'replace');
-        idoc.write(cleanHtml);
-        idoc.close();
-
-        let printed = false;
-        const doPrint = () => {
-            if (printed) return;
-            printed = true;
-            try {
-                iframe.contentWindow.focus();
-                iframe.contentWindow.print();
-            } catch (e) {
-                console.error('Error al imprimir:', e);
-            }
-            // Limpiar el iframe después de imprimir; el foco vuelve a la página normalmente
-            const cleanup = () => { const f = document.getElementById('pdf-print-frame'); if (f) f.remove(); };
-            if (iframe.contentWindow) {
-                iframe.contentWindow.onafterprint = cleanup;
-            }
-        };
-
-        // Esperar a que carguen Chart.js y se dibujen las gráficas antes de imprimir
-        iframe.onload = () => setTimeout(doPrint, 1200);
         // Respaldo         // Respaldo si onload no dispara (document.write a veces no lo lanza)
         setTimeout(doPrint, 2000);
 

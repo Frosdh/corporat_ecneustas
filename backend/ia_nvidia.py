@@ -61,28 +61,34 @@ NVIDIA_MODEL_LABEL = "NVIDIA Nemotron-3-Super-120B"
 # Para volver al modelo rápido sin razonamiento: NVIDIA_MODEL = "meta/llama-3.1-8b-instruct"
 
 # Mapas de sentimiento identicos a lib.php — para que LLM y Analisis IA coincidan
+# Mapas IDENTICOS a lib.php get_analisis_experto() — valores exactos del app movil
 SENT_MAPS = {
     "political_climate": {
+        # lib.php $mapClima: neutro=[] (respuestas no mapeadas van a neutro por defecto)
         "positivo": ["Estabilidad relativa"],
-        "neutro":   ["Tension puntual","Tension puntual manejable"],
+        "neutro":   [],
         "negativo": ["Desconfianza institucional","Division comunitaria","Conflicto abierto entre actores"],
     },
     "authority_trust": {
+        # lib.php $mapConfianza
         "positivo": ["Alta"],
         "neutro":   ["Media"],
         "negativo": ["Baja"],
     },
     "investment_acceptance": {
-        "positivo": ["Aceptacion amplia","Aceptacion condicionada"],
-        "neutro":   [],
+        # lib.php $mapInversion: condicionada = NEUTRO (no positivo)
+        "positivo": ["Aceptacion amplia","Aceptacion amplia"],
+        "neutro":   ["Aceptacion condicionada"],
         "negativo": ["Rechazo preventivo"],
     },
     "mine_reopening_perception": {
+        # lib.php $mapReapertura
         "positivo": ["Beneficiaria mucho","Beneficiaria algo"],
         "neutro":   ["Beneficio dudoso"],
         "negativo": ["No beneficiaria"],
     },
     "household_income": {
+        # lib.php $mapIngreso
         "positivo": ["Cubre con algo de holgura"],
         "neutro":   ["Cubre apenas"],
         "negativo": ["No cubre la canasta"],
@@ -216,21 +222,26 @@ def ml_train_predict(rows):
     }
 
 def classify_with_map(rows, field, mapa):
-    """Clasifica filas usando el mapa exacto de lib.php (comparacion insensible a tildes/espacios)."""
+    """
+    Clasifica filas usando los mapas exactos de lib.php.
+    - Omite filas con campo vacio (igual que lib.php freq_dist skip empty).
+    - Valores no mapeados → neutro (igual que lib.php default 'neutro').
+    """
     pos = neu = neg = 0
     pos_vals = [v.lower().strip() for v in mapa.get("positivo", [])]
-    neu_vals  = [v.lower().strip() for v in mapa.get("neutro", [])]
+    neu_vals  = [v.lower().strip() for v in mapa.get("neutro",   [])]
     neg_vals  = [v.lower().strip() for v in mapa.get("negativo", [])]
     for r in rows:
-        v = (r.get(field) or "").strip().lower()
-        if v in pos_vals:
+        v = (r.get(field) or "").strip()
+        if not v:
+            continue        # omitir vacio — igual que lib.php freq_dist
+        vl = v.lower()
+        if vl in pos_vals:
             pos += 1
-        elif v in neg_vals:
+        elif vl in neg_vals:
             neg += 1
-        elif v in neu_vals:
-            neu += 1
         else:
-            neu += 1   # valor no mapeado → neutro (igual que lib.php)
+            neu += 1        # neutro explicito O no mapeado
     return pos, neu, neg
 
 # ──────────────────────────────────────────────────────────────

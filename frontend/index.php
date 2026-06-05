@@ -976,16 +976,38 @@ header('Expires: 0');
                             </div>
                         </div>
                     </div>
-                    <!-- Barra de sentimiento global visual -->
+                    <!-- Barra de sentimiento global visual con etiquetas -->
                     <div id="llm-sentiment-bar-wrap" style="margin-bottom:20px;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:4px;">
-                            <span style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;">&#128202; Sentimiento Global &mdash; <span id="llm-sentiment-zona-label" style="color:#6F4E37;font-weight:700;">Todas las zonas</span></span>
-                            <span style="font-size:0.68rem;color:#8D6E63;font-style:italic;">&#129302; Calculado por IA sobre respuestas de encuestados</span>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:4px;">
+                            <span style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;">&#128202; Distribuci&oacute;n de Sentimiento &mdash; <span id="llm-sentiment-zona-label" style="color:#6F4E37;font-weight:700;">Todas las zonas</span></span>
+                            <span style="font-size:0.68rem;color:#8D6E63;font-style:italic;">&#129302; Modelo RF+MLP sobre encuestas reales</span>
                         </div>
-                        <div style="display:flex;height:14px;border-radius:8px;overflow:hidden;gap:2px;" id="llm-global-sentiment-bar">
-                            <div id="llm-bar-acept" style="width:34%;background:linear-gradient(90deg,#16a34a,#22c55e);transition:width 0.8s;border-radius:6px 0 0 6px;"></div>
-                            <div id="llm-bar-neutr" style="width:23%;background:linear-gradient(90deg,#d97706,#f59e0b);transition:width 0.8s;"></div>
-                            <div id="llm-bar-rech"  style="width:43%;background:linear-gradient(90deg,#b91c1c,#ef4444);transition:width 0.8s;border-radius:0 6px 6px 0;"></div>
+                        <!-- Barra visual -->
+                        <div style="display:flex;height:18px;border-radius:8px;overflow:hidden;gap:2px;margin-bottom:8px;" id="llm-global-sentiment-bar">
+                            <div id="llm-bar-acept" style="width:34%;background:linear-gradient(90deg,#16a34a,#22c55e);transition:width 0.8s;border-radius:6px 0 0 6px;display:flex;align-items:center;justify-content:center;">
+                                <span id="llm-bar-acept-label" style="font-size:0.65rem;font-weight:800;color:#fff;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,0.3);">--</span>
+                            </div>
+                            <div id="llm-bar-neutr" style="width:23%;background:linear-gradient(90deg,#d97706,#f59e0b);transition:width 0.8s;display:flex;align-items:center;justify-content:center;">
+                                <span id="llm-bar-neutr-label" style="font-size:0.65rem;font-weight:800;color:#fff;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,0.3);">--</span>
+                            </div>
+                            <div id="llm-bar-rech" style="width:43%;background:linear-gradient(90deg,#b91c1c,#ef4444);transition:width 0.8s;border-radius:0 6px 6px 0;display:flex;align-items:center;justify-content:center;">
+                                <span id="llm-bar-rech-label" style="font-size:0.65rem;font-weight:800;color:#fff;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,0.3);">--</span>
+                            </div>
+                        </div>
+                        <!-- Leyenda con valores -->
+                        <div style="display:flex;gap:16px;flex-wrap:wrap;">
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <span style="width:10px;height:10px;border-radius:50%;background:#22c55e;flex-shrink:0;"></span>
+                                <span style="font-size:0.78rem;color:#3E2723;">Aceptaci&oacute;n: <strong id="llm-sent-acept-val" style="color:#16a34a;">--</strong></span>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;flex-shrink:0;"></span>
+                                <span style="font-size:0.78rem;color:#3E2723;">Neutro: <strong id="llm-sent-neutr-val" style="color:#d97706;">--</strong></span>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <span style="width:10px;height:10px;border-radius:50%;background:#ef4444;flex-shrink:0;"></span>
+                                <span style="font-size:0.78rem;color:#3E2723;">Rechazo: <strong id="llm-sent-rech-val" style="color:#b91c1c;">--</strong></span>
+                            </div>
                         </div>
                     </div>
 
