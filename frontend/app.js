@@ -2550,7 +2550,7 @@ function generateLLMNvidia(force = false) {
     }
 
     // Poner todos los grids en estado de espera (placeholder)
-    ['llm-stats-dimensiones-grid', 'llm-dimensiones-grid', 'llm-zonas-llm-grid'].forEach(id => {
+    ['llm-stats-dimensiones-grid', 'llm-zonas-llm-grid'].forEach(id => {
         const grid = document.getElementById(id);
         if (grid) {
             grid.innerHTML = `
@@ -2641,7 +2641,7 @@ function generateLLMNvidia(force = false) {
                 if (obj.interpretaciones_dim && obj.interpretaciones_dim.length > 0) {
                     // Actualizar interpretaciones en las cards ya renderizadas
                     obj.interpretaciones_dim.forEach(d => {
-                        const grid = document.getElementById('llm-dimensiones-grid');
+                        const grid = document.getElementById('llm-stats-dimensiones-grid');
                         if (!grid) return;
                         grid.querySelectorAll('.analisis-interpretacion').forEach(el => {
                             const card = el.closest('[data-titulo]') || el.closest('.card');
@@ -2724,7 +2724,7 @@ function renderLLMStats(stats) {
     // En lugar de renderizar inmediatamente con stats locales, ponemos placeholders
     // para que sea la IA quien llene todo (según la petición del usuario).
     
-    const gridsToWait = ['llm-stats-dimensiones-grid', 'llm-dimensiones-grid', 'llm-zonas-llm-grid'];
+    const gridsToWait = ['llm-stats-dimensiones-grid', 'llm-zonas-llm-grid'];
     gridsToWait.forEach(id => {
         const grid = document.getElementById(id);
         if (grid) {
@@ -2820,8 +2820,6 @@ function renderLLMNvidia(payload) {
     if (payload.dimensiones && payload.dimensiones.length > 0) {
         // Llenamos el grid superior de Sentimientos por Dimensión
         renderLLMDimensiones(payload.dimensiones, 'llm-stats-dimensiones-grid', 'llm-stats-dim-');
-        // Llenamos el grid inferior de Análisis Detallado
-        renderLLMDimensiones(payload.dimensiones, 'llm-dimensiones-grid', 'llm-dim-');
         renderLLMRadarChart(payload.dimensiones);
     }
 
@@ -3100,7 +3098,7 @@ function renderLLMRadarChart(dimensiones) {
 }
 
 function renderLLMDimensiones(dimensiones, gridId, chartPrefix) {
-    gridId      = gridId      || 'llm-dimensiones-grid';
+    gridId      = gridId      || 'llm-stats-dimensiones-grid';
     chartPrefix = chartPrefix || 'llm-dim-';
     const grid = document.getElementById(gridId);
     if (!grid) return;

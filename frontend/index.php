@@ -1048,12 +1048,7 @@ header('Expires: 0');
                         </div>
                     </div>
 
-                    <div class="analisis-section-row">
-                        <div>
-                            <h3 class="analisis-section-header">An&aacute;lisis Detallado por Dimensi&oacute;n</h3>
-                        </div>
-                    </div>
-                    <div id="llm-dimensiones-grid" class="analisis-dim-grid" style="margin-bottom:24px;"></div>
+
 
                     <!-- Plan Estratégico -->
                     <div class="analisis-section-row">
