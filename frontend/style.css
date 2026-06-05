@@ -2583,13 +2583,13 @@ fieldset {
 #tab-llm .analisis-dim-card canvas {
     max-height: 110px !important;
 }
-#llm-radar-chart {
+#tab-llm #llm-radar-chart {
     max-height: 100% !important;
 }
-#llm-donut-stats {
+#tab-llm #llm-donut-stats {
     max-height: 170px !important;
     max-width: 280px !important;
 }
-#llm-zonas-chart {
+#tab-llm #llm-zonas-chart {
     max-height: 170px !important;
 }

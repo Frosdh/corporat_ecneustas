@@ -2576,7 +2576,7 @@ function generateLLMNvidia(force = false) {
     });
 
     // Construir URL SSE
-    const base = apiUrl('llm_nvidia_stream', { params: { sector } });
+    const base = apiUrl('llm_nvidia_stream', { sector });
     const es = new EventSource(base, { withCredentials: true });
     _llmEventSource = es;
 
