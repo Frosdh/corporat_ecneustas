@@ -1,9 +1,13 @@
+# Charset UTF-8 para JS y CSS (evita emojis rotos)
+AddCharset UTF-8 .js .css
+
 # Desactiva cache del navegador para archivos JS y CSS
 # Asi cualquier cambio subido al servidor carga de inmediato
 <FilesMatch "\.(js|css)$">
     Header set Cache-Control "no-cache, no-store, must-revalidate"
     Header set Pragma "no-cache"
     Header set Expires "0"
+    Header set Content-Type "application/javascript; charset=UTF-8"
 </FilesMatch>
 
 <Files "sw.js">

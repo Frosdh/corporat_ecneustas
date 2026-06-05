@@ -1106,13 +1106,86 @@ header('Expires: 0');
                     <!-- Conclusión -->
                     <div id="llm-conclusion-card" style="margin-top:8px;border-radius:16px;overflow:hidden;border:1px solid #D7CCC8;">
                         <div style="background:linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%);padding:16px 20px;border-bottom:1px solid #bbf7d0;display:flex;align-items:center;gap:10px;">
-                            <span style="font-size:1.3rem;">💡</span>
+                            <span style="font-size:1.3rem;">&#128161;</span>
                             <h4 style="margin:0;color:#14532d;font-size:1rem;font-weight:700;">Conclusi&oacute;n General del An&aacute;lisis IA</h4>
                         </div>
                         <div style="background:#fff;padding:20px 24px;">
                             <p id="llm-conclusion" style="margin:0;line-height:1.8;color:#3E2723;font-size:0.95rem;"></p>
                         </div>
                     </div>
+
+                    <!-- ===== RECOMENDACIONES MINERAS ===== -->
+                    <div id="llm-rec-mineras-section" class="hidden" style="margin-top:28px;">
+
+                        <!-- Header -->
+                        <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);border-radius:16px;padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;gap:16px;">
+                            <span style="font-size:2.2rem;flex-shrink:0;">&#9935;&#65039;</span>
+                            <div>
+                                <div style="font-size:0.68rem;font-weight:700;letter-spacing:.12em;color:rgba(200,220,255,0.7);text-transform:uppercase;margin-bottom:4px;">An&aacute;lisis IA &mdash; Datos de Encuestas</div>
+                                <h3 style="margin:0 0 4px;font-size:1.15rem;color:#fff;font-weight:800;">Recomendaciones para el Proyecto Minero</h3>
+                                <p style="margin:0;font-size:0.82rem;color:rgba(200,220,255,0.75);">Generado con base en las respuestas de encuestados: riesgos percibidos, beneficios esperados, conocimiento t&eacute;cnico y aceptaci&oacute;n por zona.</p>
+                            </div>
+                        </div>
+
+                        <!-- Viabilidad + KPIs -->
+                        <div id="llm-rec-viabilidad" style="margin-bottom:20px;"></div>
+
+                        <!-- 2 columnas: Fortalezas | Riesgos críticos -->
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+                            <div>
+                                <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                                    <span style="font-size:1rem;">&#9989;</span>
+                                    <h4 style="margin:0;font-size:0.9rem;font-weight:700;color:#15803d;">Fortalezas Identificadas</h4>
+                                </div>
+                                <ul id="llm-rec-fortalezas" style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;"></ul>
+                            </div>
+                            <div>
+                                <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                                    <span style="font-size:1rem;">&#9888;&#65039;</span>
+                                    <h4 style="margin:0;font-size:0.9rem;font-weight:700;color:#b91c1c;">Riesgos Cr&iacute;ticos a Gestionar</h4>
+                                </div>
+                                <ul id="llm-rec-riesgos" style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;"></ul>
+                            </div>
+                        </div>
+
+                        <!-- Acciones inmediatas -->
+                        <div style="margin-bottom:20px;">
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+                                <span style="font-size:1.1rem;">&#128161;</span>
+                                <h4 style="margin:0;font-size:0.95rem;font-weight:700;color:#4E342E;">Acciones Inmediatas Recomendadas</h4>
+                                <span style="font-size:0.7rem;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:20px;padding:2px 10px;font-weight:700;">Basadas en encuestas</span>
+                            </div>
+                            <ol id="llm-rec-acciones" style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;"></ol>
+                        </div>
+
+                        <!-- Pasos de licenciamiento -->
+                        <div style="margin-bottom:20px;">
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+                                <span style="font-size:1.1rem;">&#128203;</span>
+                                <h4 style="margin:0;font-size:0.95rem;font-weight:700;color:#4E342E;">Pasos para el Licenciamiento Minero (ARCOM)</h4>
+                            </div>
+                            <ol id="llm-rec-pasos" style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;"></ol>
+                        </div>
+
+                        <!-- Estrategia por zona -->
+                        <div style="margin-bottom:20px;">
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+                                <span style="font-size:1.1rem;">&#128205;</span>
+                                <h4 style="margin:0;font-size:0.95rem;font-weight:700;color:#4E342E;">Estrategia Diferenciada por Zona</h4>
+                            </div>
+                            <div id="llm-rec-zonas" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;"></div>
+                        </div>
+
+                        <!-- Indicadores semáforo -->
+                        <div>
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+                                <span style="font-size:1.1rem;">&#128308;</span>
+                                <h4 style="margin:0;font-size:0.95rem;font-weight:700;color:#4E342E;">Sem&aacute;foro de Licencia Social</h4>
+                            </div>
+                            <div id="llm-rec-semaforo" style="display:flex;flex-direction:column;gap:8px;"></div>
+                        </div>
+
+                    </div><!-- /llm-rec-mineras-section -->
 
                 </div><!-- /llm-results -->
             </section>

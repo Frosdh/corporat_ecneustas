@@ -409,391 +409,223 @@ def generate_instant_analysis(stats):
     recs.append("Diseñar plan de comunicación estratégica con beneficios concretos y locales: empleo, vías, servicios básicos y fondo de desarrollo parroquial.")
     recs.append("Priorizar atención a las zonas con mayor rechazo mediante mesas de trabajo sectoriales con agenda definida y compromisos verificables.")
 
-    # ── PLAN ESTRATÉGICO ──────────────────────────────────────
-    nivel = "bajo" if pa < 40 else ("medio" if pa < 60 else "alto")
+    # ── PLAN ESTRATÉGICO MINERO ──────────────────────────────
+    nivel      = "bajo" if pa < 40 else ("medio" if pa < 60 else "alto")
+    nivel_k    = "critico" if idx_k < 30 else ("bajo" if idx_k < 50 else "moderado")
+    n_zonas    = len(zonas)
+    zonas_crit = sum(1 for z in zonas if z["rechazo_pct"] > z["aceptacion_pct"])
+    meta_acept = min(pa + 20, 70)
+
+    if pa < 40:
+        fase0_extra = "Elaboracion de linea base socioambiental y cartografia de afectaciones percibidas por zona"
+        fase1_dur   = "Meses 1-4"
+        fase2_dur   = "Meses 4-8"
+        fase3_dur   = "Meses 8-18+"
+    else:
+        fase0_extra = "Identificacion de lideres de opinion y aliados estrategicos dentro de la comunidad"
+        fase1_dur   = "Meses 1-3"
+        fase2_dur   = "Meses 3-6"
+        fase3_dur   = "Meses 6-12+"
+
     plan = {
-        "titulo": "Plan de Gestión Social — Parroquia San Bartolomé",
+        "titulo": "Plan de Viabilidad Social Minera - San Bartolome",
         "diagnostico_contextual": (
-            f"La parroquia registra nivel de aceptación {nivel} ({pa}%) con índice de "
-            f"conocimiento minero del {idx_k}%. La estrategia debe priorizar socialización, "
-            f"fortalecimiento institucional y mecanismos de participación antes de avanzar en procesos formales."
+            f"Diagnostico IA: aceptacion {nivel} ({pa}%) sobre {n} encuestas; conocimiento minero {nivel_k} ({idx_k}%). "
+            f"{zonas_crit} de {n_zonas} zonas con rechazo predominante. "
+            f"Principal riesgo percibido: {top_ri}. Principal beneficio esperado: {top_ben}. "
+            f"La licencia social depende de reducir percepciones negativas sobre {top_ri.lower()} y elevar el conocimiento tecnico comunitario."
         ),
         "fases": [
-            {"fase": "Fase 0 — Diagnóstico y Preparación", "periodo": "Mes 1",
-             "acciones": ["Mapeo de actores clave y grupos de interés por zona",
-                          "Validación de hallazgos con líderes comunitarios y autoridades parroquiales",
-                          "Diseño de materiales informativos adaptados al contexto local"]},
-            {"fase": "Fase 1 — Socialización y Conocimiento", "periodo": "Meses 1–3",
-             "acciones": ["Talleres informativos sobre minería responsable en todas las comunidades",
-                          "Visitas a proyectos mineros modelo en Ecuador para líderes comunitarios",
-                          "Campaña de comunicación dirigida a las zonas con mayor rechazo"]},
-            {"fase": "Fase 2 — Diálogo y Acuerdos", "periodo": "Meses 3–6",
-             "acciones": ["Constitución de comité comunitario de seguimiento con representación zonal",
-                          "Negociación de compromisos sociales: empleo, infraestructura, desarrollo parroquial",
-                          "Proceso de consulta previa conforme a normativa ecuatoriana vigente"]},
-            {"fase": "Fase 3 — Monitoreo y Sostenibilidad", "periodo": "Meses 6–12+",
-             "acciones": ["Sistema de monitoreo socioambiental con participación comunitaria",
-                          "Rendición de cuentas semestral sobre cumplimiento de compromisos",
-                          "Re-encuesta de percepción para medir evolución del índice de aceptación"]},
+            {
+                "fase": "Fase 0 - Linea Base y Diagnostico Minero",
+                "periodo": "Mes 1",
+                "acciones": [
+                    "Mapeo georreferenciado de actores clave, grupos de interes y zonas criticas de rechazo",
+                    fase0_extra,
+                    f"Analisis diferenciado por zona: priorizar las {zonas_crit} zonas con mayor rechazo",
+                    "Inventario ambiental participativo: fuentes de agua, suelos agricolas y areas de alta sensibilidad ecologica",
+                ],
+            },
+            {
+                "fase": "Fase 1 - Educacion Tecnica y Socializacion Minera",
+                "periodo": fase1_dur,
+                "acciones": [
+                    "Talleres tecnicos sobre mineria responsable: ciclo de vida minero, normativa ARCOM y estandares IFC/Equator Principles",
+                    f"Capacitacion focalizada en gestion de {top_ri.lower()}: medidas de prevencion, control y remediacion",
+                    "Visitas a proyectos mineros modelo en Ecuador (Mirador, Fruta del Norte) para lideres y autoridades parroquiales",
+                    f"Campana de comunicacion multicanal: beneficios concretos en empleo ({top_ben.lower()}), royalties y fondos de desarrollo parroquial",
+                ],
+            },
+            {
+                "fase": "Fase 2 - Consulta Previa y Acuerdos Sociales",
+                "periodo": fase2_dur,
+                "acciones": [
+                    "Proceso de Consulta Previa, Libre e Informada (CPLI) segun Convenio 169 OIT y Art. 57 Constitucion Ecuador",
+                    "Negociacion de contrato de gestion social: minimo 80% mano de obra local no calificada y 60% semicalificada",
+                    f"Creacion de Fondo de Desarrollo Parroquial con 5-10% de utilidades netas del proyecto minero",
+                    "Firma de acuerdos de compensacion ambiental: plan de remediacion de suelos, proteccion de cuencas y reforestacion",
+                ],
+            },
+            {
+                "fase": "Fase 3 - Operacion, Monitoreo y Sostenibilidad",
+                "periodo": fase3_dur,
+                "acciones": [
+                    "Implementacion de Sistema de Gestion Ambiental y Social (SGAS) con comite comunitario auditor independiente",
+                    "Informes semestrales publicos: cumplimiento de empleo local, inversion social, calidad de agua y aire",
+                    f"Re-encuesta de percepcion cada 6 meses para monitorear evolucion (meta: >= {meta_acept}% aceptacion)",
+                    "Plan de cierre participativo: uso futuro del territorio, garantias financieras de remediacion post-operacion",
+                ],
+            },
         ],
         "indicadores": [
-            {"nombre": "Índice de aceptación comunitaria", "meta": f">={min(pa+20, 65)}%",     "plazo": "6 meses"},
-            {"nombre": "Índice de conocimiento minero",    "meta": "≥70%",                     "plazo": "3 meses"},
-            {"nombre": "Confianza institucional",          "meta": "Favorable en ≥60%",         "plazo": "4 meses"},
-            {"nombre": "Zonas con acuerdos firmados",      "meta": f"≥{max(1,len(zonas)//2)}", "plazo": "6 meses"},
+            {"nombre": "Licencia social (indice de aceptacion)",      "meta": f">={meta_acept}%",              "plazo": "6 meses"},
+            {"nombre": "Conocimiento tecnico minero comunitario",      "meta": ">=70%",                        "plazo": "3 meses"},
+            {"nombre": "Confianza institucional y empresarial",        "meta": "Favorable en >=65%",           "plazo": "5 meses"},
+            {"nombre": "Zonas con acuerdo social firmado",             "meta": f">={max(1, n_zonas*2//3)}",    "plazo": "8 meses"},
+            {"nombre": "Reduccion de rechazo en zonas criticas",       "meta": "Rechazo <35% por zona",        "plazo": "6 meses"},
+            {"nombre": "Empleo local directo comprometido",            "meta": ">=80% mano obra parroquial",   "plazo": "Inicio operacion"},
         ],
         "recomendaciones_finales": [
-            f"Iniciar proceso formal solo cuando aceptación supere 50% en al menos el 60% de las zonas (actual: {pa}%).",
-            "Mantener comunicación proactiva y transparente como eje transversal de todas las fases.",
-            "Documentar y publicar todos los acuerdos adquiridos con la comunidad para garantizar su cumplimiento.",
+            f"No iniciar exploracion avanzada hasta que la aceptacion supere 50% en al menos 70% de zonas (actual: {pa}% global, {zonas_crit} zonas en rechazo).",
+            f"Tratar {top_ri} como eje central del plan de comunicacion: presentar estudios de impacto ambiental y planes de mitigacion auditables por la comunidad.",
+            f"Disenar Fondo de Desarrollo Parroquial con participacion vinculante en la asignacion de royalties mineros para obras priorizadas por la comunidad.",
+            "Establecer protocolo de atencion a quejas y arbitraje de conflictos con mediador neutral antes del inicio de operaciones.",
+            "Documentar todos los compromisos empresariales en formatos accesibles (mapas, infografias) y publicarlos en espacios fisicos y digitales parroquiales.",
         ],
     }
 
-    # ── CONCLUSIÓN ────────────────────────────────────────────
+    # ── CONCLUSION MINERA TECNICA ─────────────────────────────
+    dim_mas_critica = dims_crit[0]["titulo"] if dims_crit else "percepcion general"
+    dim_mas_fuerte  = sorted(dims, key=lambda d: d["sentimiento"]["indice"], reverse=True)[0]["titulo"] if dims else "apertura economica"
+
     if pred == "Rechazo":
         conclusion = (
-            f"El análisis proyecta rechazo en San Bartolomé ({pr}%). Sin una estrategia de "
-            f"gestión social que eleve el conocimiento ({idx_k}%) y la confianza comunitaria, "
-            f"el riesgo de conflicto social es alto. No se recomienda avanzar sin completar las fases de socialización."
+            f"El analisis de {n} encuestas determina que San Bartolome NO cuenta con licencia social para avanzar en operaciones mineras: "
+            f"{pr}% de rechazo frente a {pa}% de aceptacion. "
+            f"La dimension mas critica es '{dim_mas_critica}', lo que indica riesgos no mitigados relacionados con {top_ri.lower()}. "
+            f"Con un conocimiento tecnico minero del {idx_k}% ({nivel_k}), gran parte del rechazo proviene de desinformacion y desconfianza institucional. "
+            f"Recomendacion IA: ejecutar Fase 0 y Fase 1 del plan antes de cualquier tramite ante ARCOM o Ministerio de Energia y Minas. "
+            f"Con educacion tecnica focalizada y compromisos verificables, el indice de aceptacion puede alcanzar {meta_acept}% en 6-8 meses."
+        )
+    elif pa >= 60:
+        conclusion = (
+            f"San Bartolome presenta condiciones favorables para avanzar en el proceso minero: {pa}% de aceptacion sobre {n} encuestas. "
+            f"La dimension '{dim_mas_fuerte}' es el principal activo social del proyecto. "
+            f"Sin embargo, el {pr}% de rechazo y el conocimiento tecnico {nivel_k} ({idx_k}%) representan riesgos de conflicto latente. "
+            f"Recomendacion IA: iniciar Fase 2 (Consulta Previa y Acuerdos) priorizando compromisos en {top_ben.lower()} "
+            f"y el Fondo de Desarrollo Parroquial como mecanismo central de confianza. "
+            f"El proyecto tiene viabilidad social condicionada al cumplimiento estricto de los acuerdos de gestion ambiental y empleo local parroquial."
         )
     else:
         conclusion = (
-            f"Con {pa}% de aceptación en {n} encuestas, San Bartolomé muestra viabilidad social para la minería. "
-            f"La clave es sostener este consenso mediante compromisos verificables, empleo local "
-            f"y mecanismos de participación efectiva en los beneficios del proyecto."
+            f"San Bartolome muestra aceptacion parcial ({pa}%) con rechazo significativo ({pr}%) en {n} encuestas. "
+            f"La viabilidad social del proyecto minero es condicional: requiere reducir brechas en '{dim_mas_critica}' "
+            f"y fortalecer la percepcion positiva en '{dim_mas_fuerte}'. "
+            f"Con {idx_k}% de conocimiento tecnico minero ({nivel_k}), gran parte del rechazo es reversible mediante educacion focalizada. "
+            f"Recomendacion IA: ejecutar Fase 1 con talleres tecnicos diferenciados por zona y medir impacto a los 3 meses. "
+            f"Si la aceptacion supera {meta_acept}% tras la socializacion, iniciar los tramites de licenciamiento ante ARCOM. "
+            f"El factor de riesgo principal a gestionar es {top_ri.lower()}."
         )
 
+    # ── RECOMENDACIONES PROYECTO MINERO (datos encuestas) ───────
+    todos_beneficios = stats.get("beneficios_mineros", [])[:6]
+    todos_riesgos    = stats.get("riesgos_mineros",    [])[:6]
+    conocimiento_det = stats.get("conocimiento_minero", [])
+    problemas_det    = stats.get("problemas",           [])[:5]
+    zonas_rechazo    = sorted(zonas, key=lambda z: z["rechazo_pct"], reverse=True)[:3]
+    zonas_acept      = sorted(zonas, key=lambda z: z["aceptacion_pct"], reverse=True)[:2]
+
+    # Conocimiento mas bajo (areas a reforzar)
+    know_bajo = sorted(conocimiento_det, key=lambda k: k.get("si_pct",100))[:3]
+    know_alto = sorted(conocimiento_det, key=lambda k: k.get("si_pct",0), reverse=True)[:2]
+
+    rec_mineras = {
+        "viabilidad_social": {
+            "titulo": "Viabilidad Social del Proyecto",
+            "nivel": "ALTA" if pa >= 60 else ("MEDIA" if pa >= 40 else "BAJA"),
+            "color": "verde" if pa >= 60 else ("naranja" if pa >= 40 else "rojo"),
+            "resumen": (
+                f"Aceptacion actual {pa}% ({n} encuestas). "
+                f"Se requiere minimo 60% para iniciar Consulta Previa. "
+                f"Brecha actual: {max(0, 60-pa)} puntos porcentuales."
+            ),
+        },
+        "fortalezas": [
+            f"Beneficio mas valorado: {b['label']} ({b['pct']}% lo menciona)"
+            for b in todos_beneficios[:3]
+        ] + (
+            [f"Zonas favorables para piloto: {', '.join(z['sector'] for z in zonas_acept)}"]
+            if zonas_acept else []
+        ) + (
+            [f"Conocimiento minero elevado en: {know_alto[0]['pregunta']} ({know_alto[0].get('si_pct',0)}% conoce)"]
+            if know_alto else []
+        ),
+        "riesgos_criticos": [
+            f"Riesgo #1 percibido: {todos_riesgos[0]['label']} ({todos_riesgos[0]['pct']}% lo menciona)" if todos_riesgos else None,
+            f"Brecha de conocimiento en: {know_bajo[0]['pregunta']} (solo {know_bajo[0].get('si_pct',0)}% lo conoce)" if know_bajo else None,
+            f"Zonas criticas de rechazo: {', '.join(z['sector'] for z in zonas_rechazo)}" if zonas_rechazo else None,
+            f"Problema social dominante: {problemas_det[0]['label']} ({problemas_det[0]['pct']}%)" if problemas_det else None,
+        ],
+        "acciones_inmediatas": [
+            f"URGENTE: Campaña de informacion sobre '{know_bajo[0]['pregunta']}' en zonas: {', '.join(z['sector'] for z in zonas_rechazo[:2])}"
+            if know_bajo and zonas_rechazo else
+            "URGENTE: Disenar campana de informacion minera focalizada en zonas con mayor rechazo",
+
+            f"Presentar plan de mitigacion documentado para '{todos_riesgos[0]['label']}' con auditor ambiental independiente"
+            if todos_riesgos else
+            "Elaborar Estudio de Impacto Ambiental (EIA) participativo con veedores comunitarios",
+
+            f"Activar negociacion temprana de '{todos_beneficios[0]['label']}' como eje de la propuesta social"
+            if todos_beneficios else
+            "Disenar propuesta de beneficios locales concretos: empleo, infraestructura, royalties",
+
+            "Conformar Mesa Tecnica Minera con alcalde, GADP, ARCOM y representantes comunitarios por zona",
+
+            f"Documentar situacion actual de '{problemas_det[0]['label']}' y proponer solucion vinculada al proyecto minero"
+            if problemas_det else
+            "Levantar diagnostico de problemas locales y proponer soluciones vinculadas al proyecto",
+        ],
+        "pasos_licenciamiento": [
+            "Paso 1 (Mes 1-2): Registro en ARCOM + solicitud de area de concesion minera (formulario AM-1)",
+            "Paso 2 (Mes 2-3): Elaboracion de Estudio de Impacto Ambiental y Plan de Manejo Ambiental (EIA/PMA) con empresa certificada",
+            "Paso 3 (Mes 3-6): Proceso de Consulta Previa, Libre e Informada (CPLI) segun Art.57 CE y Convenio 169 OIT",
+            "Paso 4 (Mes 5-7): Negociacion de contrato social: empleos locales, fondo parroquial, compromisos ambientales",
+            "Paso 5 (Mes 6-8): Aprobacion de licencia ambiental por Ministerio de Ambiente",
+            "Paso 6 (Mes 8-10): Firma de acuerdo comunitario y registro en Ministerio de Energia y Minas",
+            "Paso 7 (Operacion): Implementacion de SGAS + comite comunitario de monitoreo",
+        ],
+        "estrategia_por_zona": [
+            {
+                "zona": z["sector"],
+                "rechazo": z["rechazo_pct"],
+                "aceptacion": z["aceptacion_pct"],
+                "estrategia": (
+                    "Socializar beneficios economicos especificos y plan de empleo local"
+                    if z["rechazo_pct"] > 60 else
+                    "Talleres tecnicos sobre estandares ambientales y casos de exito regionales"
+                    if z["rechazo_pct"] > 40 else
+                    "Profundizar acuerdos y formalizar compromisos de cooperacion"
+                ),
+            }
+            for z in (sorted(zonas, key=lambda z: z["rechazo_pct"], reverse=True))[:5]
+        ],
+        "indicadores_licencia_social": [
+            {"indicador": "Indice de aceptacion global",        "actual": f"{pa}%",   "meta": f"{meta_acept}%",  "semaforo": "rojo" if pa < 40 else "naranja" if pa < 60 else "verde"},
+            {"indicador": "Conocimiento tecnico minero",        "actual": f"{idx_k}%","meta": ">=70%",           "semaforo": "rojo" if idx_k < 30 else "naranja" if idx_k < 50 else "verde"},
+            {"indicador": "Zonas en rechazo predominante",      "actual": str(zonas_crit), "meta": "0",         "semaforo": "rojo" if zonas_crit > n_zonas//2 else "naranja" if zonas_crit > 0 else "verde"},
+            {"indicador": "Riesgo ambiental percibido (top)",   "actual": f"{todos_riesgos[0]['pct']}%" if todos_riesgos else "N/A", "meta": "<20%", "semaforo": "rojo"},
+        ],
+    }
+    # Filtrar Nones
+    rec_mineras["riesgos_criticos"] = [r for r in rec_mineras["riesgos_criticos"] if r]
+
     return {
-        "resumen_ejecutivo":     resumen,
-        "importancia_factores":  factores[:5],
-        "interpretaciones_dim":  interpretaciones_dim,
-        "hallazgos_zona":        hallazgos_zona,
-        "recomendaciones_ia":    recs[:5],
-        "plan_estrategico":      plan,
-        "conclusion":            conclusion,
+        "resumen_ejecutivo":        resumen,
+        "importancia_factores":     factores[:5],
+        "interpretaciones_dim":     interpretaciones_dim,
+        "hallazgos_zona":           hallazgos_zona,
+        "recomendaciones_ia":       recs[:5],
+        "plan_estrategico":         plan,
+        "conclusion":               conclusion,
+        "recomendaciones_mineras":  rec_mineras,
     }
-
-# ──────────────────────────────────────────────────────────────
-#  COMBINAR STATS + TEXTO
-# ──────────────────────────────────────────────────────────────
-
-def merge_all(stats, texto):
-    probs = stats.get("probabilidades_globales", {})
-    pa    = probs.get('Aceptacion', 0)
-    pn    = probs.get('Neutral',    0)
-    pr    = probs.get('Rechazo',    0)
-    pred  = "Aceptacion" if pa >= pr else "Rechazo"
-
-    local_dims  = stats.get("sentimientos_dimensiones", [])
-    llm_interp  = {d['titulo']: d['interpretacion'] for d in texto.get("interpretaciones_dim", []) if 'titulo' in d}
-    dimensiones = []
-    for ld in local_dims:
-        titulo = ld['titulo']
-        dimensiones.append({
-            "titulo":        titulo,
-            "sentimiento":   ld['sentimiento'],
-            "distribucion":  ld['distribucion'],
-            "interpretacion": llm_interp.get(titulo, ""),
-        })
-
-    llm_hallazgos = {h['zona']: h['hallazgo'] for h in texto.get("hallazgos_zona", []) if 'zona' in h}
-    analisis_zona = [
-        {"zona": s['sector'], "n": s['n'],
-         "prediccion":     "Aceptacion" if s['aceptacion_pct'] >= s['rechazo_pct'] else "Rechazo",
-         "aceptacion_pct": s['aceptacion_pct'], "neutral_pct": s['neutral_pct'], "rechazo_pct": s['rechazo_pct'],
-         "hallazgo_clave": llm_hallazgos.get(s['sector'], "")}
-        for s in stats.get("sectores_detalle", [])
-    ]
-
-    return {
-        "ok": True,
-        "motor":                   "NVIDIA Análisis IA",
-        "total_encuestas":         stats.get("total_encuestas", 0),
-        "prediccion_global":       pred,
-        "probabilidades_globales": {"Aceptacion": pa, "Neutral": pn, "Rechazo": pr},
-        "sentimiento_global":      {"positivo_pct": pa, "neutro_pct": pn, "negativo_pct": pr},
-        "resumen_ejecutivo":       texto.get("resumen_ejecutivo", ""),
-        "importancia_factores":    texto.get("importancia_factores", []),
-        "dimensiones":             dimensiones,
-        "analisis_por_zona":       analisis_zona,
-        "recomendaciones_ia":      texto.get("recomendaciones_ia", []),
-        "plan_estrategico":        texto.get("plan_estrategico", {}),
-        "conclusion":              texto.get("conclusion", ""),
-        "stats_locales":           stats,
-    }
-
-# ──────────────────────────────────────────────────────────────
-#  ENRIQUECIMIENTO LLM  (prompt mínimo, solo texto narrativo)
-# ──────────────────────────────────────────────────────────────
-
-# ──────────────────────────────────────────────────────────────
-#  NUEVAS FUNCIONES DE ANÁLISIS  (cruces y carencias para el LLM)
-# ──────────────────────────────────────────────────────────────
-
-def _clase_de(row):
-    """Clasifica la percepción minera de una fila en Aceptacion/Neutral/Rechazo."""
-    return CLASE_MAP.get((row.get('mine_reopening_perception') or '').strip())
-
-
-def cruce_percepcion(rows, field, label='valor', top=None):
-    """Cruza cualquier campo con la percepción minera. Devuelve % acepta/neutral/rechaza por categoría."""
-    grupos = {}
-    for r in rows:
-        key = (r.get(field) or 'No especificado').strip() or 'No especificado'
-        clase = _clase_de(r)
-        if key not in grupos:
-            grupos[key] = {'Aceptacion': 0, 'Neutral': 0, 'Rechazo': 0, 'total': 0}
-        if clase:
-            grupos[key][clase] += 1
-        grupos[key]['total'] += 1
-    items = []
-    for k, c in grupos.items():
-        t = c['total'] or 1
-        items.append({
-            label: k, "n": c['total'],
-            "aceptacion_pct": pct(c['Aceptacion'], t),
-            "neutral_pct":    pct(c['Neutral'],    t),
-            "rechazo_pct":    pct(c['Rechazo'],    t),
-            "tendencia": "Aceptacion" if c['Aceptacion'] >= c['Rechazo'] else "Rechazo",
-        })
-    items.sort(key=lambda x: x['n'], reverse=True)
-    return items[:top] if top else items
-
-
-def conocimiento_vs_aceptacion(rows):
-    """Para cada pregunta de conocimiento: % de aceptación entre quienes conocen vs. quienes no."""
-    campos = {
-        'knows_mining_types':    'Conoce tipos de minería',
-        'knows_mining_benefits': 'Conoce beneficios mineros',
-        'knows_modern_mining':   'Conoce minería moderna',
-        'knows_local_mines':     'Conoce minas locales',
-        'knows_env_guarantees':  'Conoce garantías ambientales',
-    }
-    SI = ('si', 'sí', 'yes', 'conoce', 'sabe', '1', 'true')
-    out = []
-    for campo, preg in campos.items():
-        g_si = {'Aceptacion': 0, 'Rechazo': 0, 'Neutral': 0, 'total': 0}
-        g_no = {'Aceptacion': 0, 'Rechazo': 0, 'Neutral': 0, 'total': 0}
-        for r in rows:
-            clase = _clase_de(r)
-            if not clase:
-                continue
-            g = g_si if (r.get(campo) or '').strip().lower() in SI else g_no
-            g[clase] += 1
-            g['total'] += 1
-        a_si = pct(g_si['Aceptacion'], g_si['total'] or 1)
-        a_no = pct(g_no['Aceptacion'], g_no['total'] or 1)
-        out.append({
-            "campo": campo, "pregunta": preg,
-            "acept_conoce_pct": a_si, "acept_no_conoce_pct": a_no,
-            "n_conoce": g_si['total'], "n_no_conoce": g_no['total'],
-            "diferencia_pp": round(a_si - a_no, 1),
-        })
-    out.sort(key=lambda x: abs(x['diferencia_pp']), reverse=True)
-    return out
-
-
-def carencias_servicios(rows):
-    """Ranking de carencias de servicios básicos (% de respuestas negativas)."""
-    n = len(rows) or 1
-
-    def share(field, is_neg):
-        c = sum(1 for r in rows if is_neg((r.get(field) or '').strip().lower()))
-        return round(c / n * 100, 1)
-
-    def es_no(v):
-        return v.startswith('no') or v in ('', '0', 'false', 'ninguno', 'ninguna')
-
-    def via_mala(v):
-        return any(k in v for k in ('mala', 'malo', 'deficiente', 'pésim', 'pesim',
-                                    'intransitab', 'regular', 'tierra', 'lastre'))
-
-    def agua_insegura(v):
-        insegura = any(k in v for k in ('rio', 'río', 'pozo', 'acarre', 'lluvia',
-                                        'vertiente', 'quebrada', 'entubada'))
-        return insegura and 'trat' not in v
-
-    carencias = [
-        {"servicio": "Alcantarillado",            "carencia_pct": share('has_sewer',    es_no)},
-        {"servicio": "Internet",                  "carencia_pct": share('has_internet', es_no)},
-        {"servicio": "Pozo séptico",              "carencia_pct": share('has_septic',   es_no)},
-        {"servicio": "Agua segura (red/tratada)", "carencia_pct": share('water_source', agua_insegura)},
-        {"servicio": "Vías en buen estado",       "carencia_pct": share('road_status',  via_mala)},
-    ]
-    carencias.sort(key=lambda x: x['carencia_pct'], reverse=True)
-    return carencias
-
-
-def build_cruces(rows):
-    """Empaqueta todos los cruces nuevos en un solo dict para añadir a stats."""
-    return {
-        "cruce_percepcion_edad":      cruce_percepcion(rows, 'age_range',      'edad'),
-        "cruce_percepcion_educacion": cruce_percepcion(rows, 'education_level', 'educacion'),
-        "cruce_percepcion_sector":    cruce_percepcion(rows, 'sector',         'sector'),
-        "conocimiento_vs_aceptacion": conocimiento_vs_aceptacion(rows),
-        "carencias_servicios":        carencias_servicios(rows),
-    }
-
-
-def build_enrich_prompt(stats):
-    """Prompt que solicita razonamiento previo y luego JSON."""
-    probs = stats.get("probabilidades_globales", {})
-    pa    = probs.get('Aceptacion', 0)
-    pr    = probs.get('Rechazo',    0)
-    n     = stats.get("total_encuestas", 0)
-    dims  = stats.get("sentimientos_dimensiones", [])
-    pred  = "Aceptacion" if pa >= pr else "Rechazo"
-    dims_txt  = "; ".join(f"{d['titulo']}={d['sentimiento']['indice']}pts" for d in dims)
-    probs_lbl = ", ".join(p['label'] for p in stats.get("problemas", [])[:3])
-
-    edad     = stats.get("cruce_percepcion_edad", [])[:4]
-    edad_txt = "; ".join(f"{e.get('edad','?')} acepta {e['aceptacion_pct']}%/rechaza {e['rechazo_pct']}%" for e in edad)
-    edu      = stats.get("cruce_percepcion_educacion", [])[:4]
-    edu_txt  = "; ".join(f"{e.get('educacion','?')} acepta {e['aceptacion_pct']}%" for e in edu)
-    kva      = stats.get("conocimiento_vs_aceptacion", [])[:1]
-    kva_txt  = (f"{kva[0]['pregunta']}: conoce acepta {kva[0]['acept_conoce_pct']}% vs "
-                f"no-conoce {kva[0]['acept_no_conoce_pct']}% (dif {kva[0]['diferencia_pp']}pp)") if kva else "s/d"
-    car      = stats.get("carencias_servicios", [])[:3]
-    car_txt  = "; ".join(f"{c['servicio']} {c['carencia_pct']}%" for c in car)
-
-    return (
-        f"Eres analista minero y social en Ecuador. Datos de {n} encuestas en la parroquia San Bartolomé.\n"
-        f"Predicción global={pred}. Aceptación={pa}%, Rechazo={pr}%.\n"
-        f"Dimensiones (índice de sentimiento): {dims_txt}.\n"
-        f"Problemas principales: {probs_lbl}.\n"
-        f"Percepción por edad: {edad_txt}.\n"
-        f"Percepción por educación: {edu_txt}.\n"
-        f"Conocimiento vs aceptación: {kva_txt}.\n"
-        f"Carencias de servicios: {car_txt}.\n\n"
-        f"Por favor, piensa paso a paso analizando estos datos. Tu respuesta debe consistir de tu análisis y razonamiento, seguido de un ÚNICO bloque JSON válido (sin código markdown de preferencia, pero si lo usas que sea solo para el JSON) con esta estructura exacta:\n"
-        f'{{"resumen_ejecutivo":"2-3 oraciones que integren la percepción, el grupo etario y educativo más a favor y en contra, y la carencia más crítica.",'
-        f'"conclusion":"1-2 oraciones con el veredicto y la acción prioritaria.",'
-        f'"interpretaciones_dim":[{",".join(chr(123)+f""""titulo":"{d["titulo"]}","interpretacion":"1 oración basada en los datos."{chr(125)}""" for d in dims)}]}}'
-    )
-
-def call_nvidia_enrich(prompt):
-    """Llama al LLM con streaming. Emite eventos 'thinking' y devuelve el JSON extraído."""
-    try:
-        if HAS_OPENAI:
-            client = OpenAI(base_url=NVIDIA_BASE_URL, api_key=NVIDIA_API_KEY, timeout=60.0)
-            completion = client.chat.completions.create(
-                model=NVIDIA_MODEL,
-                messages=[
-                    {"role": "system", "content": "Eres un analista experto. Proporciona tu razonamiento y luego un bloque JSON válido."},
-                    {"role": "user",   "content": prompt}
-                ],
-                temperature=0.3, top_p=0.9, max_tokens=4096, stream=True,
-                extra_body={"chat_template_kwargs":{"enable_thinking":True},"reasoning_budget":2048}
-            )
-            raw = ""
-            for chunk in completion:
-                if not chunk.choices: continue
-                delta = chunk.choices[0].delta
-                # Alguns modelos envían el reasoning en atributos separados si están soportados, pero Nemotron lo pone en content
-                content = getattr(delta, "content", "") or ""
-                # Si el modelo soporta reasoning_content (ej. DeepSeek o Nemotron con extra_body)
-                reasoning = getattr(delta, "reasoning_content", "") or ""
-                
-                text_to_emit = reasoning + content
-                if text_to_emit:
-                    raw += text_to_emit
-                    emit({"type": "thinking", "text": text_to_emit})
-        else:
-            req_data = json.dumps({
-                "model": NVIDIA_MODEL,
-                "messages": [
-                    {"role": "system", "content": "Eres un analista experto. Proporciona tu razonamiento y luego un bloque JSON válido."},
-                    {"role": "user",   "content": prompt}
-                ],
-                "temperature": 0.3, "top_p": 0.9, "max_tokens": 4096, "stream": False,
-                "chat_template_kwargs": {"enable_thinking": True},
-                "reasoning_budget": 2048
-            }).encode('utf-8')
-            req = urllib.request.Request(
-                NVIDIA_BASE_URL + "/chat/completions",
-                data=req_data,
-                headers={'Content-Type': 'application/json',
-                         'Authorization': 'Bearer ' + NVIDIA_API_KEY}
-            )
-            with urllib.request.urlopen(req, timeout=60) as resp:
-                body = json.loads(resp.read().decode('utf-8'))
-            raw = body['choices'][0]['message']['content']
-            emit({"type": "thinking", "text": raw})
-
-        start = raw.find('{')
-        end = raw.rfind('}')
-        if start != -1 and end > start:
-            return json.loads(raw[start:end+1])
-    except Exception as e:
-        emit({"type": "thinking", "text": f"\n[Error consultando a NVIDIA: {str(e)}]\n"})
-    return None
-
-# ──────────────────────────────────────────────────────────────
-#  MAIN
-# ──────────────────────────────────────────────────────────────
-
-def main():
-    try:
-        raw = sys.stdin.read()
-        if not raw.strip():
-            emit({"type": "error", "error": "No se recibieron datos de entrada."}); return
-        rows = json.loads(raw)
-    except Exception as e:
-        emit({"type": "error", "error": "Error parseando JSON: " + str(e)}); return
-
-    if not rows:
-        emit({"type": "error", "error": "No hay encuestas para analizar."}); return
-
-    sectores_list = sorted(list(set((r.get('sector') or 'general').strip() for r in rows)))
-    total = len(rows)
-
-    # ── FASE 1: Estadísticas instantáneas ──────────────────────
-    emit({"type": "progress",
-          "mensaje": f"Calculando estadísticas de {total} encuestas...",
-          "zonas": sectores_list, "total": total, "procesadas": total})
-
-    try:
-        stats = analyze_statistics(rows)
-        # Integrar las funciones de análisis faltantes (cruces y carencias)
-        stats.update(build_cruces(rows))
-    except Exception as e:
-        emit({"type": "error", "error": "Error en estadísticas: " + str(e)}); return
-
-    emit({"type": "stats", "stats": stats})
-
-    # ── FASE 2: Enriquecimiento NVIDIA con streaming de razonamiento ──
-    emit({"type": "progress", "mensaje": "Razonando con NVIDIA Nemotron...", "total": total, "procesadas": total})
-    
-    try:
-        texto_instant = generate_instant_analysis(stats)
-    except Exception as e:
-        texto_instant = {}
-
-    prompt   = build_enrich_prompt(stats)
-    llm_data = call_nvidia_enrich(prompt)
-
-    # Reemplazar análisis instantáneo con el del LLM si fue exitoso
-    if llm_data:
-        texto_instant["resumen_ejecutivo"] = llm_data.get("resumen_ejecutivo", texto_instant.get("resumen_ejecutivo", ""))
-        texto_instant["conclusion"]        = llm_data.get("conclusion",        texto_instant.get("conclusion", ""))
-        
-        # Mezclar interpretaciones
-        llm_interp = {d['titulo']: d['interpretacion'] for d in llm_data.get("interpretaciones_dim", []) if 'titulo' in d}
-        for d in texto_instant.get("interpretaciones_dim", []):
-            if d['titulo'] in llm_interp:
-                d['interpretacion'] = llm_interp[d['titulo']]
-
-    # ── FASE 3: Emitir el resultado final ──
-    result = merge_all(stats, texto_instant)
-    emit({"type": "result", **result})
-
-
-if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        import traceback
-        err_msg = traceback.format_exc()
-        emit({"type": "error", "error": f"Error fatal en Python: {str(e)}\n{err_msg}"})
-
-

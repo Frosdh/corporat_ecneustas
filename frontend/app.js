@@ -1346,18 +1346,18 @@ function renderAuditLogs() {
     }
 
     const ACTION_META = {
-        login: { icon: '🔐', label: 'Inicio de sesión', color: '#3b82f6', bg: '#eff6ff' },
-        logout: { icon: '🚪', label: 'Cierre de sesión', color: '#6b7280', bg: '#f9fafb' },
-        save_survey: { icon: '📋', label: 'Encuesta guardada', color: '#059669', bg: '#ecfdf5' },
-        register_application: { icon: '📝', label: 'Postulación registrada', color: '#7c3aed', bg: '#f5f3ff' },
-        review_application: { icon: '🔍', label: 'Postulación revisada', color: '#d97706', bg: '#fffbeb' },
+        login: { icon: '\u{1F510}', label: 'Inicio de sesión', color: '#3b82f6', bg: '#eff6ff' },
+        logout: { icon: '\u{1F6AA}', label: 'Cierre de sesión', color: '#6b7280', bg: '#f9fafb' },
+        save_survey: { icon: '\u{1F4CB}', label: 'Encuesta guardada', color: '#059669', bg: '#ecfdf5' },
+        register_application: { icon: '\u{1F4DD}', label: 'Postulación registrada', color: '#7c3aed', bg: '#f5f3ff' },
+        review_application: { icon: '\u{1F50D}', label: 'Postulación revisada', color: '#d97706', bg: '#fffbeb' },
         update_surveyor_profile: { icon: '✏️', label: 'Perfil actualizado', color: '#0284c7', bg: '#e0f2fe' },
-        update_surveyor_status: { icon: '🔄', label: 'Estado actualizado', color: '#ea580c', bg: '#fff7ed' },
+        update_surveyor_status: { icon: '\u{1F504}', label: 'Estado actualizado', color: '#ea580c', bg: '#fff7ed' },
         reset_password: { icon: '🔑', label: 'Clave restablecida', color: '#be185d', bg: '#fdf2f8' },
     };
 
     list.innerHTML = state.auditLogs.map((item) => {
-        const meta = ACTION_META[item.action_type] || { icon: '📌', label: item.action_type, color: '#6b7280', bg: '#f9fafb' };
+        const meta = ACTION_META[item.action_type] || { icon: '\u{1F4CC}', label: item.action_type, color: '#6b7280', bg: '#f9fafb' };
         const details = item.details || {};
         const detailEntries = Object.entries(details).filter(([k]) => k !== 'status' || item.action_type !== 'login');
         const detailHtml = detailEntries.length
@@ -1384,7 +1384,7 @@ function renderAuditLogs() {
                     </div>
                     <div class="audit-meta-row">
                         <span class="audit-actor">👤 ${escapeHtml(item.actor_name || '—')}</span>
-                        <span class="audit-time">📅 ${escapeHtml(datePart || '')} &nbsp;⏰ ${escapeHtml(timePart || '')}</span>
+                        <span class="audit-time">\u{1F4C5} ${escapeHtml(datePart || '')} &nbsp;⏰ ${escapeHtml(timePart || '')}</span>
                         ${item.entity_id ? `<span class="audit-id">ID: ${escapeHtml(String(item.entity_id))}</span>` : ''}
                     </div>
                 </div>
@@ -2777,6 +2777,11 @@ function renderLLMNvidia(payload) {
     setText('llm-motor-badge', motor);
     setText('llm-resumen', payload.resumen_ejecutivo || '');
     setText('llm-conclusion', payload.conclusion || '');
+
+    // Renderizar recomendaciones mineras si vienen en el payload
+    if (payload.recomendaciones_mineras) {
+        renderRecMineras(payload.recomendaciones_mineras);
+    }
     setText('llm-prediccion', payload.prediccion_global || '--');
 
     // Enriquecer card de conclusión con resumen visual
@@ -2793,17 +2798,17 @@ function renderLLMNvidia(payload) {
         if (hdr) {
             hdr.style.background = `linear-gradient(135deg,${bgFrom} 0%,${bgTo} 100%)`;
             hdr.style.borderBottomColor = accent + '55';
-            const icon = isAcept ? '✅' : isRech ? '⚠️' : '⚖️';
+            const icon = isAcept ? '&#10003;' : isRech ? '&#9888;' : '&#9878;';
             hdr.innerHTML = `
                 <div style="display:flex;align-items:center;justify-content:space-between;width:100%;flex-wrap:wrap;gap:12px;">
                     <div style="display:flex;align-items:center;gap:10px;">
                         <span style="font-size:1.3rem;">${icon}</span>
-                        <h4 style="margin:0;color:#14532d;font-size:1rem;font-weight:700;">Conclusión General del Análisis IA</h4>
+                        <h4 style="margin:0;color:#14532d;font-size:1rem;font-weight:700;">Conclusi&#243;n General del An&#225;lisis IA</h4>
                     </div>
                     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                        <span style="font-size:0.78rem;font-weight:700;background:rgba(34,197,94,0.15);color:#16a34a;border-radius:20px;padding:3px 12px;border:1px solid #16a34a55;">✅ ${prbs.Aceptacion ?? '--'}% Aceptación</span>
-                        <span style="font-size:0.78rem;font-weight:700;background:rgba(245,158,11,0.15);color:#d97706;border-radius:20px;padding:3px 12px;border:1px solid #d9770655;">⚖️ ${prbs.Neutral ?? '--'}% Neutral</span>
-                        <span style="font-size:0.78rem;font-weight:700;background:rgba(239,68,68,0.15);color:#b91c1c;border-radius:20px;padding:3px 12px;border:1px solid #b91c1c55;">❌ ${prbs.Rechazo ?? '--'}% Rechazo</span>
+                        <span style="font-size:0.78rem;font-weight:700;background:rgba(34,197,94,0.15);color:#16a34a;border-radius:20px;padding:3px 12px;border:1px solid #16a34a55;">&#10003; ${prbs.Aceptacion ?? '--'}% Aceptaci&#243;n</span>
+                        <span style="font-size:0.78rem;font-weight:700;background:rgba(245,158,11,0.15);color:#d97706;border-radius:20px;padding:3px 12px;border:1px solid #d9770655;">&#9878;&#65039; ${prbs.Neutral ?? '--'}% Neutral</span>
+                        <span style="font-size:0.78rem;font-weight:700;background:rgba(239,68,68,0.15);color:#b91c1c;border-radius:20px;padding:3px 12px;border:1px solid #b91c1c55;">&#10007; ${prbs.Rechazo ?? '--'}% Rechazo</span>
                     </div>
                 </div>`;
         }
@@ -2887,10 +2892,10 @@ function renderLLMNvidia(payload) {
     if (fasesBox && plan.fases && plan.fases.length > 0) {
         // Paleta de colores por número de fase
         const faseColors = [
-            { border: '#d97706', bg: 'rgba(245,158,11,0.07)', badge: '#fef3c7', badgeText: '#92400e', icon: '🔍' }, // Fase 0 — Diagnóstico
-            { border: '#3b82f6', bg: 'rgba(59,130,246,0.06)', badge: '#dbeafe', badgeText: '#1e40af', icon: '🤝' }, // Fase 1 — Socialización
-            { border: '#8b5cf6', bg: 'rgba(139,92,246,0.06)', badge: '#ede9fe', badgeText: '#5b21b6', icon: '📋' }, // Fase 2 — Diálogo
-            { border: '#22c55e', bg: 'rgba(34,197,94,0.06)',  badge: '#dcfce7', badgeText: '#14532d', icon: '📊' }, // Fase 3 — Monitoreo
+            { border: '#d97706', bg: 'rgba(245,158,11,0.07)', badge: '#fef3c7', badgeText: '#92400e', icon: '\u{1F50D}' }, // Fase 0 — Diagn&#243;stico
+            { border: '#3b82f6', bg: 'rgba(59,130,246,0.06)', badge: '#dbeafe', badgeText: '#1e40af', icon: '\u{1F91D}' }, // Fase 1 — Socializaci&#243;n
+            { border: '#8b5cf6', bg: 'rgba(139,92,246,0.06)', badge: '#ede9fe', badgeText: '#5b21b6', icon: '\u{1F4CB}' }, // Fase 2 — Di&#225;logo
+            { border: '#22c55e', bg: 'rgba(34,197,94,0.06)',  badge: '#dcfce7', badgeText: '#14532d', icon: '\u{1F4CA}' }, // Fase 3 — Monitoreo
         ];
         fasesBox.innerHTML = plan.fases.map((f, idx) => {
             const c = faseColors[idx % faseColors.length];
@@ -2905,12 +2910,12 @@ function renderLLMNvidia(payload) {
                         <span style="font-size:1.4rem;flex-shrink:0;">${color.icon}</span>
                         <h4 style="margin:0;font-size:0.95rem;font-weight:700;color:#3E2723;line-height:1.3;">${escapeHtml(f.fase)}</h4>
                     </div>
-                    <span style="flex-shrink:0;font-size:0.72rem;font-weight:700;background:${color.badge};color:${color.badgeText};border-radius:20px;padding:3px 10px;white-space:nowrap;">📅 ${escapeHtml(f.periodo)}</span>
+                    <span style="flex-shrink:0;font-size:0.72rem;font-weight:700;background:${color.badge};color:${color.badgeText};border-radius:20px;padding:3px 10px;white-space:nowrap;">\u{1F4C5} ${escapeHtml(f.periodo)}</span>
                 </div>
                 <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px;">
                     ${(f.acciones || []).map(a => `
                     <li style="display:flex;align-items:flex-start;gap:8px;font-size:0.84rem;color:#5D4037;line-height:1.5;">
-                        <span style="flex-shrink:0;color:${color.border};font-weight:700;margin-top:1px;">▸</span>
+                        <span style="flex-shrink:0;color:${color.border};font-weight:700;margin-top:1px;">&#9656;</span>
                         <span>${escapeHtml(a)}</span>
                     </li>`).join('')}
                 </ul>
@@ -2926,7 +2931,7 @@ function renderLLMNvidia(payload) {
             // Detectar si la meta es positiva (tiene >, >=, Favorable) o crítica
             const metaLower = (ind.meta || '').toLowerCase();
             const metaColor = metaLower.includes('favorable') ? '#16a34a'
-                            : metaLower.startsWith('>') || metaLower.startsWith('≥') ? '#0369a1'
+                            : metaLower.startsWith('>') || metaLower.startsWith('>=') ? '#0369a1'
                             : '#6F4E37';
             return `<tr style="border-bottom:1px solid #EDE0D0;${isEven ? '' : 'background:#FFFDF7;'}">
                 <td style="padding:12px 16px;color:#3E2723;font-weight:500;">${escapeHtml(ind.nombre)}</td>
@@ -2942,16 +2947,114 @@ function renderLLMNvidia(payload) {
     const accionesBox = document.getElementById('llm-plan-acciones');
     if (accionesBox) {
         const acciones = plan.recomendaciones_finales || [];
-        const accionIcons = ['🎯', '🔗', '📢', '✅', '⚙️', '📌'];
+        const accionIcons = ['\u{1F3AF}', '\u{1F517}', '\u{1F4E2}', '\u2705', '\u2699\uFE0F', '\u{1F4CC}'];
         accionesBox.innerHTML = acciones.map((a, i) => `
             <li style="display:flex;align-items:flex-start;gap:14px;background:#fff;border:1px solid #EDE0D0;border-left:4px solid #6F4E37;border-radius:10px;padding:12px 16px;">
                 <span style="font-size:1.2rem;flex-shrink:0;line-height:1.4;">${accionIcons[i % accionIcons.length]}</span>
                 <div>
-                    <span style="font-size:0.7rem;font-weight:700;color:#8D6E63;text-transform:uppercase;letter-spacing:.08em;">Acción ${i + 1}</span>
+                    <span style="font-size:0.7rem;font-weight:700;color:#8D6E63;text-transform:uppercase;letter-spacing:.08em;">Acci&#243;n ${i + 1}</span>
                     <p style="margin:2px 0 0;font-size:0.88rem;color:#3E2723;line-height:1.55;">${escapeHtml(a)}</p>
                 </div>
             </li>`).join('');
     }
+}
+
+/** Recomendaciones mineras basadas en datos de encuestas */
+function renderRecMineras(rec) {
+    const section = document.getElementById('llm-rec-mineras-section');
+    if (!section) return;
+    section.classList.remove('hidden');
+
+    const esc = (s) => escapeHtml(String(s || ''));
+
+    // ── Viabilidad ──
+    const v = rec.viabilidad_social || {};
+    const vColors = { ALTA: { bg:'#dcfce7', border:'#16a34a', text:'#14532d', badge:'#16a34a' },
+                      MEDIA:{ bg:'#fef3c7', border:'#d97706', text:'#92400e', badge:'#d97706' },
+                      BAJA: { bg:'#fee2e2', border:'#b91c1c', text:'#7f1d1d', badge:'#b91c1c' } };
+    const vc = vColors[v.nivel] || vColors.BAJA;
+    const viabEl = document.getElementById('llm-rec-viabilidad');
+    if (viabEl) viabEl.innerHTML = `
+        <div style="background:${vc.bg};border:2px solid ${vc.border};border-radius:14px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+            <div>
+                <div style="font-size:0.72rem;font-weight:700;color:${vc.text};text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">Viabilidad Social del Proyecto Minero</div>
+                <p style="margin:0;font-size:0.88rem;color:${vc.text};line-height:1.5;">${esc(v.resumen)}</p>
+            </div>
+            <span style="font-size:1.1rem;font-weight:800;background:${vc.badge};color:#fff;border-radius:12px;padding:8px 20px;white-space:nowrap;flex-shrink:0;">
+                ${v.nivel === 'ALTA' ? '&#9989;' : v.nivel === 'MEDIA' ? '&#9888;&#65039;' : '&#10060;'} ${esc(v.nivel)}
+            </span>
+        </div>`;
+
+    // ── Fortalezas ──
+    const fortEl = document.getElementById('llm-rec-fortalezas');
+    if (fortEl) fortEl.innerHTML = (rec.fortalezas || []).map(f => `
+        <li style="display:flex;align-items:flex-start;gap:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 12px;">
+            <span style="color:#16a34a;font-weight:800;flex-shrink:0;margin-top:1px;">&#9650;</span>
+            <span style="font-size:0.84rem;color:#166534;line-height:1.5;">${esc(f)}</span>
+        </li>`).join('');
+
+    // ── Riesgos críticos ──
+    const riesEl = document.getElementById('llm-rec-riesgos');
+    if (riesEl) riesEl.innerHTML = (rec.riesgos_criticos || []).map(r => `
+        <li style="display:flex;align-items:flex-start;gap:10px;background:#fff1f2;border:1px solid #fecaca;border-radius:10px;padding:10px 12px;">
+            <span style="color:#b91c1c;font-weight:800;flex-shrink:0;margin-top:1px;">&#9660;</span>
+            <span style="font-size:0.84rem;color:#7f1d1d;line-height:1.5;">${esc(r)}</span>
+        </li>`).join('');
+
+    // ── Acciones inmediatas ──
+    const acEl = document.getElementById('llm-rec-acciones');
+    const acIcons = ['&#128270;','&#9888;&#65039;','&#128176;','&#128101;','&#128203;'];
+    if (acEl) acEl.innerHTML = (rec.acciones_inmediatas || []).map((a, i) => `
+        <li style="display:flex;align-items:flex-start;gap:14px;background:#fff;border:1px solid #EDE0D0;border-left:4px solid ${i===0?'#b91c1c':'#6F4E37'};border-radius:10px;padding:12px 16px;">
+            <span style="font-size:1.3rem;flex-shrink:0;">${acIcons[i % acIcons.length]}</span>
+            <div>
+                <span style="font-size:0.68rem;font-weight:800;color:${i===0?'#b91c1c':'#8D6E63'};text-transform:uppercase;letter-spacing:.08em;">${i===0?'&#9889; PRIORITARIO':'Acci&#243;n '+(i+1)}</span>
+                <p style="margin:3px 0 0;font-size:0.87rem;color:#3E2723;line-height:1.55;">${esc(a)}</p>
+            </div>
+        </li>`).join('');
+
+    // ── Pasos licenciamiento ──
+    const pasEl = document.getElementById('llm-rec-pasos');
+    const stepColors = ['#0e4eb0','#0369a1','#0891b2','#059669','#16a34a','#d97706','#6F4E37'];
+    if (pasEl) pasEl.innerHTML = (rec.pasos_licenciamiento || []).map((p, i) => `
+        <li style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;background:#fff;border:1px solid #EDE0D0;border-radius:10px;border-left:4px solid ${stepColors[i%stepColors.length]};">
+            <span style="flex-shrink:0;min-width:24px;height:24px;border-radius:50%;background:${stepColors[i%stepColors.length]};color:#fff;font-size:0.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;">${i+1}</span>
+            <span style="font-size:0.85rem;color:#3E2723;line-height:1.5;">${esc(p)}</span>
+        </li>`).join('');
+
+    // ── Estrategia por zona ──
+    const zonaEl = document.getElementById('llm-rec-zonas');
+    if (zonaEl) zonaEl.innerHTML = (rec.estrategia_por_zona || []).map(z => {
+        const rc = z.rechazo > 60 ? '#b91c1c' : z.rechazo > 40 ? '#d97706' : '#16a34a';
+        const bg = z.rechazo > 60 ? '#fff1f2' : z.rechazo > 40 ? '#fffbeb' : '#f0fdf4';
+        return `<div style="background:${bg};border:1px solid ${rc}44;border-top:3px solid ${rc};border-radius:12px;padding:14px 16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+                <strong style="font-size:0.88rem;color:#3E2723;">${esc(z.zona)}</strong>
+                <div style="display:flex;gap:6px;font-size:0.72rem;font-weight:700;">
+                    <span style="background:rgba(34,197,94,0.15);color:#16a34a;border-radius:20px;padding:2px 8px;">&#9989; ${z.aceptacion}%</span>
+                    <span style="background:rgba(239,68,68,0.15);color:#b91c1c;border-radius:20px;padding:2px 8px;">&#10007; ${z.rechazo}%</span>
+                </div>
+            </div>
+            <p style="margin:0;font-size:0.82rem;color:#5D4037;line-height:1.5;">&#128204; ${esc(z.estrategia)}</p>
+        </div>`;
+    }).join('');
+
+    // ── Semáforo de indicadores ──
+    const semEl = document.getElementById('llm-rec-semaforo');
+    const semColors = { verde:'#16a34a', naranja:'#d97706', rojo:'#b91c1c' };
+    const semBg     = { verde:'#f0fdf4', naranja:'#fffbeb', rojo:'#fff1f2' };
+    const semIcon   = { verde:'&#128994;', naranja:'&#128993;', rojo:'&#128308;' };
+    if (semEl) semEl.innerHTML = (rec.indicadores_licencia_social || []).map(ind => {
+        const sc = ind.semaforo || 'rojo';
+        return `<div style="display:flex;align-items:center;gap:14px;background:${semBg[sc]};border:1px solid ${semColors[sc]}33;border-radius:10px;padding:12px 16px;">
+            <span style="font-size:1.4rem;flex-shrink:0;">${semIcon[sc]}</span>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:0.82rem;font-weight:700;color:#3E2723;">${esc(ind.indicador)}</div>
+                <div style="font-size:0.75rem;color:#8D6E63;margin-top:2px;">Actual: <strong style="color:${semColors[sc]};">${esc(ind.actual)}</strong> &nbsp;&#8594;&nbsp; Meta: <strong>${esc(ind.meta)}</strong></div>
+            </div>
+            <span style="font-size:0.72rem;font-weight:800;background:${semColors[sc]};color:#fff;border-radius:20px;padding:4px 12px;white-space:nowrap;">${sc.toUpperCase()}</span>
+        </div>`;
+    }).join('');
 }
 
 /** Donut de sentimiento (positivo/neutro/negativo) */
@@ -3698,11 +3801,14 @@ function renderTendencia(tendencia) {
                         usePointStyle: true,
                         boxWidth: 8,
                         padding: 12,
-                        font: { size: 11, weight: '500' }
+                        font: { size: 11, weight: '500' },
+                        color: 'rgba(255,255,255,0.85)',
                     }
                 },
                 tooltip: {
-                    backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                    backgroundColor: 'rgba(10,20,50,0.93)',
+                    titleColor: '#fff',
+                    bodyColor: 'rgba(255,255,255,0.85)',
                     titleFont: { size: 13, weight: '600' },
                     bodyFont: { size: 13 },
                     padding: 12,
@@ -3710,15 +3816,14 @@ function renderTendencia(tendencia) {
                     displayColors: true,
                     boxPadding: 4,
                     usePointStyle: true,
+                    borderColor: 'rgba(56,189,248,0.3)',
+                    borderWidth: 1,
                     callbacks: {
                         label: function (context) {
                             let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed.y !== null) {
+                            if (label) label += ': ';
+                            if (context.parsed.y !== null)
                                 label += context.parsed.y + (context.dataset.yAxisID === 'y2' ? '%' : '');
-                            }
                             return label;
                         }
                     }
@@ -3727,21 +3832,24 @@ function renderTendencia(tendencia) {
             scales: {
                 x: {
                     grid: { display: false, drawBorder: false },
-                    ticks: { color: '#6B7280', font: { size: 11 } }
+                    ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 11 } },
+                    border: { color: 'rgba(255,255,255,0.1)' },
                 },
                 y: {
                     position: 'left',
-                    title: { display: true, text: 'Nº Encuestas', font: { size: 11, weight: '600' }, color: '#6B7280' },
-                    grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false, borderDash: [4, 4] },
-                    ticks: { color: '#6B7280', font: { size: 11 } },
+                    title: { display: true, text: 'Nº Encuestas', font: { size: 11, weight: '600' }, color: 'rgba(255,255,255,0.6)' },
+                    grid: { color: 'rgba(255,255,255,0.07)', drawBorder: false, borderDash: [4, 4] },
+                    ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 11 } },
+                    border: { color: 'rgba(255,255,255,0.1)' },
                     beginAtZero: true
                 },
                 y2: {
                     position: 'right',
                     max: 100,
-                    title: { display: true, text: 'Apertura (%)', font: { size: 11, weight: '600' }, color: '#6B7280' },
+                    title: { display: true, text: 'Apertura (%)', font: { size: 11, weight: '600' }, color: 'rgba(255,255,255,0.6)' },
                     grid: { display: false, drawBorder: false },
-                    ticks: { callback: v => v + '%', color: '#6B7280', font: { size: 11 } },
+                    ticks: { callback: v => v + '%', color: 'rgba(255,255,255,0.7)', font: { size: 11 } },
+                    border: { color: 'rgba(255,255,255,0.1)' },
                     beginAtZero: true
                 },
             },
@@ -3828,27 +3936,38 @@ function renderRadarDimensiones(dimensiones) {
                     min: -100, max: 100,
                     ticks: {
                         stepSize: 25,
-                        font: { size: 13 },
-                        color: '#8D6E63',
-                        backdropColor: 'rgba(255,248,225,0.7)',
+                        font: { size: 12, weight: '600' },
+                        color: 'rgba(255,255,255,0.75)',
+                        backdropColor: 'rgba(10,20,50,0.45)',
                         z: 10,
                         callback: v => (v > 0 ? '+' : '') + v,
                     },
                     pointLabels: {
-                        font: { size: 15, weight: 'bold' },
-                        color: '#3E2723',
+                        font: { size: 13, weight: 'bold' },
+                        color: (ctx2) => {
+                            const v = vals[ctx2.index] ?? 0;
+                            return v >= 10 ? '#4ade80' : v <= -10 ? '#f87171' : '#fbbf24';
+                        },
+                        padding: 8,
                     },
-                    grid: { color: '#D7CCC8', circular: true },
-                    angleLines: { color: '#D7CCC8' },
+                    grid:       { color: 'rgba(255,255,255,0.12)', circular: true },
+                    angleLines: { color: 'rgba(255,255,255,0.15)' },
                 },
             },
             plugins: {
                 legend: { display: false },
                 tooltip: {
+                    backgroundColor: 'rgba(10,20,50,0.92)',
+                    titleColor: '#fff',
+                    bodyColor: 'rgba(255,255,255,0.8)',
+                    borderColor: 'rgba(56,189,248,0.4)',
+                    borderWidth: 1,
                     callbacks: {
+                        title: (items) => dimensiones[items[0].dataIndex]?.titulo || '',
                         label: ctx2 => {
                             const v = ctx2.raw;
-                            return ` Índice: ${v > 0 ? '+' : ''}${v} pts`;
+                            const lbl = v >= 10 ? 'Favorable' : v <= -10 ? 'Critico' : 'Neutro';
+                            return ` ${lbl}: ${v > 0 ? '+' : ''}${v} pts`;
                         },
                     },
                 },
@@ -5066,6 +5185,26 @@ h1,h2,h3,h4{font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif}
     (escala &minus;100 a +100 puntos). Valores &ge; +15 se clasifican como <em>Favorable</em>,
     entre &minus;15 y +15 como <em>Ambivalente</em>, y &le; &minus;15 como <em>Cr&iacute;tico</em>.
   </div>
+  <div class="pie"><span>Reporte T&eacute;cnico-Cient&iacute;fico &middot; Encuestas Parroquiales San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
+</div>
+
+<!-- PAG 2: GRAFICAS -->
+<div class="page">
+  <div class="ph"><h2>2. An&aacute;lisis Gr&aacute;fico de Sentimiento</h2><p>Visualizaciones capturadas en tiempo real del sistema de an&aacute;lisis</p></div>
+  ${imgDonut ? `
+  <div class="st">2.1 Distribuci&oacute;n de Sentimiento Comunitario</div>
+  <div class="sd">Proporci&oacute;n de encuestas clasificadas como Positivo, Neutro y Negativo sobre el total analizado.</div>
+  <div class="chart-wrap"><img src="${imgDonut}"></div>` : ''}
+  ${imgRadar ? `
+  <div class="st">2.2 Fortaleza de Dimensiones</div>
+  <div class="sd">Puntaje neto obtenido en cada una de las dimensiones analizadas (de &minus;100 a +100 puntos).</div>
+  <div class="chart-wrap"><img src="${imgRadar}" style="max-height:360px"></div>` : ''}
+  <div class="pie"><span>Reporte T&eacute;cnico-Cient&iacute;fico &middot; Encuestas Parroquiales San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
+</div>
+
+<!-- PAG 3: DETALLE DE DIMENSIONES -->
+<div class="page">
+  <div class="ph"><h2>3. Sentimiento Detallado por Dimensi&oacute;n</h2><p>An&aacute;lisis del &Iacute;ndice Neto y respuestas porcentuales por &aacute;rea de inter&eacute;s</p></div>
   <div class="pie"><span>Reporte T&eacute;cnico-Cient&iacute;fico &middot; Encuestas Parroquiales San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
 </div>
 
