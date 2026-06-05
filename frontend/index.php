@@ -1300,4 +1300,59 @@ header('Expires: 0');
                             <p class="analisis-section-desc">Diferencia expresada en puntos porcentuales (pp) entre grupos comparados.</p>
                         </div>
                     </div>
-                    <div id="analisis-correlaciones" c
+                    <div id="analisis-correlaciones" class="analisis-corr-list"></div>
+
+                    <!-- Tendencia temporal -->
+                    <div class="analisis-section-row">
+                        <div>
+                            <h3 class="analisis-section-header">Tendencia del Levantamiento (ultimos 14 dias)</h3>
+                            <p class="analisis-section-desc">Barras: encuestas por dia &nbsp;&middot;&nbsp; Linea: % de apertura a inversion minera.</p>
+                        </div>
+                    </div>
+                    <div class="card analisis-chart-card" style="max-width:520px;margin:0 auto;padding:12px 16px">
+                        <div style="position:relative;height:180px">
+                          <canvas id="chart-tendencia"></canvas>
+                        </div>
+                    </div>
+
+
+                    <!-- Distribucion por sector -->
+                    <div class="analisis-section-row">
+                        <div>
+                            <h3 class="analisis-section-header">Distribucion por Sector</h3>
+                            <p class="analisis-section-desc">Numero de encuestas registradas por zona geografica.</p>
+                        </div>
+                    </div>
+                    <div class="card analisis-chart-card">
+                        <div id="analisis-sector-dist" class="analisis-bar-list"></div>
+                    </div>
+
+                    <!-- IA MINERA -->
+                    <div id="ia-minera-box" class="hidden" style="margin-top:24px"></div>
+                    <!-- Plan Gemini -->
+                    <div id="gemini-plan-box" class="hidden" style="margin-top:24px"></div>
+
+                </div><!-- /analisis-content -->
+
+            </section><!-- /tab-analisis -->
+
+        </main><!-- /app-main -->
+    </div><!-- /app-shell -->
+
+    <!-- ===================== MODAL VER ENCUESTA ===================== -->
+    <div id="survey-detail-modal" class="survey-modal-overlay" style="display:none;" onclick="closeSurveyModal(event)">
+        <div class="survey-modal-box">
+            <div class="survey-modal-header">
+                <div id="survey-modal-header-left" class="survey-modal-header-left"></div>
+                <span id="survey-modal-status-badge" class="survey-modal-status-badge"></span>
+                <button class="survey-modal-close" type="button" onclick="closeSurveyModal(event)" aria-label="Cerrar">&times;</button>
+            </div>
+            <div id="survey-modal-body" class="survey-modal-body"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script src="frontend/app.js?v=<?= time() ?>" charset="utf-8"></script>
+</body>
+</html>

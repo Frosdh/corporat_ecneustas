@@ -2582,6 +2582,12 @@ function generateLLMNvidia() {
                 if (btn) btn.disabled = false;
                 if (loading) loading.classList.add('hidden');
                 if (thinking) thinking.classList.add('hidden');
+                
+                // CRÍTICO: Cerrar conexión para que el navegador no intente reconectar y lance onerror
+                es.close(); 
+                _llmEventSource = null;
+                const aiBoxResult = document.getElementById('llm-ai-enriching');
+                if (aiBoxResult) aiBoxResult.style.display = 'none';
                 break;
 
             case 'llm_update':

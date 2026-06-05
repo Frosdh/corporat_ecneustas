@@ -21,6 +21,15 @@ import sys
 import json
 from collections import Counter
 
+# Forzar UTF-8 en stdin y stdout para evitar UnicodeEncodeError/UnicodeDecodeError en Windows
+try:
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
+    if hasattr(sys.stdin, 'reconfigure'):
+        sys.stdin.reconfigure(encoding='utf-8')
+except Exception:
+    pass
+
 try:
     from openai import OpenAI
     HAS_OPENAI = True
@@ -672,16 +681,17 @@ def call_nvidia_enrich(prompt):
                     {"role": "system", "content": "Eres un analista experto. Proporciona tu razonamiento y luego un bloque JSON válido."},
                     {"role": "user",   "content": prompt}
                 ],
-                temperature=0.3, top_p=0.9, max_tokens=2000, stream=True,
+                temperature=0.3, top_p=0.9, max_tokens=4096, stream=True,
+                extra_body={"chat_template_kwargs":{"enable_thinking":True},"reasoning_budget":2048}
             )
             raw = ""
             for chunk in completion:
                 if not chunk.choices: continue
                 delta = chunk.choices[0].delta
                 # Alguns modelos envían el reasoning en atributos separados si están soportados, pero Nemotron lo pone en content
-                content = delta.content or ""
-                # Si el modelo soporta reasoning_content (ej. DeepSeek)
-                reasoning = getattr(delta, "reasoning_content", "")
+                content = getattr(delta, "content", "") or ""
+                # Si el modelo soporta reasoning_content (ej. DeepSeek o Nemotron con extra_body)
+                reasoning = getattr(delta, "reasoning_content", "") or ""
                 
                 text_to_emit = reasoning + content
                 if text_to_emit:
@@ -694,7 +704,9 @@ def call_nvidia_enrich(prompt):
                     {"role": "system", "content": "Eres un analista experto. Proporciona tu razonamiento y luego un bloque JSON válido."},
                     {"role": "user",   "content": prompt}
                 ],
-                "temperature": 0.3, "top_p": 0.9, "max_tokens": 2000, "stream": False,
+                "temperature": 0.3, "top_p": 0.9, "max_tokens": 4096, "stream": False,
+                "chat_template_kwargs": {"enable_thinking": True},
+                "reasoning_budget": 2048
             }).encode('utf-8')
             req = urllib.request.Request(
                 NVIDIA_BASE_URL + "/chat/completions",
@@ -776,4 +788,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        import traceback
+        err_msg = traceback.format_exc()
+        emit({"type": "error", "error": f"Error fatal en Python: {str(e)}\n{err_msg}"})
