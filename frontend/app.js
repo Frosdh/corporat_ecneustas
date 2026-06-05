@@ -2942,7 +2942,7 @@ function generateLLMNvidia(force = false) {
         if (!_llmEventSource) return;
         es.close(); _llmEventSource = null;
         if (errBox) {
-            errBox.textContent = 'Error de conexión con el servidor. Verifique su sesión e inténtelo de nuevo.';
+            errBox.textContent = 'Error de conexion con el servidor. Verifique su sesion e intentelo de nuevo.';
             errBox.classList.remove('hidden');
         }
         if (btn) btn.disabled = false;

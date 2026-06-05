@@ -18,6 +18,17 @@ Protocolo NDJSON (una línea JSON por evento):
 
 from asyncio import exceptions
 import os
+
+# ML libraries (mismo modelo que ia_minera.py)
+try:
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.neural_network import MLPClassifier
+    from sklearn.preprocessing import LabelEncoder
+    import numpy as np
+    SKLEARN_OK = True
+except ImportError:
+    SKLEARN_OK = False
+
 import sys
 import json
 from collections import Counter
@@ -86,6 +97,124 @@ CLASE_MAP = {
     'No beneficiaria':    'Rechazo',
 }
 
+# ── MISMAS CONSTANTES QUE ia_minera.py ──────────────────────
+ML_FEATURE_COLS = [
+    'political_climate','authority_trust','investment_acceptance',
+    'household_income','water_source','has_internet','road_status','has_sewer',
+    'knows_mining_types','knows_mining_benefits','knows_modern_mining',
+    'knows_local_mines','knows_env_guarantees',
+    'age_range','education_level','respondent_gender',
+    'has_septic','road_who_fixes',
+]
+ML_CLASE_MAP = {
+    'Beneficiaria mucho': 'Aceptacion',
+    'Beneficiaria algo':  'Aceptacion',
+    'Beneficio dudoso':   'Neutral',
+    'No beneficiaria':    'Rechazo',
+}
+
+def ml_train_predict(rows):
+    """
+    Entrena Random Forest + MLP (identico a ia_minera.py) y devuelve
+    probabilidades globales y por sector basadas en el modelo ML.
+    Retorna None si sklearn no esta disponible o hay pocos datos.
+    """
+    if not SKLEARN_OK:
+        return None
+
+    X_raw, y_raw, sectors = [], [], []
+    for row in rows:
+        clase = ML_CLASE_MAP.get((row.get('mine_reopening_perception') or '').strip())
+        if not clase:
+            continue
+        feats = [(row.get(c) or '').strip() or 'Sin dato' for c in ML_FEATURE_COLS]
+        X_raw.append(feats)
+        y_raw.append(clase)
+        sectors.append((row.get('sector') or 'general').strip() or 'general')
+
+    n_train = len(y_raw)
+    if n_train < 5:
+        return None
+
+    # Codificar features (LabelEncoder por columna)
+    X_T = list(zip(*X_raw))
+    X_enc = []
+    for col_data in X_T:
+        le = LabelEncoder()
+        uv = list(set(col_data)) + ['Sin dato']
+        le.fit(list(set(uv)))
+        X_enc.append(le.transform(list(col_data)))
+    X = np.array(list(zip(*X_enc)))
+    le_y = LabelEncoder()
+    le_y.fit(['Aceptacion','Neutral','Rechazo'])
+    y = le_y.transform(y_raw)
+
+    # MLP (Red Neuronal) — igual que ia_minera.py
+    use_es = n_train >= 50
+    mlp = MLPClassifier(
+        hidden_layer_sizes=(64,32,16,8), max_iter=1000,
+        random_state=42, alpha=0.01, learning_rate='adaptive',
+        early_stopping=use_es,
+        validation_fraction=0.1 if use_es else 0.0,
+    )
+    mlp.fit(X, y)
+
+    # Random Forest para importancia de factores
+    rf = RandomForestClassifier(n_estimators=150, random_state=42, class_weight='balanced')
+    rf.fit(X, y)
+
+    # Importancia de factores
+    feat_labels = {
+        'political_climate':'Clima Politico','authority_trust':'Confianza en Autoridades',
+        'investment_acceptance':'Apertura a Inversion','household_income':'Situacion Economica',
+        'water_source':'Fuente de Agua','has_internet':'Acceso a Internet',
+        'road_status':'Estado de Vias','has_sewer':'Alcantarillado',
+        'knows_mining_types':'Conoce Tipos Mineria','knows_mining_benefits':'Conoce Beneficios Mineros',
+        'knows_modern_mining':'Conoce Mineria Moderna','knows_local_mines':'Conoce Minas Locales',
+        'knows_env_guarantees':'Conoce Garantias Ambientales',
+        'age_range':'Rango de Edad','education_level':'Nivel Educacion',
+        'respondent_gender':'Genero','has_septic':'Pozo Septico','road_who_fixes':'Responsable Vias',
+    }
+    importancia = sorted([
+        {"factor": feat_labels.get(ML_FEATURE_COLS[i], ML_FEATURE_COLS[i]),
+         "score_pct": round(float(rf.feature_importances_[i]) * 100, 1)}
+        for i in range(len(ML_FEATURE_COLS))
+    ], key=lambda x: x['score_pct'], reverse=True)
+
+    # Probabilidades globales usando conteo directo (mismo que ia_minera.py)
+    counts = {'Aceptacion': y_raw.count('Aceptacion'), 'Neutral': y_raw.count('Neutral'), 'Rechazo': y_raw.count('Rechazo')}
+    t = n_train
+    prob_a = round(counts['Aceptacion'] / t * 100, 1)
+    prob_n = round(counts['Neutral']    / t * 100, 1)
+    prob_r = round(counts['Rechazo']    / t * 100, 1)
+    pred   = max(counts, key=counts.get)
+
+    # Por sector
+    sec_results = {}
+    for sec, clase in zip(sectors, y_raw):
+        if sec not in sec_results:
+            sec_results[sec] = {'Aceptacion':0,'Neutral':0,'Rechazo':0,'total':0}
+        sec_results[sec][clase] += 1
+        sec_results[sec]['total'] += 1
+    sectores_ml = [
+        {"sector": sec, "n": v['total'],
+         "aceptacion_pct": round(v['Aceptacion']/v['total']*100,1),
+         "neutral_pct":    round(v['Neutral']   /v['total']*100,1),
+         "rechazo_pct":    round(v['Rechazo']   /v['total']*100,1)}
+        for sec, v in sorted(sec_results.items(), key=lambda x: -x[1]['total'])
+    ]
+
+    return {
+        "prob_acept":   prob_a,
+        "prob_neu":     prob_n,
+        "prob_rech":    prob_r,
+        "prediccion":   pred,
+        "importancia":  importancia,
+        "sectores_ml":  sectores_ml,
+        "n_train":      n_train,
+        "mlp_acc":      round(float(mlp.score(X, y)) * 100, 1),
+    }
+
 def classify_with_map(rows, field, mapa):
     """Clasifica filas usando el mapa exacto de lib.php (comparacion insensible a tildes/espacios)."""
     pos = neu = neg = 0
@@ -149,29 +278,40 @@ def analyze_statistics(rows):
     ingresos       = dist_field(rows, 'household_income')
     vias           = dist_field(rows, 'road_status')
 
-    # ── PROBABILIDADES GLOBALES: metodologia identica a lib.php ──────────
-    # Promedio ponderado de 5 dimensiones clave (mismo calculo que get_analisis_experto)
-    KEY_DIMS = ["political_climate","authority_trust","investment_acceptance",
-                "mine_reopening_perception","household_income"]
-    t_pos_glob = t_neu_glob = t_neg_glob = t_tot_glob = 0
-    for dim_field in KEY_DIMS:
-        mapa = SENT_MAPS[dim_field]
-        dp, dn, dng = classify_with_map(rows, dim_field, mapa)
-        dt = dp + dn + dng or 1
-        t_pos_glob += dp
-        t_neu_glob += dn
-        t_neg_glob += dng
-        t_tot_glob += dt
-    n_glob     = t_tot_glob or 1
-    prob_acept = pct(t_pos_glob, n_glob)   # positivo  → Aceptacion
-    prob_neu   = pct(t_neu_glob, n_glob)   # neutro    → Neutral
-    prob_rech  = pct(t_neg_glob, n_glob)   # negativo  → Rechazo
+    # ── MODELO ML (Random Forest + MLP) — misma metodologia que ia_minera.py ──
+    ml_result = ml_train_predict(rows)
 
-    # Calculo especifico de aceptacion MINERA (solo mine_reopening_perception)
-    # — se usa para el plan estrategico y las zonas
+    if ml_result:
+        # Usar probabilidades del modelo ML entrenado
+        prob_acept = ml_result["prob_acept"]
+        prob_neu   = ml_result["prob_neu"]
+        prob_rech  = ml_result["prob_rech"]
+        ml_importancia   = ml_result["importancia"]
+        ml_sectores      = ml_result["sectores_ml"]
+        ml_prediccion    = ml_result["prediccion"]
+        ml_n_train       = ml_result["n_train"]
+        ml_acc           = ml_result["mlp_acc"]
+    else:
+        # Fallback: promedio ponderado de 5 dimensiones (lib.php approach)
+        KEY_DIMS = ["political_climate","authority_trust","investment_acceptance",
+                    "mine_reopening_perception","household_income"]
+        t_pos_glob = t_neu_glob = t_neg_glob = t_tot_glob = 0
+        for dim_field in KEY_DIMS:
+            mapa = SENT_MAPS[dim_field]
+            dp, dn, dng = classify_with_map(rows, dim_field, mapa)
+            dt = dp + dn + dng or 1
+            t_pos_glob += dp; t_neu_glob += dn; t_neg_glob += dng; t_tot_glob += dt
+        n_glob = t_tot_glob or 1
+        prob_acept = pct(t_pos_glob, n_glob)
+        prob_neu   = pct(t_neu_glob, n_glob)
+        prob_rech  = pct(t_neg_glob, n_glob)
+        ml_importancia = []; ml_sectores = []; ml_prediccion = None
+        ml_n_train = 0; ml_acc = 0.0
+
+    # Calculo especifico de aceptacion MINERA (mine_reopening_perception) para zonas
     clases = {'Aceptacion': 0, 'Neutral': 0, 'Rechazo': 0}
     for r in rows:
-        c = CLASE_MAP.get((r.get('mine_reopening_perception') or '').strip())
+        c = ML_CLASE_MAP.get((r.get('mine_reopening_perception') or '').strip())
         if c:
             clases[c] += 1
     n_class = sum(clases.values()) or 1
@@ -284,8 +424,18 @@ def analyze_statistics(rows):
         "total_encuestas": n,
         "encuestas_clasificadas": n_class,
         "probabilidades_globales": {"Aceptacion": prob_acept, "Neutral": prob_neu, "Rechazo": prob_rech},
-        "prediccion_global": "Aceptacion" if clases['Aceptacion'] >= clases['Rechazo'] else "Rechazo",
-        "sectores": sectores, "sectores_detalle": sectores_detalle,
+        "prediccion_global": ml_prediccion or ("Aceptacion" if clases['Aceptacion'] >= clases['Rechazo'] else "Rechazo"),
+        "sectores": sectores,
+        # Usar sectores del modelo ML si disponibles (mas preciso que conteo directo)
+        "sectores_detalle": ml_sectores if ml_sectores else sectores_detalle,
+        # Datos del modelo ML para mostrar en el frontend
+        "ml_modelo": {
+            "disponible": bool(ml_result),
+            "n_encuestas_entrenamiento": ml_n_train,
+            "precision_mlp": ml_acc,
+            "metodo": "Random Forest + MLP Neural Network" if ml_result else "Reglas estadisticas (fallback)",
+        },
+        "ml_importancia_factores": ml_importancia,
         "comunidades": comunidades, "genero": genero, "edad": edad,
         "educacion": educacion, "ocupacion": ocupacion,
         "problemas": problemas, "prioridad_social": prioridad_soc,
@@ -824,9 +974,17 @@ def generate_instant_analysis(stats):
         ],
     }
 
+    # Usar importancia del modelo ML si disponible (mas preciso que varianza estadistica)
+    ml_imp = stats.get("ml_importancia_factores", [])
+    factores_final = ml_imp if ml_imp else factores
+
+    # Info del modelo
+    ml_info = stats.get("ml_modelo", {})
+
     return {
         "resumen_ejecutivo":        resumen,
-        "importancia_factores":     factores,
+        "importancia_factores":     factores_final,
+        "ml_modelo":                ml_info,
         "interpretaciones_dim":     interpretaciones_dim,
         "hallazgos_zona":           hallazgos_zona,
         "recomendaciones_ia":       recs[:5],
@@ -865,9 +1023,17 @@ def merge_all(stats, texto):
         for s in stats.get("sectores_detalle", [])
     ]
 
+    ml_info = texto.get("ml_modelo", stats.get("ml_modelo", {}))
+    motor_label = "NVIDIA + RF/MLP" if ml_info.get("disponible") else "NVIDIA Analisis IA"
+    if ml_info.get("disponible"):
+        motor_label = (f"NVIDIA + Random Forest + MLP  "
+                       f"(n={ml_info.get('n_encuestas_entrenamiento',0)}, "
+                       f"acc={ml_info.get('precision_mlp',0)}%)")
+
     return {
         "ok": True,
-        "motor":                   "NVIDIA Análisis IA",
+        "motor":                   motor_label,
+        "ml_modelo":               ml_info,
         "total_encuestas":         stats.get("total_encuestas", 0),
         "prediccion_global":       pred,
         "probabilidades_globales": {"Aceptacion": pa, "Neutral": pn, "Rechazo": pr},
@@ -879,6 +1045,9 @@ def merge_all(stats, texto):
         "recomendaciones_ia":      texto.get("recomendaciones_ia", []),
         "plan_estrategico":        texto.get("plan_estrategico", {}),
         "conclusion":              texto.get("conclusion", ""),
+        "recomendaciones_mineras": texto.get("recomendaciones_mineras", {}),
+        "ejes_estrategicos":       texto.get("ejes_estrategicos", []),
+        "mejores_practicas":       texto.get("mejores_practicas", {}),
         "stats_locales":           stats,
     }
 
