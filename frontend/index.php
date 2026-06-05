@@ -1096,14 +1096,14 @@ header('Expires: 0');
                         </div>
                     </div>
 
-                    <!-- Radar -->
+                    <!-- Radar — mismo estilo que Vista Radar del tab Análisis IA -->
                     <div class="analisis-section-row">
-                        <div class="premium-radar-header">
-                            <h3 class="analisis-section-header">Radar de Favorabilidad</h3>
+                        <div>
+                            <h3 class="analisis-section-header">Vista Radar &mdash; Comparativa por Dimensi&oacute;n</h3>
+                            <p class="analisis-section-desc">Cada eje eval&uacute;a el sentimiento mediante un <strong>&Iacute;ndice Neto</strong> (escala -100 a +100 pts), calculado como: <em>% Positivo menos % Negativo</em>. Verde = favorable, rojo = cr&iacute;tico. Misma metodolog&iacute;a que el tab An&aacute;lisis IA &mdash; compare ambos radares para verificar consistencia.</p>
                         </div>
                     </div>
-                    <div class="card analisis-radar-card" style="margin-bottom:24px;padding:24px 16px 16px;flex-direction:column;background:#fff;border:1px solid #D7CCC8;">
-                        <p style="font-size:0.85rem;color:#8D6E63;margin:0 0 16px;text-align:center;">Muestra qué tan favorable es cada dimensión temática (infraestructura, educación, salud, etc.). Cuanto más cerca del borde exterior, mayor es la aceptación en esa dimensión.</p>
+                    <div class="card analisis-radar-card" style="margin-bottom:24px;background:linear-gradient(135deg,#111827 0%,#1e3a8a 100%);border:1px solid rgba(255,255,255,0.1);padding:24px 16px 16px;flex-direction:column;">
                         <div style="position:relative;width:100%;height:700px;max-width:900px;margin:0 auto;">
                             <canvas id="llm-radar-chart"></canvas>
                         </div>

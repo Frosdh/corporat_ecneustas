@@ -61,37 +61,52 @@ NVIDIA_MODEL_LABEL = "NVIDIA Nemotron-3-Super-120B"
 # Para volver al modelo rápido sin razonamiento: NVIDIA_MODEL = "meta/llama-3.1-8b-instruct"
 
 # Mapas de sentimiento identicos a lib.php — para que LLM y Analisis IA coincidan
-# Mapas IDENTICOS a lib.php get_analisis_experto() — valores exactos del app movil
+# Mapas IDENTICOS a lib.php get_analisis_experto() — 9 dimensiones exactas
 SENT_MAPS = {
     "political_climate": {
-        # lib.php $mapClima: neutro=[] (respuestas no mapeadas van a neutro por defecto)
         "positivo": ["Estabilidad relativa"],
         "neutro":   [],
         "negativo": ["Desconfianza institucional","Division comunitaria","Conflicto abierto entre actores"],
     },
     "authority_trust": {
-        # lib.php $mapConfianza
         "positivo": ["Alta"],
         "neutro":   ["Media"],
         "negativo": ["Baja"],
     },
     "investment_acceptance": {
-        # lib.php $mapInversion: condicionada = NEUTRO (no positivo)
-        "positivo": ["Aceptacion amplia","Aceptacion amplia"],
+        "positivo": ["Aceptacion amplia"],
         "neutro":   ["Aceptacion condicionada"],
         "negativo": ["Rechazo preventivo"],
     },
     "mine_reopening_perception": {
-        # lib.php $mapReapertura
         "positivo": ["Beneficiaria mucho","Beneficiaria algo"],
         "neutro":   ["Beneficio dudoso"],
         "negativo": ["No beneficiaria"],
     },
     "household_income": {
-        # lib.php $mapIngreso
         "positivo": ["Cubre con algo de holgura"],
         "neutro":   ["Cubre apenas"],
         "negativo": ["No cubre la canasta"],
+    },
+    "water_source": {
+        "positivo": ["Red publica con tratamiento"],
+        "neutro":   ["Vertiente comunal sin purificacion","Tanquero u otra compra"],
+        "negativo": ["Rio o acequia"],
+    },
+    "has_sewer": {
+        "positivo": ["Si tiene"],
+        "neutro":   [],
+        "negativo": ["No tiene"],
+    },
+    "has_internet": {
+        "positivo": ["Si estable"],
+        "neutro":   ["Intermitente"],
+        "negativo": ["No tiene"],
+    },
+    "road_status": {
+        "positivo": ["Bueno"],
+        "neutro":   ["Regular"],
+        "negativo": ["Malo"],
     },
 }
 
@@ -455,21 +470,35 @@ def analyze_statistics(rows):
         "fuente_agua": fuente_agua, "internet": internet, "ingresos": ingresos, "vias": vias,
         "beneficios_mineros": beneficios_dist, "riesgos_mineros": riesgos_dist,
         "conocimiento_minero": conocimiento, "indice_conocimiento": idx_conocimiento,
+        # 9 dimensiones en el mismo orden que lib.php dimsConfig
         "sentimientos_dimensiones": [
-            {"titulo": "Percepcion Minera",    "sentimiento": sent_mineria,
-             "distribucion": {"items": [{"label": i["label"], "pct": i["pct"], "sentimiento": lsm(i["label"])} for i in percepcion_min[:6]]}},
-            {"titulo": "Clima Politico",        "sentimiento": sent_clima,
+            {"titulo": "Clima Politico",
+             "sentimiento": sent_clima,
              "distribucion": {"items": [{"label": i["label"], "pct": i["pct"], "sentimiento": lsc(i["label"])} for i in clima_pol[:6]]}},
-            {"titulo": "Confianza Institucional","sentimiento": sent_trust,
+            {"titulo": "Confianza en Autoridades",
+             "sentimiento": sent_trust,
              "distribucion": {"items": [{"label": i["label"], "pct": i["pct"], "sentimiento": lst(i["label"])} for i in confianza_aut[:6]]}},
-            {"titulo": "Apertura a Inversion",  "sentimiento": sent_inversion,
+            {"titulo": "Aceptacion de Inversion",
+             "sentimiento": sent_inversion,
              "distribucion": {"items": [{"label": i["label"], "pct": i["pct"], "sentimiento": lsi(i["label"])} for i in aceptacion_inv[:6]]}},
-            {"titulo": "Situacion Economica",   "sentimiento": sent_ingresos,
+            {"titulo": "Percepcion Reapertura Minera",
+             "sentimiento": sent_mineria,
+             "distribucion": {"items": [{"label": i["label"], "pct": i["pct"], "sentimiento": lsm(i["label"])} for i in percepcion_min[:6]]}},
+            {"titulo": "Situacion Economica Familiar",
+             "sentimiento": sent_ingresos,
              "distribucion": {"items": [{"label": i["label"], "pct": i["pct"], "sentimiento": lse(i["label"])} for i in ingresos[:6]]}},
-            {"titulo": "Conocimiento Minero",   "sentimiento": sent_conocimiento,
-             "distribucion": {"items": [{"label": k["pregunta"], "pct": k["si_pct"],
-                "sentimiento": "positivo" if k["nivel"]=="Alto" else ("neutro" if k["nivel"]=="Medio" else "negativo")}
-                for k in conocimiento]}},
+            {"titulo": "Fuente de Agua",
+             "sentimiento": dim_sent("water_source"),
+             "distribucion": {"items": [{"label": i["label"], "pct": i["pct"], "sentimiento": label_sent("water_source",i["label"])} for i in fuente_agua[:6]]}},
+            {"titulo": "Cobertura de Alcantarillado",
+             "sentimiento": dim_sent("has_sewer"),
+             "distribucion": {"items": [{"label": i["label"], "pct": i["pct"], "sentimiento": label_sent("has_sewer",i["label"])} for i in dist_field(rows,"has_sewer")[:6]]}},
+            {"titulo": "Acceso a Internet",
+             "sentimiento": dim_sent("has_internet"),
+             "distribucion": {"items": [{"label": i["label"], "pct": i["pct"], "sentimiento": label_sent("has_internet",i["label"])} for i in internet[:6]]}},
+            {"titulo": "Estado Vial",
+             "sentimiento": dim_sent("road_status"),
+             "distribucion": {"items": [{"label": i["label"], "pct": i["pct"], "sentimiento": label_sent("road_status",i["label"])} for i in vias[:6]]}},
         ],
         "sentimiento_global": {"positivo_pct": prob_acept, "neutro_pct": prob_neu, "negativo_pct": prob_rech},
     }
@@ -531,7 +560,7 @@ def generate_instant_analysis(stats):
 
     # ── INTERPRETACIONES POR DIMENSIÓN ────────────────────────
     INTERP = {
-        "Percepcion Minera": {
+        "Percepcion Reapertura Minera": {
             "pos": "La percepción minera es favorable; la comunidad identifica beneficios concretos y muestra apertura al diálogo con operadores.",
             "neg": "La percepción minera es negativa; la comunidad asocia la minería con riesgos ambientales y sociales no mitigados.",
             "neu": "Percepción dividida; existe disposición al diálogo pero con condiciones claras de transparencia y beneficios directos.",
@@ -541,17 +570,17 @@ def generate_instant_analysis(stats):
             "neg": "Clima político tenso; las divisiones internas aumentan el riesgo de conflictos sociales y dificultan el consenso.",
             "neu": "Clima político moderado; es necesario fortalecer la confianza institucional para facilitar acuerdos comunitarios.",
         },
-        "Confianza Institucional": {
+        "Confianza en Autoridades": {
             "pos": "Alta confianza en autoridades; facilita la mediación y la legitimidad de los acuerdos comunitarios.",
             "neg": "Baja confianza institucional; es crítico establecer mecanismos transparentes de rendición de cuentas.",
             "neu": "Confianza moderada; se deben fortalecer canales de comunicación y cumplimiento de compromisos.",
         },
-        "Apertura a Inversion": {
+        "Aceptacion de Inversion": {
             "pos": "Alta apertura a la inversión; la comunidad reconoce el potencial económico y está dispuesta a negociar condiciones.",
             "neg": "Resistencia a la inversión extractiva; predomina la preferencia por actividades agropecuarias y turismo sostenible.",
             "neu": "Apertura condicionada; la comunidad acepta inversión solo con garantías de empleo local y protección ambiental.",
         },
-        "Situacion Economica": {
+        "Situacion Economica Familiar": {
             "pos": "Situación económica estable; reduce la urgencia por ingresos mineros pero mantiene interés en diversificación productiva.",
             "neg": "Situación económica precaria; genera presión por fuentes alternativas de ingreso que la minería podría satisfacer.",
             "neu": "Economía en transición; la comunidad busca opciones que complementen la agricultura sin reemplazarla.",
@@ -821,7 +850,7 @@ def generate_instant_analysis(stats):
 
     # ── EJES ESTRATEGICOS (basados en dimensiones criticas) ────
     EJE_DEF = {
-        "Percepcion Minera": {
+        "Percepcion Reapertura Minera": {
             "icono": "mining",
             "titulo": "Eje 1: Transformacion de la Percepcion Minera",
             "descripcion": "Revertir la imagen negativa de la mineria mediante evidencia de proyectos responsables y beneficios documentados.",
@@ -843,7 +872,7 @@ def generate_instant_analysis(stats):
             ],
             "normativa": "Codigo Organico de Organizacion Territorial (COOTAD); Acuerdo Ministerial 154",
         },
-        "Confianza Institucional": {
+        "Confianza en Autoridades": {
             "icono": "trust",
             "titulo": "Eje 3: Fortalecimiento de la Confianza Institucional",
             "descripcion": "Construir confianza en las instituciones publicas y en la empresa operadora mediante transparencia y rendicion de cuentas.",
@@ -854,7 +883,7 @@ def generate_instant_analysis(stats):
             ],
             "normativa": "Convenio 169 OIT Art. 15; IFC Performance Standard 1",
         },
-        "Apertura a Inversion": {
+        "Aceptacion de Inversion": {
             "icono": "investment",
             "titulo": "Eje 4: Modelo de Participacion Economica Comunitaria",
             "descripcion": "Disenar mecanismos de participacion economica que conviertan a la comunidad en socia del proyecto.",
@@ -865,7 +894,7 @@ def generate_instant_analysis(stats):
             ],
             "normativa": "Ley de Mineria Art. 28 (regalias); Reglamento General de Mineria Art. 67",
         },
-        "Situacion Economica": {
+        "Situacion Economica Familiar": {
             "icono": "economy",
             "titulo": "Eje 5: Desarrollo Economico Complementario",
             "descripcion": "Integrar el proyecto minero con la economia agropecuaria local para no generar dependencia ni desplazamiento.",

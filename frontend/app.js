@@ -3528,18 +3528,15 @@ function renderLLMAnalissiZonas(zonas) {
 function renderLLMRadarChart(dimensiones) {
     const ctx = document.getElementById('llm-radar-chart');
     if (!ctx || typeof Chart === 'undefined') return;
-    // Destruir cualquier chart previo en este canvas
     destroyChart('llm-radar');
-    destroyChart('llm-donut-llm-radar-chart');
     const existingChart = Chart.getChart(ctx);
     if (existingChart) existingChart.destroy();
 
-    const labels    = dimensiones.map(d => d.titulo || '');
-    const dataFavor = dimensiones.map(d => Math.max(0, ((d.sentimiento?.indice ?? 0) + 100) / 2));
-
-    // Colores por valor: verde=alto, amarillo=medio, rojo=bajo
-    const pointColors = dataFavor.map(v =>
-        v >= 60 ? '#22c55e' : v >= 40 ? '#f59e0b' : '#ef4444'
+    // IDENTICO a renderRadarDimensiones: escala -100 a +100, fondo oscuro
+    const labels = dimensiones.map(d => d.titulo || '');
+    const vals   = dimensiones.map(d => d.sentimiento?.indice ?? 0);
+    const pointColors = vals.map(v =>
+        v >= 10 ? '#0f9f6e' : v <= -10 ? '#c43d45' : '#d97706'
     );
 
     analisisState.charts['llm-radar'] = new Chart(ctx, {
@@ -3547,18 +3544,16 @@ function renderLLMRadarChart(dimensiones) {
         data: {
             labels,
             datasets: [{
-                label: '\u00cdndice de Favorabilidad',
-                data: dataFavor,
-                backgroundColor: 'rgba(59,130,246,0.18)',
-                borderColor: 'rgba(99,179,255,0.95)',
+                label: '\u00cdndice Neto de Sentimiento (pts)',
+                data: vals,
+                backgroundColor: 'rgba(56,189,248,0.2)',
+                borderColor: '#38bdf8',
                 borderWidth: 2.5,
                 pointBackgroundColor: pointColors,
-                pointBorderColor: '#fff',
+                pointBorderColor: '#ffffff',
                 pointBorderWidth: 2,
                 pointRadius: 6,
                 pointHoverRadius: 9,
-                pointHoverBackgroundColor: '#fff',
-                pointHoverBorderColor: pointColors,
             }],
         },
         options: {
@@ -3566,45 +3561,41 @@ function renderLLMRadarChart(dimensiones) {
             maintainAspectRatio: false,
             scales: {
                 r: {
-                    min: 0, max: 100,
-                    angleLines: { color: '#D7CCC8', lineWidth: 1.2 },
-                    grid:        { color: '#EDE0D0', lineWidth: 1 },
-                    pointLabels: {
-                        color: (ctx2) => {
-                            const v = dataFavor[ctx2.index] ?? 50;
-                            return v >= 60 ? '#16a34a' : v >= 40 ? '#d97706' : '#b91c1c';
-                        },
-                        font: { size: 13, weight: '700' },
-                        padding: 10,
-                    },
+                    min: -100, max: 100,
                     ticks: {
-                        display: true,
                         stepSize: 25,
-                        color: '#8D6E63',
-                        font: { size: 9 },
-                        backdropColor: 'rgba(255,248,225,0.7)',
-                        callback: v => v + '%',
+                        font: { size: 12, weight: '600' },
+                        color: 'rgba(255,255,255,0.75)',
+                        backdropColor: 'rgba(10,20,50,0.45)',
+                        z: 10,
+                        callback: v => (v > 0 ? '+' : '') + v,
                     },
+                    pointLabels: {
+                        font: { size: 13, weight: 'bold' },
+                        color: (ctx2) => {
+                            const v = vals[ctx2.index] ?? 0;
+                            return v >= 10 ? '#4ade80' : v <= -10 ? '#f87171' : '#fbbf24';
+                        },
+                        padding: 8,
+                    },
+                    grid:       { color: 'rgba(255,255,255,0.12)', circular: true },
+                    angleLines: { color: 'rgba(255,255,255,0.15)' },
                 },
             },
             plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: { color: '#3E2723', font: { size: 12, weight: '600' }, padding: 16, usePointStyle: true },
-                },
+                legend: { display: false },
                 tooltip: {
-                    backgroundColor: 'rgba(255,248,225,0.97)',
-                    titleColor: '#3E2723',
-                    bodyColor: '#6F4E37',
-                    borderColor: '#D7CCC8',
+                    backgroundColor: 'rgba(10,20,50,0.92)',
+                    titleColor: '#fff',
+                    bodyColor: 'rgba(255,255,255,0.8)',
+                    borderColor: 'rgba(56,189,248,0.4)',
                     borderWidth: 1,
                     callbacks: {
                         title: (items) => dimensiones[items[0].dataIndex]?.titulo || '',
-                        label: (c) => {
-                            const raw = c.raw;
-                            const idx = (raw * 2) - 100;
-                            const lbl = idx >= 15 ? '✅ Favorable' : idx <= -15 ? '❌ Crítico' : '⚖️ Ambivalente';
-                            return ` ${lbl}  (${idx >= 0 ? '+' : ''}${idx.toFixed(0)} pts sobre 100)`;
+                        label: ctx2 => {
+                            const v = ctx2.raw;
+                            const lbl = v >= 10 ? 'Favorable' : v <= -10 ? 'Critico' : 'Neutro';
+                            return ' ' + lbl + ': ' + (v > 0 ? '+' : '') + v + ' pts';
                         },
                     },
                 },
