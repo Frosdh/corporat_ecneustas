@@ -1993,6 +1993,25 @@ function escapeJs(value) {
     return String(value ?? '').replaceAll('\\', '\\\\').replaceAll("'", "\\'");
 }
 
+/** Limpia texto del backend: quita emojis, control chars, y artefactos de double-encoding */
+function cleanText(str) {
+    if (!str) return '';
+    return String(str)
+        // Remove common double-encoded UTF-8 artifacts
+        .replace(/\u00c3[\u0080-\u00bf]/g, function(m) {
+            var map = {'\u00c3\u00a1':'a','\u00c3\u00a9':'e','\u00c3\u00ad':'i','\u00c3\u00b3':'o','\u00c3\u00ba':'u',
+                       '\u00c3\u0081':'A','\u00c3\u0089':'E','\u00c3\u008d':'I','\u00c3\u0093':'O','\u00c3\u009a':'U',
+                       '\u00c3\u00b1':'n','\u00c3\u0091':'N'};
+            return map[m] || '';
+        })
+        // Remove emoji (surrogate pairs and common emoji ranges)
+        .replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '')
+        .replace(/[\u2600-\u27FF\uFE00-\uFE0F\u2702-\u27B0]/g, '')
+        // Remove control characters (except space, tab, newline)
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
+        .trim();
+}
+
 async function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
         try {
@@ -2486,8 +2505,8 @@ function renderDonutGlobal(sent) {
         options: {
             cutout: '68%',
             plugins: {
-                legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 10, color: 'rgba(255,255,255,0.8)' } },
-                tooltip: { callbacks: { label: (c) => ' ' + c.label + ': ' + c.parsed + '%' } },
+                legend: { position: 'bottom', labels: { font: { size: 11, weight: '600' }, padding: 10, color: '#3E2723', usePointStyle: true } },
+                tooltip: { backgroundColor: 'rgba(255,248,225,0.97)', titleColor: '#3E2723', bodyColor: '#6F4E37', borderColor: '#D7CCC8', borderWidth: 1, callbacks: { label: (c) => ' ' + c.label + ': ' + c.parsed + '%' } },
             },
             animation: { duration: 700 },
         },
@@ -2730,14 +2749,14 @@ function renderLLMStats(stats) {
         if (grid) {
             grid.innerHTML = `
                 <div style="grid-column:1/-1;text-align:center;padding:48px 24px;
-                            background:rgba(255,255,255,0.03);border-radius:12px;
-                            border:2px dashed rgba(255,255,255,0.12);">
-                    <div style="font-size:2rem;margin-bottom:12px;opacity:0.4;">&#9881;</div>
-                    <p style="color:rgba(255,255,255,0.4);font-size:0.9rem;margin:0 0 4px;font-weight:600;">
-                        Esperando an&aacute;lisis de IA
+                            background:rgba(111,78,55,0.04);border-radius:12px;
+                            border:2px dashed #D7CCC8;">
+                    <div style="font-size:2rem;margin-bottom:12px;opacity:0.5;">⚙️</div>
+                    <p style="color:#6F4E37;font-size:0.9rem;margin:0 0 4px;font-weight:600;">
+                        Esperando análisis de IA
                     </p>
-                    <p style="color:rgba(255,255,255,0.25);font-size:0.78rem;margin:0;">
-                        Los resultados detallados aparecer&aacute;n aqu&iacute; cuando NVIDIA finalice el an&aacute;lisis.
+                    <p style="color:#8D6E63;font-size:0.78rem;margin:0;">
+                        Los resultados detallados aparecerán aquí cuando NVIDIA finalice el análisis.
                     </p>
                 </div>`;
         }
@@ -2759,6 +2778,36 @@ function renderLLMNvidia(payload) {
     setText('llm-resumen', payload.resumen_ejecutivo || '');
     setText('llm-conclusion', payload.conclusion || '');
     setText('llm-prediccion', payload.prediccion_global || '--');
+
+    // Enriquecer card de conclusión con resumen visual
+    const conclusionCard = document.getElementById('llm-conclusion-card');
+    if (conclusionCard && payload.prediccion_global) {
+        const pred = payload.prediccion_global;
+        const prbs = payload.probabilidades_globales || {};
+        const isAcept = pred === 'Aceptacion' || pred === 'Aceptación';
+        const isRech  = pred === 'Rechazo';
+        const accent  = isAcept ? '#16a34a' : isRech ? '#b91c1c' : '#d97706';
+        const bgFrom  = isAcept ? '#f0fdf4' : isRech ? '#fff1f2' : '#fffbeb';
+        const bgTo    = isAcept ? '#dcfce7' : isRech ? '#ffe4e6' : '#fef3c7';
+        const hdr     = conclusionCard.querySelector('div:first-child');
+        if (hdr) {
+            hdr.style.background = `linear-gradient(135deg,${bgFrom} 0%,${bgTo} 100%)`;
+            hdr.style.borderBottomColor = accent + '55';
+            const icon = isAcept ? '✅' : isRech ? '⚠️' : '⚖️';
+            hdr.innerHTML = `
+                <div style="display:flex;align-items:center;justify-content:space-between;width:100%;flex-wrap:wrap;gap:12px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <span style="font-size:1.3rem;">${icon}</span>
+                        <h4 style="margin:0;color:#14532d;font-size:1rem;font-weight:700;">Conclusión General del Análisis IA</h4>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <span style="font-size:0.78rem;font-weight:700;background:rgba(34,197,94,0.15);color:#16a34a;border-radius:20px;padding:3px 12px;border:1px solid #16a34a55;">✅ ${prbs.Aceptacion ?? '--'}% Aceptación</span>
+                        <span style="font-size:0.78rem;font-weight:700;background:rgba(245,158,11,0.15);color:#d97706;border-radius:20px;padding:3px 12px;border:1px solid #d9770655;">⚖️ ${prbs.Neutral ?? '--'}% Neutral</span>
+                        <span style="font-size:0.78rem;font-weight:700;background:rgba(239,68,68,0.15);color:#b91c1c;border-radius:20px;padding:3px 12px;border:1px solid #b91c1c55;">❌ ${prbs.Rechazo ?? '--'}% Rechazo</span>
+                    </div>
+                </div>`;
+        }
+    }
 
     const probs = payload.probabilidades_globales || {};
     setText('llm-prob-aceptacion', (probs.Aceptacion ?? '--') + '%');
@@ -2797,7 +2846,7 @@ function renderLLMNvidia(payload) {
                     <span style="font-size:0.85rem;color:var(--text-color);font-weight:500;">${i+1}. ${escapeHtml(f.factor)}</span>
                     <span style="font-size:0.78rem;color:${col};font-weight:700;min-width:38px;text-align:right;">${f.score_pct}%</span>
                 </div>
-                <div style="background:rgba(255,255,255,0.07);border-radius:4px;height:6px;overflow:hidden;">
+                <div style="background:#EDE0D0;border-radius:4px;height:6px;overflow:hidden;">
                     <div style="width:${f.score_pct}%;height:100%;background:${col};border-radius:4px;transition:width 0.9s ease;"></div>
                 </div>
             </li>`;
@@ -2814,7 +2863,12 @@ function renderLLMNvidia(payload) {
     }
 
     // Análisis por zona (LLM)
-    renderLLMAnalissiZonas(payload.analisis_por_zona || payload.stats_locales?.sectores_detalle || []);
+    const zonasIA = payload.analisis_por_zona || payload.stats_locales?.sectores_detalle || [];
+    renderLLMAnalissiZonas(zonasIA);
+    // Actualizar la gráfica de barras con los datos procesados por NVIDIA
+    if (zonasIA.length > 0) {
+        renderLLMZonasChart(zonasIA, true);
+    }
 
     // Dimensiones con gráficas
     if (payload.dimensiones && payload.dimensiones.length > 0) {
@@ -2831,33 +2885,72 @@ function renderLLMNvidia(payload) {
     // Fases del plan
     const fasesBox = document.getElementById('llm-plan-fases');
     if (fasesBox && plan.fases && plan.fases.length > 0) {
-        fasesBox.innerHTML = plan.fases.map(f => `
-            <div class="card analisis-dim-card" style="padding: 12px; border-top: 3px solid #3b82f6;">
-                <div class="analisis-dim-header" style="margin-bottom:8px;">
-                    <h4 class="analisis-dim-titulo" style="font-size:1rem;color:var(--text-color);">${escapeHtml(f.fase)}</h4>
-                    <span class="analisis-sent-badge sent-neutral" style="background:rgba(59,130,246,0.15);color:#60a5fa;border:none;">${escapeHtml(f.periodo)}</span>
+        // Paleta de colores por número de fase
+        const faseColors = [
+            { border: '#d97706', bg: 'rgba(245,158,11,0.07)', badge: '#fef3c7', badgeText: '#92400e', icon: '🔍' }, // Fase 0 — Diagnóstico
+            { border: '#3b82f6', bg: 'rgba(59,130,246,0.06)', badge: '#dbeafe', badgeText: '#1e40af', icon: '🤝' }, // Fase 1 — Socialización
+            { border: '#8b5cf6', bg: 'rgba(139,92,246,0.06)', badge: '#ede9fe', badgeText: '#5b21b6', icon: '📋' }, // Fase 2 — Diálogo
+            { border: '#22c55e', bg: 'rgba(34,197,94,0.06)',  badge: '#dcfce7', badgeText: '#14532d', icon: '📊' }, // Fase 3 — Monitoreo
+        ];
+        fasesBox.innerHTML = plan.fases.map((f, idx) => {
+            const c = faseColors[idx % faseColors.length];
+            // Extraer número de fase del nombre si existe
+            const numMatch = f.fase.match(/\d+/);
+            const faseNum  = numMatch ? parseInt(numMatch[0]) : idx;
+            const color    = faseColors[faseNum % faseColors.length];
+            return `
+            <div style="background:${color.bg};border:1px solid ${color.border}33;border-top:4px solid ${color.border};border-radius:14px;padding:18px;position:relative;overflow:hidden;">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:12px;">
+                    <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+                        <span style="font-size:1.4rem;flex-shrink:0;">${color.icon}</span>
+                        <h4 style="margin:0;font-size:0.95rem;font-weight:700;color:#3E2723;line-height:1.3;">${escapeHtml(f.fase)}</h4>
+                    </div>
+                    <span style="flex-shrink:0;font-size:0.72rem;font-weight:700;background:${color.badge};color:${color.badgeText};border-radius:20px;padding:3px 10px;white-space:nowrap;">📅 ${escapeHtml(f.periodo)}</span>
                 </div>
-                <ul style="list-style:disc;padding-left:18px;margin-top:10px;font-size:0.85rem;color:var(--text-muted);line-height:1.6;">
-                    ${(f.acciones || []).map(a => `<li style="margin-bottom:4px;">${escapeHtml(a)}</li>`).join('')}
+                <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px;">
+                    ${(f.acciones || []).map(a => `
+                    <li style="display:flex;align-items:flex-start;gap:8px;font-size:0.84rem;color:#5D4037;line-height:1.5;">
+                        <span style="flex-shrink:0;color:${color.border};font-weight:700;margin-top:1px;">▸</span>
+                        <span>${escapeHtml(a)}</span>
+                    </li>`).join('')}
                 </ul>
-            </div>`).join('');
+            </div>`;
+        }).join('');
     }
 
     // Indicadores del plan
     const indBox = document.getElementById('llm-plan-indicadores');
     if (indBox && plan.indicadores && plan.indicadores.length > 0) {
-        indBox.innerHTML = plan.indicadores.map(ind => `
-            <tr>
-                <td>${escapeHtml(ind.nombre)}</td>
-                <td style="color:#22c55e;font-weight:600;">${escapeHtml(ind.meta)}</td>
-                <td style="color:var(--text-muted);">${escapeHtml(ind.plazo)}</td>
-            </tr>`).join('');
+        indBox.innerHTML = plan.indicadores.map((ind, i) => {
+            const isEven = i % 2 === 0;
+            // Detectar si la meta es positiva (tiene >, >=, Favorable) o crítica
+            const metaLower = (ind.meta || '').toLowerCase();
+            const metaColor = metaLower.includes('favorable') ? '#16a34a'
+                            : metaLower.startsWith('>') || metaLower.startsWith('≥') ? '#0369a1'
+                            : '#6F4E37';
+            return `<tr style="border-bottom:1px solid #EDE0D0;${isEven ? '' : 'background:#FFFDF7;'}">
+                <td style="padding:12px 16px;color:#3E2723;font-weight:500;">${escapeHtml(ind.nombre)}</td>
+                <td style="padding:12px 16px;font-weight:700;color:${metaColor};">${escapeHtml(ind.meta)}</td>
+                <td style="padding:12px 16px;color:#8D6E63;">
+                    <span style="background:#FFF8E1;border:1px solid #EDE0D0;border-radius:20px;padding:2px 10px;font-size:0.82rem;white-space:nowrap;">${escapeHtml(ind.plazo)}</span>
+                </td>
+            </tr>`;
+        }).join('');
     }
 
+    // Acciones Finales
     const accionesBox = document.getElementById('llm-plan-acciones');
     if (accionesBox) {
         const acciones = plan.recomendaciones_finales || [];
-        accionesBox.innerHTML = acciones.map(a => `<li>${escapeHtml(a)}</li>`).join('');
+        const accionIcons = ['🎯', '🔗', '📢', '✅', '⚙️', '📌'];
+        accionesBox.innerHTML = acciones.map((a, i) => `
+            <li style="display:flex;align-items:flex-start;gap:14px;background:#fff;border:1px solid #EDE0D0;border-left:4px solid #6F4E37;border-radius:10px;padding:12px 16px;">
+                <span style="font-size:1.2rem;flex-shrink:0;line-height:1.4;">${accionIcons[i % accionIcons.length]}</span>
+                <div>
+                    <span style="font-size:0.7rem;font-weight:700;color:#8D6E63;text-transform:uppercase;letter-spacing:.08em;">Acción ${i + 1}</span>
+                    <p style="margin:2px 0 0;font-size:0.88rem;color:#3E2723;line-height:1.55;">${escapeHtml(a)}</p>
+                </div>
+            </li>`).join('');
     }
 }
 
@@ -2874,7 +2967,7 @@ function renderLLMSentimientoDonut(sentData, canvasId) {
     analisisState.charts['llm-donut-' + canvasId] = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['Aceptación', 'Neutro', 'Rechazo'],
+            labels: ['Aceptaci\u00f3n', 'Neutro', 'Rechazo'],
             datasets: [{
                 data: [pos, neu, neg],
                 backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'],
@@ -2889,7 +2982,7 @@ function renderLLMSentimientoDonut(sentData, canvasId) {
                 legend: {
                     position: 'bottom',
                     labels: {
-                        color: 'rgba(255,255,255,0.9)',
+                        color: '#3E2723',
                         font: { size: 12, weight: '600' },
                         padding: 16,
                         boxWidth: 12,
@@ -2898,7 +2991,7 @@ function renderLLMSentimientoDonut(sentData, canvasId) {
                         pointStyleWidth: 12,
                     },
                 },
-                tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed.toFixed(1)}%` } },
+                tooltip: { backgroundColor: 'rgba(255,248,225,0.97)', titleColor: '#3E2723', bodyColor: '#6F4E37', borderColor: '#D7CCC8', borderWidth: 1, callbacks: { label: (c) => ` ${c.label}: ${c.parsed.toFixed(1)}%` } },
             },
             animation: { duration: 900, easing: 'easeInOutQuart' },
         },
@@ -2906,31 +2999,150 @@ function renderLLMSentimientoDonut(sentData, canvasId) {
 }
 
 /** Gráfica de barras por zona (estadístico) */
-function renderLLMZonasChart(sectores) {
+function renderLLMZonasChart(sectores, fromIA = false) {
     const ctx = document.getElementById('llm-zonas-chart');
     if (!ctx || !sectores.length || typeof Chart === 'undefined') return;
     destroyChart('llm-zonas');
 
-    const labels = sectores.map(s => truncate(s.sector, 18));
+    // Normalizar: la IA usa campo "zona", las estad\u00edsticas usan "sector"
+    const normalized = sectores.map(s => ({
+        sector: s.zona || s.sector || '\u2014',
+        aceptacion_pct: s.aceptacion_pct ?? 0,
+        neutral_pct:    s.neutral_pct    ?? 0,
+        rechazo_pct:    s.rechazo_pct    ?? 0,
+        n:              s.n              ?? 0,
+        prediccion:     s.prediccion     || null,
+        hallazgo_clave: s.hallazgo_clave || null,
+    }));
+
+    // Actualizar badge de fuente en el encabezado de la secci\u00f3n
+    const badge = document.getElementById('llm-zonas-chart-badge');
+    if (badge) {
+        badge.textContent = fromIA ? '\ud83e\udd16 Datos analizados por NVIDIA' : '\ud83d\udcca Datos estad\u00edsticos';
+        badge.style.background = fromIA ? 'rgba(34,197,94,0.12)' : 'rgba(111,78,55,0.08)';
+        badge.style.color       = fromIA ? '#16a34a'               : '#8D6E63';
+        badge.style.borderColor = fromIA ? '#16a34a'               : '#D7CCC8';
+    }
+
+    // Colores del tema claro
+    const INK   = '#3E2723';   // texto principal
+    const MUTED = '#8D6E63';   // texto secundario
+    const GRID  = '#D7CCC8';   // l\u00edneas de cuadr\u00edcula
+
+    const labels = normalized.map(s => {
+        // Wrap long zone names into two lines for legibility
+        const name = s.sector || '';
+        return name.length > 14 ? name.match(/.{1,14}(\s|$)/g) || [name] : name;
+    });
+
+    // Colores de barra: si viene de IA, resaltar seg\u00fan predicci\u00f3n
+    const barColorAcept = normalized.map(s =>
+        fromIA && s.prediccion === 'Rechazo' ? 'rgba(34,197,94,0.45)' : 'rgba(34,197,94,0.87)'
+    );
+    const barColorRech = normalized.map(s =>
+        fromIA && s.prediccion === 'Rechazo' ? 'rgba(239,68,68,0.95)' : 'rgba(239,68,68,0.85)'
+    );
+
     analisisState.charts['llm-zonas'] = new Chart(ctx, {
         type: 'bar',
         data: {
             labels,
             datasets: [
-                { label: 'Aceptación %', data: sectores.map(s => s.aceptacion_pct), backgroundColor: '#22c55e', borderRadius: 4 },
-                { label: 'Neutral %',    data: sectores.map(s => s.neutral_pct),    backgroundColor: '#f59e0b', borderRadius: 4 },
-                { label: 'Rechazo %',    data: sectores.map(s => s.rechazo_pct),    backgroundColor: '#ef4444', borderRadius: 4 },
+                {
+                    label: '\u2705 Aceptaci\u00f3n',
+                    data: normalized.map(s => s.aceptacion_pct),
+                    backgroundColor: barColorAcept,
+                    borderColor: '#16a34a',
+                    borderWidth: 1,
+                    borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 0, bottomRight: 0 },
+                },
+                {
+                    label: '\u2696\ufe0f Neutral',
+                    data: normalized.map(s => s.neutral_pct),
+                    backgroundColor: 'rgba(245,158,11,0.85)',
+                    borderColor: '#d97706',
+                    borderWidth: 1,
+                    borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 0, bottomRight: 0 },
+                },
+                {
+                    label: '\u274c Rechazo',
+                    data: normalized.map(s => s.rechazo_pct),
+                    backgroundColor: barColorRech,
+                    borderColor: '#b91c1c',
+                    borderWidth: 1,
+                    borderRadius: { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 },
+                },
             ],
         },
         options: {
-            responsive: true, maintainAspectRatio: false,
+            responsive: true,
+            maintainAspectRatio: false,
             scales: {
-                x: { stacked: true, grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.7)', font: {size:10} } },
-                y: { stacked: true, max: 100, ticks: { color: 'rgba(255,255,255,0.7)' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+                x: {
+                    stacked: true,
+                    grid: { display: false },
+                    ticks: {
+                        color: INK,
+                        font: { size: 11, weight: '600' },
+                        maxRotation: 30,
+                        minRotation: 0,
+                    },
+                    border: { color: GRID },
+                },
+                y: {
+                    stacked: true,
+                    max: 100,
+                    ticks: {
+                        color: MUTED,
+                        font: { size: 11 },
+                        callback: v => v + '%',
+                    },
+                    grid: { color: GRID },
+                    border: { color: GRID },
+                    title: {
+                        display: true,
+                        text: 'Porcentaje de respuestas (%)',
+                        color: MUTED,
+                        font: { size: 11 },
+                    },
+                },
             },
             plugins: {
-                legend: { position: 'bottom', labels: { color: 'rgba(255,255,255,0.8)' } },
-                tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.y}%` } },
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: INK,
+                        font: { size: 12, weight: '600' },
+                        padding: 18,
+                        usePointStyle: true,
+                        pointStyle: 'rectRounded',
+                    },
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(255,248,225,0.97)',
+                    titleColor: INK,
+                    bodyColor: MUTED,
+                    borderColor: GRID,
+                    borderWidth: 1,
+                    callbacks: {
+                        title: (items) => `Zona: ${normalized[items[0].dataIndex]?.sector || ''}`,
+                        label: (c) => `  ${c.dataset.label.replace(/^.\s/, '')}: ${c.parsed.y}%`,
+                        afterBody: (items) => {
+                            const i = items[0]?.dataIndex;
+                            if (i == null) return '';
+                            const s = normalized[i];
+                            const lines = [`  Total encuestas: ${s.n ?? '\u2014'}`];
+                            if (fromIA && s.prediccion) {
+                                const icon = s.prediccion === 'Aceptacion' ? '\u2705' : s.prediccion === 'Rechazo' ? '\u274c' : '\u2696\ufe0f';
+                                lines.push(`  Predicci\u00f3n IA: ${icon} ${s.prediccion}`);
+                            }
+                            if (fromIA && s.hallazgo_clave) {
+                                lines.push(`  \ud83d\udca1 ${s.hallazgo_clave}`);
+                            }
+                            return lines;
+                        },
+                    },
+                },
             },
             animation: { duration: 700 },
         },
@@ -2948,7 +3160,7 @@ function renderLLMAnalissiZonas(zonas) {
     box.innerHTML = zonas.map((z, i) => {
         const pred = z.prediccion || (z.aceptacion_pct >= z.rechazo_pct ? 'Aceptacion' : 'Rechazo');
         const color = pred === 'Aceptacion' ? '#22c55e' : pred === 'Rechazo' ? '#ef4444' : '#f59e0b';
-        const icon  = pred === 'Aceptacion' ? '✅' : pred === 'Rechazo' ? '❌' : '⚠️';
+        const icon  = pred === 'Aceptacion' ? '&#10004;' : pred === 'Rechazo' ? '&#10008;' : '&#9888;';
         const acept = z.aceptacion_pct ?? 0;
         const neutr = z.neutral_pct ?? 0;
         const rech  = z.rechazo_pct ?? 0;
@@ -2965,13 +3177,13 @@ function renderLLMAnalissiZonas(zonas) {
             <div style="position:relative;width:100%;height:140px;margin-bottom:16px;margin-top:16px;">
                 <canvas id="${chartId}"></canvas>
                 <div style="position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:1.4rem;font-weight:800;color:${color};">
-                    ${acept}%<br><span style="font-size:0.75rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">Aceptación</span>
+                    ${acept}%<br><span style="font-size:0.75rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">Aceptaci&#243;n</span>
                 </div>
             </div>
             <div style="display:flex;justify-content:center;gap:12px;font-size:0.75rem;margin-bottom:14px;color:rgba(255,255,255,0.6);">
-                <span><span style="color:#22c55e;">●</span> ${acept}%</span>
-                <span><span style="color:#f59e0b;">●</span> ${neutr}%</span>
-                <span><span style="color:#ef4444;">●</span> ${rech}%</span>
+                <span><span style="color:#22c55e;">&#9679;</span> ${acept}%</span>
+                <span><span style="color:#f59e0b;">&#9679;</span> ${neutr}%</span>
+                <span><span style="color:#ef4444;">&#9679;</span> ${rech}%</span>
             </div>
             
             ${z.hallazgo_clave ? `<p style="font-size:0.88rem;color:var(--text-muted);margin:0;line-height:1.6;border-top:1px solid rgba(255,255,255,0.08);padding-top:14px;text-align:left;">${escapeHtml(z.hallazgo_clave)}</p>` : ''}
@@ -2990,7 +3202,7 @@ function renderLLMAnalissiZonas(zonas) {
             analisisState.charts['llm-zona-gauge-' + i] = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Aceptación', 'Neutral', 'Rechazo'],
+                    labels: ['Aceptaci\u00f3n', 'Neutral', 'Rechazo'],
                     datasets: [{
                         data: [acept, neutr, rech],
                         backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'],
@@ -3057,37 +3269,44 @@ function renderLLMRadarChart(dimensiones) {
             scales: {
                 r: {
                     min: 0, max: 100,
-                    angleLines: { color: 'rgba(255,255,255,0.12)', lineWidth: 1.2 },
-                    grid:        { color: 'rgba(255,255,255,0.1)',  lineWidth: 1 },
+                    angleLines: { color: '#D7CCC8', lineWidth: 1.2 },
+                    grid:        { color: '#EDE0D0', lineWidth: 1 },
                     pointLabels: {
                         color: (ctx2) => {
                             const v = dataFavor[ctx2.index] ?? 50;
-                            return v >= 60 ? '#4ade80' : v >= 40 ? '#fbbf24' : '#f87171';
+                            return v >= 60 ? '#16a34a' : v >= 40 ? '#d97706' : '#b91c1c';
                         },
-                        font: { size: 13, weight: '600' },
+                        font: { size: 13, weight: '700' },
                         padding: 10,
                     },
                     ticks: {
                         display: true,
                         stepSize: 25,
-                        color: 'rgba(255,255,255,0.3)',
+                        color: '#8D6E63',
                         font: { size: 9 },
-                        backdropColor: 'transparent',
+                        backdropColor: 'rgba(255,248,225,0.7)',
+                        callback: v => v + '%',
                     },
                 },
             },
             plugins: {
                 legend: {
                     position: 'bottom',
-                    labels: { color: 'rgba(255,255,255,0.7)', font: { size: 12 }, padding: 16 },
+                    labels: { color: '#3E2723', font: { size: 12, weight: '600' }, padding: 16, usePointStyle: true },
                 },
                 tooltip: {
+                    backgroundColor: 'rgba(255,248,225,0.97)',
+                    titleColor: '#3E2723',
+                    bodyColor: '#6F4E37',
+                    borderColor: '#D7CCC8',
+                    borderWidth: 1,
                     callbacks: {
+                        title: (items) => dimensiones[items[0].dataIndex]?.titulo || '',
                         label: (c) => {
                             const raw = c.raw;
                             const idx = (raw * 2) - 100;
-                            const lbl = idx >= 15 ? 'Favorable' : idx <= -15 ? 'Critico' : 'Ambivalente';
-                            return ` ${lbl}  (${idx >= 0 ? '+' : ''}${idx.toFixed(0)} pts)`;
+                            const lbl = idx >= 15 ? '✅ Favorable' : idx <= -15 ? '❌ Crítico' : '⚖️ Ambivalente';
+                            return ` ${lbl}  (${idx >= 0 ? '+' : ''}${idx.toFixed(0)} pts sobre 100)`;
                         },
                     },
                 },
@@ -3206,7 +3425,7 @@ function renderLLMDimensiones(dimensiones, gridId, chartPrefix) {
                     data: {
                         datasets: [{
                             data: [gaugeVal, 100 - gaugeVal],
-                            backgroundColor: [accentColor, 'rgba(255,255,255,0.06)'],
+                            backgroundColor: [accentColor, '#EDE0D0'],
                             borderWidth: 0,
                             borderRadius: [5, 0],
                         }],
@@ -3242,7 +3461,7 @@ function renderLLMDimensiones(dimensiones, gridId, chartPrefix) {
                             maintainAspectRatio: false,
                             scales: {
                                 x: { max: 100, display: false },
-                                y: { grid: { display: false }, ticks: { font: { size: 10 }, color: 'rgba(255,255,255,0.6)' } },
+                                y: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#6F4E37' } },
                             },
                             plugins: {
                                 legend: { display: false },
@@ -3610,17 +3829,17 @@ function renderRadarDimensiones(dimensiones) {
                     ticks: {
                         stepSize: 25,
                         font: { size: 13 },
-                        color: 'rgba(255,255,255,0.7)',
-                        backdropColor: 'transparent',
+                        color: '#8D6E63',
+                        backdropColor: 'rgba(255,248,225,0.7)',
                         z: 10,
                         callback: v => (v > 0 ? '+' : '') + v,
                     },
                     pointLabels: {
                         font: { size: 15, weight: 'bold' },
-                        color: '#f8fafc',
+                        color: '#3E2723',
                     },
-                    grid: { color: 'rgba(255,255,255,0.15)', circular: true },
-                    angleLines: { color: 'rgba(255,255,255,0.15)' },
+                    grid: { color: '#D7CCC8', circular: true },
+                    angleLines: { color: '#D7CCC8' },
                 },
             },
             plugins: {

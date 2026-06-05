@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+header('Content-Type: text/html; charset=UTF-8');
 header('Cache-Control: no-cache, no-store, must-revalidate');
 header('Pragma: no-cache');
 header('Expires: 0');
@@ -888,12 +889,12 @@ header('Expires: 0');
             </section>
 
             <section id="tab-llm" class="tab-panel hidden">
-                <div class="section-title" style="border-bottom:2px solid rgba(99,179,255,0.18);padding-bottom:16px;margin-bottom:20px;">
+                <div class="section-title" style="border-bottom:2px solid #D7CCC8;padding-bottom:16px;margin-bottom:20px;">
                     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
                         <span style="font-size:2rem;line-height:1;">🤖</span>
                         <div>
-                            <h3 style="margin:0;font-size:1.25rem;background:linear-gradient(90deg,#60a5fa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">An&aacute;lisis IA &mdash; NVIDIA LLM</h3>
-                            <p style="margin:2px 0 0;color:var(--text-muted);font-size:0.85rem;">Sentimientos, predicciones y plan estrat&eacute;gico por IA en tiempo real.</p>
+                            <h3 style="margin:0;font-size:1.25rem;color:#4E342E;font-weight:700;">An&aacute;lisis IA &mdash; NVIDIA LLM</h3>
+                            <p style="margin:2px 0 0;color:#8D6E63;font-size:0.85rem;">Sentimientos, predicciones y plan estrat&eacute;gico generados por inteligencia artificial en tiempo real.</p>
                         </div>
                     </div>
                 </div>
@@ -1025,12 +1026,16 @@ header('Expires: 0');
                     <div id="llm-zonas-llm-grid" class="analisis-dim-grid" style="margin-bottom:24px;"></div>
                     
                     <div class="analisis-section-row">
-                        <div>
-                            <h3 class="analisis-section-header">Densidad de Encuestas por Zona</h3>
+                        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                            <div>
+                                <h3 class="analisis-section-header">Distribución de Sentimientos por Zona</h3>
+                                <p class="analisis-section-desc">Cada barra representa una zona de la parroquia. Los colores muestran qué proporción respondió de forma <strong style="color:#16a34a;">favorable</strong>, <strong style="color:#d97706;">neutral</strong> o <strong style="color:#b91c1c;">desfavorable</strong>. Al pasar el cursor sobre una barra verás la predicción y hallazgo de la IA.</p>
+                            </div>
+                            <span id="llm-zonas-chart-badge" style="font-size:0.72rem;font-weight:600;padding:4px 12px;border-radius:20px;border:1px solid #D7CCC8;color:#8D6E63;background:rgba(111,78,55,0.08);white-space:nowrap;align-self:flex-start;margin-top:4px;">📊 Datos estadísticos</span>
                         </div>
                     </div>
-                    <div class="card analisis-chart-card" style="margin-bottom:24px;">
-                        <div style="position:relative;height:250px;">
+                    <div class="card analisis-chart-card" style="margin-bottom:24px;background:#fff;border:1px solid #D7CCC8;">
+                        <div style="position:relative;height:300px;padding:8px 0 4px;">
                             <canvas id="llm-zonas-chart"></canvas>
                         </div>
                     </div>
@@ -1041,8 +1046,8 @@ header('Expires: 0');
                             <h3 class="analisis-section-header">Radar de Favorabilidad</h3>
                         </div>
                     </div>
-                    <div class="card analisis-radar-card" style="margin-bottom:24px;padding:24px 16px 16px;flex-direction:column;">
-                        <p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 16px;text-align:center;">Balance multidimensional &mdash; An&aacute;lisis IA</p>
+                    <div class="card analisis-radar-card" style="margin-bottom:24px;padding:24px 16px 16px;flex-direction:column;background:#fff;border:1px solid #D7CCC8;">
+                        <p style="font-size:0.85rem;color:#8D6E63;margin:0 0 16px;text-align:center;">Muestra qué tan favorable es cada dimensión temática (infraestructura, educación, salud, etc.). Cuanto más cerca del borde exterior, mayor es la aceptación en esa dimensión.</p>
                         <div style="position:relative;width:100%;height:700px;max-width:900px;margin:0 auto;">
                             <canvas id="llm-radar-chart"></canvas>
                         </div>
@@ -1051,38 +1056,62 @@ header('Expires: 0');
 
 
                     <!-- Plan Estratégico -->
-                    <div class="analisis-section-row">
-                        <div class="premium-radar-header">
-                            <h3 id="llm-plan-titulo" class="analisis-section-header" style="color:#3b82f6;">Plan Estrat&eacute;gico</h3>
-                            <p id="llm-plan-diagnostico" class="analisis-section-desc"></p>
+                    <div style="margin-bottom:8px;padding:20px 24px 16px;background:linear-gradient(135deg,#4E342E 0%,#6F4E37 100%);border-radius:16px;display:flex;align-items:flex-start;gap:16px;">
+                        <div style="font-size:2rem;line-height:1;flex-shrink:0;">🗺️</div>
+                        <div>
+                            <div style="font-size:0.7rem;font-weight:700;letter-spacing:.1em;color:rgba(255,220,180,0.8);text-transform:uppercase;margin-bottom:4px;">Plan Generado por NVIDIA IA</div>
+                            <h3 id="llm-plan-titulo" style="margin:0 0 6px;font-size:1.2rem;color:#fff;font-weight:700;">Plan Estrat&eacute;gico</h3>
+                            <p id="llm-plan-diagnostico" style="margin:0;font-size:0.85rem;color:rgba(255,220,180,0.85);line-height:1.5;"></p>
                         </div>
                     </div>
-                    <div class="card" style="margin-bottom:24px;">
-                        <h4 style="margin-bottom:12px; color:var(--text-color);">Fases de Implementaci&oacute;n</h4>
-                        <div id="llm-plan-fases" class="analisis-dim-grid" style="margin-bottom:24px;"></div>
 
-                        <h4 style="margin-bottom:12px; color:var(--text-color);">Indicadores de Seguimiento</h4>
-                        <div style="overflow-x:auto;margin-bottom:24px;">
+                    <!-- Fases -->
+                    <div style="margin-bottom:6px;padding:4px 0 8px;">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+                            <span style="font-size:1.1rem;">🔄</span>
+                            <h4 style="margin:0;font-size:1rem;font-weight:700;color:#4E342E;">Fases de Implementaci&oacute;n</h4>
+                        </div>
+                        <div id="llm-plan-fases" class="analisis-dim-grid"></div>
+                    </div>
+
+                    <!-- Indicadores -->
+                    <div style="margin-bottom:6px;padding:4px 0 8px;">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+                            <span style="font-size:1.1rem;">📈</span>
+                            <h4 style="margin:0;font-size:1rem;font-weight:700;color:#4E342E;">Indicadores de Seguimiento</h4>
+                        </div>
+                        <div style="overflow-x:auto;border-radius:12px;border:1px solid #D7CCC8;background:#fff;">
                             <table style="width:100%;border-collapse:collapse;font-size:0.88rem;">
                                 <thead>
-                                    <tr style="border-bottom:1px solid rgba(255,255,255,0.15);color:var(--text-muted);">
-                                        <th style="padding:8px 10px;text-align:left;">Indicador</th>
-                                        <th style="padding:8px 10px;text-align:left;">Meta</th>
-                                        <th style="padding:8px 10px;text-align:left;">Plazo</th>
+                                    <tr style="background:#FFF8E1;border-bottom:2px solid #D7CCC8;">
+                                        <th style="padding:12px 16px;text-align:left;color:#4E342E;font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:.05em;">Indicador</th>
+                                        <th style="padding:12px 16px;text-align:left;color:#4E342E;font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:.05em;">Meta</th>
+                                        <th style="padding:12px 16px;text-align:left;color:#4E342E;font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:.05em;">⏱ Plazo</th>
                                     </tr>
                                 </thead>
                                 <tbody id="llm-plan-indicadores"></tbody>
                             </table>
                         </div>
+                    </div>
 
-                        <h4 style="margin-bottom:12px; color:var(--text-color);">Acciones Finales</h4>
-                        <ul id="llm-plan-acciones" style="padding-left:20px;color:var(--text-muted);line-height:1.8;"></ul>
+                    <!-- Acciones Finales -->
+                    <div style="margin-bottom:6px;padding:4px 0 8px;">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+                            <span style="font-size:1.1rem;">⚡</span>
+                            <h4 style="margin:0;font-size:1rem;font-weight:700;color:#4E342E;">Acciones Prioritarias</h4>
+                        </div>
+                        <ol id="llm-plan-acciones" style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;"></ol>
                     </div>
 
                     <!-- Conclusión -->
-                    <div class="card" style="margin-top:24px;border-left:4px solid #22c55e;background:rgba(34,197,94,0.05);">
-                        <h4>&#128161; Conclusi&oacute;n General</h4>
-                        <p id="llm-conclusion" style="line-height:1.7;margin-top:8px;"></p>
+                    <div id="llm-conclusion-card" style="margin-top:8px;border-radius:16px;overflow:hidden;border:1px solid #D7CCC8;">
+                        <div style="background:linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%);padding:16px 20px;border-bottom:1px solid #bbf7d0;display:flex;align-items:center;gap:10px;">
+                            <span style="font-size:1.3rem;">💡</span>
+                            <h4 style="margin:0;color:#14532d;font-size:1rem;font-weight:700;">Conclusi&oacute;n General del An&aacute;lisis IA</h4>
+                        </div>
+                        <div style="background:#fff;padding:20px 24px;">
+                            <p id="llm-conclusion" style="margin:0;line-height:1.8;color:#3E2723;font-size:0.95rem;"></p>
+                        </div>
                     </div>
 
                 </div><!-- /llm-results -->
