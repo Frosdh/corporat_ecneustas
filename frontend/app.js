@@ -2043,7 +2043,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const llmBtn = document.getElementById('llm-generate-btn');
     if (llmBtn) llmBtn.addEventListener('click', () => generateLLMNvidia());
     const llmFilter = document.getElementById('llm-sector-filter');
-    if (llmFilter) llmFilter.addEventListener('change', () => generateLLMNvidia());
+    if (llmFilter) llmFilter.addEventListener('change', () => {
+        // Forzar nueva carga al cambiar zona — siempre resetear el sector guardado
+        window._llmCurrentSector = null;
+        generateLLMNvidia();
+    });
 });
 
 let _analisisAbortController = null;
@@ -2550,33 +2554,69 @@ function generateLLMNvidia() {
                 break;
 
             case 'stats':
-                // Mostrar estadísticas locales inmediatamente mientras el LLM razona
+                // ── MOSTRAR RESULTADOS INMEDIATAMENTE — no esperar al LLM ──
                 if (obj.stats) renderLLMStats(obj.stats);
                 if (results) results.classList.remove('hidden');
+                // Ocultar spinner y habilitar botón YA — el LLM sigue en background
+                if (loading) loading.classList.add('hidden');
+                if (btn) btn.disabled = false;
+                // Mostrar indicador "IA enriqueciendo..." no bloqueante
+                if (progBox) {
+                    progBox.textContent = '';
+                    const aiBox = document.getElementById('llm-ai-enriching');
+                    if (aiBox) { aiBox.style.display = 'flex'; }
+                }
                 break;
 
             case 'thinking':
+                // Solo actualizar caja de razonamiento en background — sin bloquear UI
                 if (thinking) {
-                    thinking.classList.remove('hidden');
                     thinking.textContent += obj.text;
                     thinking.scrollTop = thinking.scrollHeight;
                 }
-                if (progBox) progBox.textContent = 'NVIDIA Nemotron razonando...';
                 break;
 
             case 'result':
-                es.close(); _llmEventSource = null;
                 renderLLMNvidia(obj);
                 if (results) results.classList.remove('hidden');
                 if (btn) btn.disabled = false;
                 if (loading) loading.classList.add('hidden');
-                if (progBox) progBox.textContent = 'Análisis completado con NVIDIA Nemotron-3-Super-120B';
+                if (thinking) thinking.classList.add('hidden');
+                break;
+
+            case 'llm_update':
+                // Enriquecimiento NVIDIA llegó: actualizar solo texto narrativo
+                if (obj.resumen_ejecutivo) setText('llm-resumen', obj.resumen_ejecutivo);
+                if (obj.conclusion)        setText('llm-conclusion', obj.conclusion);
+                if (obj.interpretaciones_dim && obj.interpretaciones_dim.length > 0) {
+                    // Actualizar interpretaciones en las cards ya renderizadas
+                    obj.interpretaciones_dim.forEach(d => {
+                        const grid = document.getElementById('llm-dimensiones-grid');
+                        if (!grid) return;
+                        grid.querySelectorAll('.analisis-interpretacion').forEach(el => {
+                            const card = el.closest('[data-titulo]') || el.closest('.card');
+                            const h4   = card && card.querySelector('h4');
+                            if (h4 && h4.textContent.trim().includes(d.titulo)) {
+                                el.textContent = d.interpretacion;
+                            }
+                        });
+                    });
+                }
+                // Ocultar indicador "enriqueciendo"
+                es.close(); _llmEventSource = null;
+                const aiBox2 = document.getElementById('llm-ai-enriching');
+                if (aiBox2) aiBox2.style.display = 'none';
                 break;
 
             case 'error':
                 es.close(); _llmEventSource = null;
-                if (errBox) {
-                    errBox.textContent = 'Error NVIDIA: ' + (obj.error || 'Error desconocido');
+                // Si ya mostramos stats, no mostrar error prominente — solo ocultar indicador
+                const aiBox3 = document.getElementById('llm-ai-enriching');
+                if (aiBox3) {
+                    aiBox3.innerHTML = '⚠️ <span style="font-size:0.78rem;color:#f87171;">Texto IA no disponible — datos estadísticos mostrados.</span>';
+                    setTimeout(() => { aiBox3.style.display = 'none'; }, 4000);
+                } else if (errBox) {
+                    errBox.textContent = 'Error: ' + (obj.error || 'Error desconocido');
                     errBox.classList.remove('hidden');
                 }
                 if (btn) btn.disabled = false;
@@ -2607,14 +2647,50 @@ function renderLLMStats(stats) {
     setText('llm-prob-rechazo',    (probs.Rechazo    ?? '--') + '%');
     setText('llm-prediccion', stats.prediccion_global || '--');
 
+    // Actualizar color del KPI prediccion
+    const predEl = document.getElementById('llm-prediccion');
+    if (predEl) {
+        const pred = stats.prediccion_global || '';
+        predEl.style.color = pred === 'Aceptacion' ? '#22c55e' : pred === 'Rechazo' ? '#ef4444' : '#f59e0b';
+    }
+
+    // Actualizar barra de sentimiento global
+    const bA = document.getElementById('llm-bar-acept');
+    const bN = document.getElementById('llm-bar-neutr');
+    const bR = document.getElementById('llm-bar-rech');
+    if (bA && bN && bR) {
+        const pa = probs.Aceptacion ?? 0, pn = probs.Neutral ?? 0, pr = probs.Rechazo ?? 0;
+        bA.style.width = pa + '%';
+        bN.style.width = pn + '%';
+        bR.style.width = pr + '%';
+    }
+
     // Gráfica donut sentimiento global estadístico
     renderLLMSentimientoDonut(stats.sentimiento_global || probs, 'llm-donut-stats');
 
     // Gráfica barras por sector
     renderLLMZonasChart(stats.sectores_detalle || []);
 
-    // Dimensiones estadísticas previas
+    // ── ACTUALIZAR TODAS LAS GRÁFICAS INMEDIATAMENTE con datos locales ──
+    // Análisis por zona (tarjetas) — no espera al LLM
+    if (stats.sectores_detalle && stats.sectores_detalle.length > 0) {
+        renderLLMAnalissiZonas(stats.sectores_detalle.map(s => ({
+            zona:           s.sector,
+            n:              s.n,
+            prediccion:     s.aceptacion_pct >= s.rechazo_pct ? 'Aceptacion' : 'Rechazo',
+            aceptacion_pct: s.aceptacion_pct,
+            neutral_pct:    s.neutral_pct,
+            rechazo_pct:    s.rechazo_pct,
+            hallazgo_clave: '',
+        })));
+    }
+
+    // Radar de favorabilidad — no espera al LLM
     if (stats.sentimientos_dimensiones && stats.sentimientos_dimensiones.length > 0) {
+        renderLLMRadarChart(stats.sentimientos_dimensiones);
+        // Dimensiones detalladas (grid principal) — no espera al LLM
+        renderLLMDimensiones(stats.sentimientos_dimensiones, 'llm-dimensiones-grid', 'llm-dim-');
+        // Dimensiones estadísticas previas (sección pre-LLM)
         renderLLMDimensiones(stats.sentimientos_dimensiones, 'llm-stats-dimensiones-grid', 'llm-stats-dim-');
     }
 }
@@ -2632,6 +2708,23 @@ function renderLLMNvidia(payload) {
     setText('llm-prob-neutral',    (probs.Neutral    ?? '--') + '%');
     setText('llm-prob-rechazo',    (probs.Rechazo    ?? '--') + '%');
 
+    // Actualizar color de prediccion
+    const predEl2 = document.getElementById('llm-prediccion');
+    if (predEl2) {
+        const pred2 = payload.prediccion_global || '';
+        predEl2.style.color = pred2 === 'Aceptacion' ? '#22c55e' : pred2 === 'Rechazo' ? '#ef4444' : '#f59e0b';
+    }
+
+    // Actualizar barra de sentimiento global
+    const bA2 = document.getElementById('llm-bar-acept');
+    const bN2 = document.getElementById('llm-bar-neutr');
+    const bR2 = document.getElementById('llm-bar-rech');
+    if (bA2 && bN2 && bR2) {
+        bA2.style.width = (probs.Aceptacion ?? 0) + '%';
+        bN2.style.width = (probs.Neutral    ?? 0) + '%';
+        bR2.style.width = (probs.Rechazo    ?? 0) + '%';
+    }
+
     // Actualizar donut de stats con datos del LLM
     renderLLMSentimientoDonut(payload.sentimiento_global || probs, 'llm-donut-stats');
 
@@ -2639,16 +2732,19 @@ function renderLLMNvidia(payload) {
     const factoresBox = document.getElementById('llm-factores');
     if (factoresBox) {
         const facts = payload.importancia_factores || [];
-        factoresBox.innerHTML = facts.map((f, i) => `
-            <li style="margin-bottom:6px;">
-                <strong>${escapeHtml(f.factor)}</strong>
-                <div style="display:flex;align-items:center;gap:8px;margin-top:2px;">
-                    <div style="flex:1;background:rgba(255,255,255,0.1);border-radius:4px;height:8px;">
-                        <div style="width:${f.score_pct}%;background:${i===0?'#22c55e':i===1?'#3b82f6':'#f59e0b'};height:8px;border-radius:4px;transition:width 0.8s;"></div>
-                    </div>
-                    <span style="color:var(--text-muted);font-size:0.82rem;min-width:40px;">${f.score_pct}%</span>
+        const fColors = ['#ef4444','#f97316','#f59e0b','#84cc16','#22c55e'];
+        factoresBox.innerHTML = facts.map((f, i) => {
+            const col = fColors[Math.min(i, fColors.length - 1)];
+            return `<li style="margin-bottom:10px;list-style:none;padding:0;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
+                    <span style="font-size:0.85rem;color:var(--text-color);font-weight:500;">${i+1}. ${escapeHtml(f.factor)}</span>
+                    <span style="font-size:0.78rem;color:${col};font-weight:700;min-width:38px;text-align:right;">${f.score_pct}%</span>
                 </div>
-            </li>`).join('');
+                <div style="background:rgba(255,255,255,0.07);border-radius:4px;height:6px;overflow:hidden;">
+                    <div style="width:${f.score_pct}%;height:100%;background:${col};border-radius:4px;transition:width 0.9s ease;"></div>
+                </div>
+            </li>`;
+        }).join('');
     }
 
     // Recomendaciones
@@ -2720,21 +2816,25 @@ function renderLLMSentimientoDonut(sentData, canvasId) {
     analisisState.charts['llm-donut-' + canvasId] = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['Positivo / Aceptación', 'Neutro', 'Negativo / Rechazo'],
+            labels: ['✅ Aceptación', '⚠️ Neutro', '❌ Rechazo'],
             datasets: [{
                 data: [pos, neu, neg],
                 backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'],
-                borderColor: 'rgba(0,0,0,0.2)',
+                borderColor: ['#16a34a', '#d97706', '#dc2626'],
                 borderWidth: 2,
+                hoverOffset: 8,
             }],
         },
         options: {
-            responsive: true, maintainAspectRatio: false, cutout: '60%',
+            responsive: true, maintainAspectRatio: false, cutout: '65%',
             plugins: {
-                legend: { position: 'bottom', labels: { color: 'rgba(255,255,255,0.8)', font: {size:11} } },
+                legend: {
+                    position: 'bottom',
+                    labels: { color: 'rgba(255,255,255,0.8)', font: { size: 11 }, padding: 12, boxWidth: 14 },
+                },
                 tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed.toFixed(1)}%` } },
             },
-            animation: { duration: 800 },
+            animation: { duration: 900, easing: 'easeInOutQuart' },
         },
     });
 }
@@ -2780,20 +2880,30 @@ function renderLLMAnalissiZonas(zonas) {
     box.innerHTML = zonas.map(z => {
         const pred = z.prediccion || (z.aceptacion_pct >= z.rechazo_pct ? 'Aceptacion' : 'Rechazo');
         const color = pred === 'Aceptacion' ? '#22c55e' : pred === 'Rechazo' ? '#ef4444' : '#f59e0b';
-        const sentClass = pred === 'Aceptacion' ? 'sent-positive' : pred === 'Rechazo' ? 'sent-negative' : 'sent-neutral';
+        const icon  = pred === 'Aceptacion' ? '✅' : pred === 'Rechazo' ? '❌' : '⚠️';
+        const acept = z.aceptacion_pct ?? 0;
+        const neutr = z.neutral_pct ?? 0;
+        const rech  = z.rechazo_pct ?? 0;
         return `
-        <div class="card analisis-dim-card" style="border-left:4px solid ${color}; padding:14px;">
-            <div class="analisis-dim-header" style="margin-bottom:10px;">
-                <h4 class="analisis-dim-titulo" style="font-size:1rem;color:var(--text-color);">${escapeHtml(z.zona || z.sector || '')}</h4>
-                <span class="analisis-sent-badge ${sentClass}" style="border:none;">${escapeHtml(pred)}</span>
+        <div class="card analisis-dim-card" style="border-top:3px solid ${color};padding:16px;position:relative;overflow:hidden;">
+            <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,${color}80,${color});"></div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+                <h4 style="font-size:1rem;font-weight:700;color:var(--text-color);margin:0;">${icon} ${escapeHtml(z.zona || z.sector || '')}</h4>
+                <span style="font-size:0.72rem;background:rgba(255,255,255,0.06);color:#94a3b8;border-radius:20px;padding:2px 10px;white-space:nowrap;">${z.n ?? 0} enc.</span>
             </div>
-            <div style="display:flex;gap:12px;font-size:0.82rem;color:var(--text-muted);margin-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.05);padding-bottom:10px;">
-                <span style="color:#22c55e;">✓ ${z.aceptacion_pct ?? 0}%</span>
-                <span style="color:#f59e0b;">~ ${z.neutral_pct ?? 0}%</span>
-                <span style="color:#ef4444;">✗ ${z.rechazo_pct ?? 0}%</span>
-                <span style="margin-left:auto;color:#94a3b8;font-weight:600;">${z.n ?? ''} encs</span>
+            <div style="margin-bottom:10px;">
+                <div style="display:flex;justify-content:space-between;font-size:0.78rem;color:rgba(255,255,255,0.5);margin-bottom:4px;">
+                    <span style="color:#4ade80;">Acepta ${acept}%</span>
+                    <span style="color:#fbbf24;">${neutr}%</span>
+                    <span style="color:#f87171;">Rechaza ${rech}%</span>
+                </div>
+                <div style="display:flex;height:8px;border-radius:6px;overflow:hidden;gap:1px;">
+                    <div style="width:${acept}%;background:#22c55e;transition:width 0.6s;"></div>
+                    <div style="width:${neutr}%;background:#f59e0b;transition:width 0.6s;"></div>
+                    <div style="width:${rech}%;background:#ef4444;transition:width 0.6s;"></div>
+                </div>
             </div>
-            ${z.hallazgo_clave ? `<p style="font-size:0.85rem;color:var(--text-muted);margin:0;line-height:1.6;">${escapeHtml(z.hallazgo_clave)}</p>` : ''}
+            ${z.hallazgo_clave ? `<p style="font-size:0.82rem;color:var(--text-muted);margin:0;line-height:1.55;border-top:1px solid rgba(255,255,255,0.06);padding-top:8px;">${escapeHtml(z.hallazgo_clave)}</p>` : ''}
         </div>`;
     }).join('');
 }
@@ -2801,47 +2911,81 @@ function renderLLMAnalissiZonas(zonas) {
 function renderLLMRadarChart(dimensiones) {
     const ctx = document.getElementById('llm-radar-chart');
     if (!ctx || typeof Chart === 'undefined') return;
-    // Destruir cualquier chart previo en este canvas (donut o radar)
+    // Destruir cualquier chart previo en este canvas
     destroyChart('llm-radar');
     destroyChart('llm-donut-llm-radar-chart');
-    // También destruir via Chart.js por si quedó referencia huérfana
     const existingChart = Chart.getChart(ctx);
     if (existingChart) existingChart.destroy();
 
-    const labels      = dimensiones.map(d => truncate(d.titulo, 22));
-    const dataFavor   = dimensiones.map(d => Math.max(0, (( d.sentimiento?.indice ?? 0) + 100) / 2));
+    const labels    = dimensiones.map(d => d.titulo || '');
+    const dataFavor = dimensiones.map(d => Math.max(0, ((d.sentimiento?.indice ?? 0) + 100) / 2));
+
+    // Colores por valor: verde=alto, amarillo=medio, rojo=bajo
+    const pointColors = dataFavor.map(v =>
+        v >= 60 ? '#22c55e' : v >= 40 ? '#f59e0b' : '#ef4444'
+    );
 
     analisisState.charts['llm-radar'] = new Chart(ctx, {
         type: 'radar',
         data: {
             labels,
             datasets: [{
-                label: 'Índice de Favorabilidad (0-100)',
+                label: 'Índice de Favorabilidad',
                 data: dataFavor,
-                backgroundColor: 'rgba(14, 78, 176, 0.25)',
-                borderColor: 'rgba(59, 130, 246, 1)',
-                pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                backgroundColor: 'rgba(59,130,246,0.18)',
+                borderColor: 'rgba(99,179,255,0.95)',
+                borderWidth: 2.5,
+                pointBackgroundColor: pointColors,
                 pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 6,
+                pointHoverRadius: 9,
                 pointHoverBackgroundColor: '#fff',
-                pointHoverBorderColor: 'rgba(59, 130, 246, 1)',
+                pointHoverBorderColor: pointColors,
             }],
         },
         options: {
-            responsive: true, maintainAspectRatio: false,
+            responsive: true,
+            maintainAspectRatio: false,
             scales: {
                 r: {
                     min: 0, max: 100,
-                    angleLines: { color: 'rgba(255,255,255,0.15)' },
-                    grid:        { color: 'rgba(255,255,255,0.15)' },
-                    pointLabels: { color: 'rgba(255,255,255,0.85)', font: { size: 11 } },
-                    ticks:       { display: false },
+                    angleLines: { color: 'rgba(255,255,255,0.12)', lineWidth: 1.2 },
+                    grid:        { color: 'rgba(255,255,255,0.1)',  lineWidth: 1 },
+                    pointLabels: {
+                        color: (ctx2) => {
+                            const v = dataFavor[ctx2.index] ?? 50;
+                            return v >= 60 ? '#4ade80' : v >= 40 ? '#fbbf24' : '#f87171';
+                        },
+                        font: { size: 13, weight: '600' },
+                        padding: 10,
+                    },
+                    ticks: {
+                        display: true,
+                        stepSize: 25,
+                        color: 'rgba(255,255,255,0.3)',
+                        font: { size: 9 },
+                        backdropColor: 'transparent',
+                    },
                 },
             },
             plugins: {
-                legend: { position: 'bottom', labels: { color: 'rgba(255,255,255,0.8)' } },
-                tooltip: { callbacks: { label: (c) => ' Favorabilidad: ' + c.raw.toFixed(1) + '/100' } },
+                legend: {
+                    position: 'bottom',
+                    labels: { color: 'rgba(255,255,255,0.7)', font: { size: 12 }, padding: 16 },
+                },
+                tooltip: {
+                    callbacks: {
+                        label: (c) => {
+                            const raw = c.raw;
+                            const idx = (raw * 2) - 100;
+                            const lbl = idx >= 15 ? '🟢 Favorable' : idx <= -15 ? '🔴 Crítico' : '🟡 Ambivalente';
+                            return ` ${lbl}  (${idx >= 0 ? '+' : ''}${idx.toFixed(0)} pts)`;
+                        },
+                    },
+                },
             },
-            animation: { duration: 700 },
+            animation: { duration: 900, easing: 'easeInOutQuart' },
         },
     });
 }
@@ -2859,35 +3003,49 @@ function renderLLMDimensiones(dimensiones, gridId, chartPrefix) {
     dimensiones.forEach((dim, idx) => {
         const sent = dim.sentimiento || { indice: 0, positivo_pct: 0, neutro_pct: 0, negativo_pct: 0 };
         const items = ((dim.distribucion && dim.distribucion.items) ? dim.distribucion.items : []).slice(0, 7);
-        const sentClass = sent.indice >= 15 ? 'sent-positive' : sent.indice <= -15 ? 'sent-negative' : 'sent-neutral';
-        const sentLabel = sent.indice >= 15 ? 'Favorable' : sent.indice <= -15 ? 'Cr&iacute;tico' : 'Ambivalente';
+        const idxVal   = sent.indice ?? 0;
+        const sentClass = idxVal >= 15 ? 'sent-positive' : idxVal <= -15 ? 'sent-negative' : 'sent-neutral';
+        const sentLabel = idxVal >= 15 ? '🟢 Favorable' : idxVal <= -15 ? '🔴 Crítico' : '🟡 Ambivalente';
+        const accentColor = idxVal >= 15 ? '#22c55e' : idxVal <= -15 ? '#ef4444' : '#f59e0b';
         const chartId   = 'chart-' + chartPrefix + idx;
+
+        // Gauge arc semicircular simple usando porcentaje (0-100)
+        const gaugeVal  = Math.round(((idxVal + 100) / 2));
+        const gaugeDeg  = Math.round(gaugeVal * 1.8); // 0-180°
+        const gaugeColor= idxVal >= 15 ? '#22c55e' : idxVal <= -15 ? '#ef4444' : '#f59e0b';
 
         const card = document.createElement('div');
         card.className = 'card analisis-dim-card';
+        card.style.cssText = `border-top:3px solid ${accentColor};position:relative;overflow:hidden;`;
         card.innerHTML = `
-            <div class="analisis-dim-header">
-                <h4 class="analisis-dim-titulo">${escapeHtml(dim.titulo)}</h4>
-                <span class="analisis-sent-badge ${sentClass}">
-                    ${sentLabel} (${sent.indice > 0 ? '+' : ''}${sent.indice} pts)
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+                <h4 class="analisis-dim-titulo" style="margin:0;font-size:0.95rem;">${escapeHtml(dim.titulo)}</h4>
+                <span class="analisis-sent-badge ${sentClass}" style="white-space:nowrap;font-size:0.75rem;">
+                    ${sentLabel} <span style="opacity:0.8;">${idxVal > 0 ? '+' : ''}${idxVal}pts</span>
                 </span>
             </div>
-            <div class="analisis-dim-meters">
-                <div class="analisis-sent-row">
-                    <span class="analisis-sent-label sent-pos-label">✔ Positivo&nbsp;${sent.positivo_pct}%</span>
-                    <div class="analisis-sent-track"><div class="analisis-sent-fill sent-pos-fill" style="width:${sent.positivo_pct}%"></div></div>
+            <div style="margin-bottom:10px;">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+                    <span style="font-size:0.75rem;color:#4ade80;min-width:52px;">✔ ${sent.positivo_pct}%</span>
+                    <div style="flex:1;height:7px;background:rgba(255,255,255,0.07);border-radius:4px;overflow:hidden;">
+                        <div style="width:${sent.positivo_pct}%;height:100%;background:linear-gradient(90deg,#16a34a,#22c55e);border-radius:4px;transition:width 0.6s;"></div>
+                    </div>
                 </div>
-                <div class="analisis-sent-row">
-                    <span class="analisis-sent-label sent-neu-label">~ Neutro&nbsp;${sent.neutro_pct}%</span>
-                    <div class="analisis-sent-track"><div class="analisis-sent-fill sent-neu-fill" style="width:${sent.neutro_pct}%"></div></div>
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+                    <span style="font-size:0.75rem;color:#fbbf24;min-width:52px;">~ ${sent.neutro_pct}%</span>
+                    <div style="flex:1;height:7px;background:rgba(255,255,255,0.07);border-radius:4px;overflow:hidden;">
+                        <div style="width:${sent.neutro_pct}%;height:100%;background:linear-gradient(90deg,#d97706,#f59e0b);border-radius:4px;transition:width 0.6s;"></div>
+                    </div>
                 </div>
-                <div class="analisis-sent-row">
-                    <span class="analisis-sent-label sent-neg-label">✖ Negativo&nbsp;${sent.negativo_pct}%</span>
-                    <div class="analisis-sent-track"><div class="analisis-sent-fill sent-neg-fill" style="width:${sent.negativo_pct}%"></div></div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="font-size:0.75rem;color:#f87171;min-width:52px;">✖ ${sent.negativo_pct}%</span>
+                    <div style="flex:1;height:7px;background:rgba(255,255,255,0.07);border-radius:4px;overflow:hidden;">
+                        <div style="width:${sent.negativo_pct}%;height:100%;background:linear-gradient(90deg,#b91c1c,#ef4444);border-radius:4px;transition:width 0.6s;"></div>
+                    </div>
                 </div>
             </div>
-            ${items.length > 0 ? `<canvas id="${chartId}" height="100"></canvas>` : ''}
-            ${dim.interpretacion ? `<p class="analisis-interpretacion">${escapeHtml(dim.interpretacion)}</p>` : ''}
+            ${items.length > 0 ? `<canvas id="${chartId}" height="90" style="margin-top:6px;"></canvas>` : ''}
+            ${dim.interpretacion ? `<p class="analisis-interpretacion" style="margin-top:10px;font-size:0.82rem;color:var(--text-muted);line-height:1.55;border-top:1px solid rgba(255,255,255,0.06);padding-top:8px;">${escapeHtml(dim.interpretacion)}</p>` : ''}
         `;
         grid.appendChild(card);
 
@@ -2900,17 +3058,17 @@ function renderLLMDimensiones(dimensiones, gridId, chartPrefix) {
                         labels: items.map(it => truncate(it.label, 28)),
                         datasets: [{ data: items.map(it => it.pct),
                             backgroundColor: items.map(it => sentColor(it.sentimiento)),
-                            borderRadius: 4 }],
+                            borderRadius: 5 }],
                     },
                     options: {
                         indexAxis: 'y', responsive: true, maintainAspectRatio: false,
                         scales: {
                             x: { max: 100, display: false },
-                            y: { grid: { display: false }, ticks: { font: { size: 10 }, color: 'rgba(255,255,255,0.7)' } },
+                            y: { grid: { display: false }, ticks: { font: { size: 10 }, color: 'rgba(255,255,255,0.65)' } },
                         },
                         plugins: { legend: { display: false },
                             tooltip: { callbacks: { label: (c) => ' ' + c.parsed.x + '%' } } },
-                        animation: { duration: 500 },
+                        animation: { duration: 500, easing: 'easeOutQuart' },
                     },
                 });
             }

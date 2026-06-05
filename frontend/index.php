@@ -888,34 +888,37 @@ header('Expires: 0');
             </section>
 
             <section id="tab-llm" class="tab-panel hidden">
-                <div class="section-title">
-                    <h3>An&aacute;lisis IA &mdash; NVIDIA Nemotron-3-Super-120B</h3>
-                    <p>Razonamiento profundo, sentimientos y plan estrat&eacute;gico impulsado exclusivamente por la IA de NVIDIA.</p>
+                <div class="section-title" style="border-bottom:2px solid rgba(99,179,255,0.18);padding-bottom:16px;margin-bottom:20px;">
+                    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                        <span style="font-size:2rem;line-height:1;">🤖</span>
+                        <div>
+                            <h3 style="margin:0;font-size:1.25rem;background:linear-gradient(90deg,#60a5fa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">An&aacute;lisis IA &mdash; NVIDIA LLM</h3>
+                            <p style="margin:2px 0 0;color:var(--text-muted);font-size:0.85rem;">Sentimientos, predicciones y plan estrat&eacute;gico por IA en tiempo real.</p>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Filtro y boton -->
-                <div class="card filter-panel">
-                    <div class="form-grid">
-                        <div>
-                            <label class="field-label" for="llm-sector-filter">Zona a analizar</label>
-                            <select id="llm-sector-filter">
-                                <option value="general">Todo San Bartolom&eacute;</option>
-                            </select>
-                        </div>
+                <div class="card filter-panel" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:200px;">
+                        <label class="field-label" for="llm-sector-filter" style="font-size:0.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">🗺️ Zona a analizar</label>
+                        <select id="llm-sector-filter" style="margin-top:4px;">
+                            <option value="general">Todas las zonas</option>
+                        </select>
                     </div>
-                    <div class="inline-actions" style="gap:12px;flex-wrap:wrap;">
-                        <button id="llm-generate-btn" class="primary-button" type="button">&#9889; Generar An&aacute;lisis con NVIDIA LLM</button>
+                    <div style="padding-top:20px;">
+                        <button id="llm-generate-btn" class="primary-button" type="button" style="white-space:nowrap;">&#9889; Analizar con IA</button>
                     </div>
                 </div>
 
                 <!-- Loading -->
                 <div id="llm-loading" class="hidden">
-                    <div class="ia-loading">
+                    <div class="ia-loading" style="padding:32px;">
                         <span class="ia-spinner"></span>
-                        <div style="margin-top:12px;text-align:center;">
-                            <strong id="llm-progress-msg">Iniciando NVIDIA Nemotron...</strong><br>
-                            <small style="color:var(--text-muted);">Las estad&iacute;sticas de todas las zonas se cargar&aacute;n mientras la IA razona.</small>
-                            <div id="llm-zonas-progress" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;"></div>
+                        <div style="margin-top:16px;text-align:center;">
+                            <strong id="llm-progress-msg" style="font-size:1rem;">Calculando estadísticas...</strong><br>
+                            <small style="color:var(--text-muted);">Las gráficas aparecen en segundos &mdash; el texto del LLM sigue procesando.</small>
+                            <div id="llm-zonas-progress" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;"></div>
                         </div>
                     </div>
                 </div>
@@ -923,39 +926,53 @@ header('Expires: 0');
                 <!-- Error -->
                 <div id="llm-error" class="hidden ia-error"></div>
                 <div id="llm-results" class="hidden">
+                    <!-- Indicador no-bloqueante: IA enriqueciendo texto en background -->
+                    <div id="llm-ai-enriching" style="display:none;align-items:center;gap:10px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:10px 16px;margin-bottom:16px;">
+                        <span style="display:inline-block;width:14px;height:14px;border:2px solid #60a5fa;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0;"></span>
+                        <span style="font-size:0.82rem;color:#93c5fd;">IA generando interpretaciones en segundo plano&hellip; Las gr&aacute;ficas ya est&aacute;n listas.</span>
+                    </div>
                     <div style="text-align:right;margin-bottom:12px;">
                         <span id="llm-motor-badge" class="analisis-label-pill" style="background:#1e3a5f;color:#60a5fa;"></span>
                     </div>
 
                     <!-- KPI Row -->
-                    <div class="analisis-kpi-row" style="margin-bottom:20px;">
-                        <div class="analisis-kpi-card">
-                            <div class="kpi-icon-wrap kpi-blue">?</div>
+                    <div class="analisis-kpi-row" style="margin-bottom:16px;">
+                        <div class="analisis-kpi-card" style="border-top:3px solid #60a5fa;">
+                            <div class="kpi-icon-wrap kpi-blue" style="font-size:1.3rem;">🎯</div>
                             <div class="kpi-info">
                                 <span class="kpi-label">Predicci&oacute;n</span>
-                                <strong id="llm-prediccion" class="kpi-value">--</strong>
+                                <strong id="llm-prediccion" class="kpi-value" style="font-size:1.1rem;">--</strong>
                             </div>
                         </div>
-                        <div class="analisis-kpi-card">
-                            <div class="kpi-icon-wrap kpi-green">+</div>
+                        <div class="analisis-kpi-card" style="border-top:3px solid #22c55e;">
+                            <div class="kpi-icon-wrap kpi-green" style="font-size:1.3rem;">✅</div>
                             <div class="kpi-info">
                                 <span class="kpi-label">Aceptaci&oacute;n</span>
                                 <strong id="llm-prob-aceptacion" class="kpi-value kpi-green-val">--</strong>
                             </div>
                         </div>
-                        <div class="analisis-kpi-card">
-                            <div class="kpi-icon-wrap kpi-orange">~</div>
+                        <div class="analisis-kpi-card" style="border-top:3px solid #f59e0b;">
+                            <div class="kpi-icon-wrap kpi-orange" style="font-size:1.3rem;">⚖️</div>
                             <div class="kpi-info">
                                 <span class="kpi-label">Neutral</span>
                                 <strong id="llm-prob-neutral" class="kpi-value kpi-problem-text">--</strong>
                             </div>
                         </div>
-                        <div class="analisis-kpi-card">
-                            <div class="kpi-icon-wrap kpi-red">-</div>
+                        <div class="analisis-kpi-card" style="border-top:3px solid #ef4444;">
+                            <div class="kpi-icon-wrap kpi-red" style="font-size:1.3rem;">❌</div>
                             <div class="kpi-info">
                                 <span class="kpi-label">Rechazo</span>
                                 <strong id="llm-prob-rechazo" class="kpi-value kpi-red-val">--</strong>
                             </div>
+                        </div>
+                    </div>
+                    <!-- Barra de sentimiento global visual -->
+                    <div id="llm-sentiment-bar-wrap" style="margin-bottom:20px;">
+                        <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Control de Sentimiento Global</div>
+                        <div style="display:flex;height:14px;border-radius:8px;overflow:hidden;gap:2px;" id="llm-global-sentiment-bar">
+                            <div id="llm-bar-acept" style="width:34%;background:linear-gradient(90deg,#16a34a,#22c55e);transition:width 0.8s;border-radius:6px 0 0 6px;"></div>
+                            <div id="llm-bar-neutr" style="width:23%;background:linear-gradient(90deg,#d97706,#f59e0b);transition:width 0.8s;"></div>
+                            <div id="llm-bar-rech"  style="width:43%;background:linear-gradient(90deg,#b91c1c,#ef4444);transition:width 0.8s;border-radius:0 6px 6px 0;"></div>
                         </div>
                     </div>
 
@@ -975,8 +992,8 @@ header('Expires: 0');
 
                     <div class="analisis-section-row">
                         <div>
-                            <h3 class="analisis-section-header">Sentimientos por Dimensi&oacute;n (Pre-LLM)</h3>
-                            <p class="analisis-section-desc">Calculado localmente antes de consultar a NVIDIA</p>
+                            <h3 class="analisis-section-header">Sentimientos por Dimensi&oacute;n</h3>
+                            <p class="analisis-section-desc">An&aacute;lisis de sentimiento por cada eje tem&aacute;tico &mdash; procesado por IA</p>
                         </div>
                     </div>
                     <div id="llm-stats-dimensiones-grid" class="analisis-dim-grid" style="margin-bottom:24px;"></div>
@@ -1022,11 +1039,13 @@ header('Expires: 0');
                     <div class="analisis-section-row">
                         <div class="premium-radar-header">
                             <h3 class="analisis-section-header">Radar de Favorabilidad</h3>
-                            <p class="analisis-section-desc">Balance multidimensional generado por LLM</p>
                         </div>
                     </div>
-                    <div class="card analisis-radar-card" style="margin-bottom:24px;">
-                        <canvas id="llm-radar-chart" height="110"></canvas>
+                    <div class="card analisis-radar-card" style="margin-bottom:24px;padding:24px 16px 16px;">
+                        <p style="font-size:0.8rem;color:var(--text-muted);margin:0 0 12px;text-align:center;">Balance multidimensional &mdash; An&aacute;lisis IA</p>
+                        <div style="position:relative;width:100%;height:420px;max-width:640px;margin:0 auto;">
+                            <canvas id="llm-radar-chart"></canvas>
+                        </div>
                     </div>
 
                     <div class="analisis-section-row">
@@ -1099,7 +1118,7 @@ header('Expires: 0');
                 </div>
             </section>
             <!-- =========================================================
-                 TAB: PREGUNTAS â€” Gr&aacute;ficas por pregunta de encuesta
+                 TAB: PREGUNTAS &mdash; Gr&aacute;ficas por pregunta de encuesta
                  ========================================================= -->
             <section id="tab-preguntas" class="tab-panel hidden">
                 <div class="analisis-topbar">
@@ -1164,35 +1183,35 @@ header('Expires: 0');
                             <div class="kpi-icon-wrap kpi-blue">#</div>
                             <div class="kpi-info">
                                 <span class="kpi-label">Total Encuestas</span>
-                                <strong id="analisis-total-n" class="kpi-value">â€”</strong>
+                                <strong id="analisis-total-n" class="kpi-value">&mdash;</strong>
                             </div>
                         </div>
                         <div class="analisis-kpi-card">
                             <div class="kpi-icon-wrap kpi-teal">~</div>
                             <div class="kpi-info">
                                 <span class="kpi-label">Andice Neto Global</span>
-                                <strong id="kpi-indice-global" class="kpi-value">â€”</strong>
+                                <strong id="kpi-indice-global" class="kpi-value">&mdash;</strong>
                             </div>
                         </div>
                         <div class="analisis-kpi-card">
                             <div class="kpi-icon-wrap kpi-green">+</div>
                             <div class="kpi-info">
                                 <span class="kpi-label">Sentimiento Positivo</span>
-                                <strong id="analisis-pos-global" class="kpi-value kpi-green-val">â€”</strong>
+                                <strong id="analisis-pos-global" class="kpi-value kpi-green-val">&mdash;</strong>
                             </div>
                         </div>
                         <div class="analisis-kpi-card">
                             <div class="kpi-icon-wrap kpi-red">-</div>
                             <div class="kpi-info">
                                 <span class="kpi-label">Sentimiento Negativo</span>
-                                <strong id="analisis-neg-global" class="kpi-value kpi-red-val">â€”</strong>
+                                <strong id="analisis-neg-global" class="kpi-value kpi-red-val">&mdash;</strong>
                             </div>
                         </div>
                         <div class="analisis-kpi-card kpi-wide">
                             <div class="kpi-icon-wrap kpi-orange">!</div>
                             <div class="kpi-info">
-                                <span class="kpi-label">Problematica Principal</span>
-                                <strong id="analisis-problema" class="kpi-value kpi-problem-text">â€”</strong>
+                                <span class="kpi-label">Problem&aacute;tica Principal</span>
+                                <strong id="analisis-problema" class="kpi-value kpi-problem-text">&mdash;</strong>
                             </div>
                         </div>
                     </div>
@@ -1209,17 +1228,17 @@ header('Expires: 0');
                                 <div class="donut-leg-item">
                                     <span class="legend-dot" style="background:#0f9f6e"></span>
                                     <span>Positivo</span>
-                                    <strong id="leg-pos">â€”</strong>%
+                                    <strong id="leg-pos">&mdash;</strong>%
                                 </div>
                                 <div class="donut-leg-item">
                                     <span class="legend-dot" style="background:#d97706"></span>
                                     <span>Neutro</span>
-                                    <strong id="leg-neu">â€”</strong>%
+                                    <strong id="leg-neu">&mdash;</strong>%
                                 </div>
                                 <div class="donut-leg-item">
                                     <span class="legend-dot" style="background:#c43d45"></span>
                                     <span>Negativo</span>
-                                    <strong id="leg-neg">â€”</strong>%
+                                    <strong id="leg-neg">&mdash;</strong>%
                                 </div>
                             </div>
                         </div>
@@ -1239,8 +1258,8 @@ header('Expires: 0');
                     <!-- Dimensiones -->
                     <div class="analisis-section-row">
                         <div>
-                            <h3 class="analisis-section-header">Analisis Detallado por Dimension</h3>
-                            <p class="analisis-section-desc">Distribucion de respuestas y sentimiento por cada eje tematico de la encuesta parroquial.</p>
+                            <h3 class="analisis-section-header">An&aacute;lisis Detallado por Dimensi&oacute;n</h3>
+                            <p class="analisis-section-desc">Distribuci&oacute;n de respuestas y sentimiento por cada eje tem&aacute;tico de la encuesta parroquial.</p>
                         </div>
                     </div>
                     <div id="analisis-dimensiones-grid" class="analisis-dim-grid"></div>
@@ -1249,7 +1268,7 @@ header('Expires: 0');
                     <div class="analisis-section-row">
                         <div>
                             <h3 class="analisis-section-header">Percepciones sobre la Actividad Minera</h3>
-                            <p class="analisis-section-desc">Seleccion multiple â€” un encuestado puede indicar varios items.</p>
+                            <p class=”analisis-section-desc”>Selecci&oacute;n m&uacute;ltiple &mdash; un encuestado puede indicar varios &iacute;tems.</p>
                         </div>
                     </div>
                     <div class="analisis-mining-grid">
@@ -1281,60 +1300,4 @@ header('Expires: 0');
                             <p class="analisis-section-desc">Diferencia expresada en puntos porcentuales (pp) entre grupos comparados.</p>
                         </div>
                     </div>
-                    <div id="analisis-correlaciones" class="analisis-corr-list"></div>
-
-                    <!-- Tendencia temporal -->
-                    <div class="analisis-section-row">
-                        <div>
-                            <h3 class="analisis-section-header">Tendencia del Levantamiento (ultimos 14 dias)</h3>
-                            <p class="analisis-section-desc">Barras: encuestas por dia &nbsp;&middot;&nbsp; Linea: % de apertura a inversion minera.</p>
-                        </div>
-                    </div>
-                    <div class="card analisis-chart-card" style="max-width:520px;margin:0 auto;padding:12px 16px">
-                        <div style="position:relative;height:180px">
-                          <canvas id="chart-tendencia"></canvas>
-                        </div>
-                    </div>
-
-
-                    <!-- Distribucion por sector -->
-                    <div class="analisis-section-row">
-                        <div>
-                            <h3 class="analisis-section-header">Distribucion por Sector</h3>
-                            <p class="analisis-section-desc">Numero de encuestas registradas por zona geografica.</p>
-                        </div>
-                    </div>
-                    <div class="card analisis-chart-card">
-                        <div id="analisis-sector-dist" class="analisis-bar-list"></div>
-                    </div>
-
-                    <!-- IA MINERA -->
-                    <div id="ia-minera-box" class="hidden" style="margin-top:24px"></div>
-                    <!-- Plan Gemini -->
-                    <div id="gemini-plan-box" class="hidden" style="margin-top:24px"></div>
-
-                </div><!-- /analisis-content -->
-
-            </section><!-- /tab-analisis -->
-
-        </main><!-- /app-main -->
-    </div><!-- /app-shell -->
-
-    <!-- ===================== MODAL VER ENCUESTA ===================== -->
-    <div id="survey-detail-modal" class="survey-modal-overlay" style="display:none;" onclick="closeSurveyModal(event)">
-        <div class="survey-modal-box">
-            <div class="survey-modal-header">
-                <div id="survey-modal-header-left" class="survey-modal-header-left"></div>
-                <span id="survey-modal-status-badge" class="survey-modal-status-badge"></span>
-                <button class="survey-modal-close" type="button" onclick="closeSurveyModal(event)" aria-label="Cerrar">&times;</button>
-            </div>
-            <div id="survey-modal-body" class="survey-modal-body"></div>
-        </div>
-    </div>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-    <script src="frontend/app.js?v=<?= time() ?>" charset="utf-8"></script>
-</body>
-</html>
-                                                                                                                                                                                                                                                 
+                    <div id="analisis-correlaciones" c
