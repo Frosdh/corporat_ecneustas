@@ -19,6 +19,13 @@ from collections import Counter
 import urllib.request
 import urllib.parse
 
+# Forzar UTF-8 en stdout para que los caracteres especiales no se corrompan
+# cuando PHP llama a este script via proc_open
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stdin, 'reconfigure'):
+    sys.stdin.reconfigure(encoding='utf-8')
+
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import LabelEncoder

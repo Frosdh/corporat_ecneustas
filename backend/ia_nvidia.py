@@ -49,12 +49,60 @@ NVIDIA_MODEL       = "nvidia/nemotron-3-super-120b-a12b"   # Nemotron-3-Super-12
 NVIDIA_MODEL_LABEL = "NVIDIA Nemotron-3-Super-120B"
 # Para volver al modelo rápido sin razonamiento: NVIDIA_MODEL = "meta/llama-3.1-8b-instruct"
 
+# Mapas de sentimiento identicos a lib.php — para que LLM y Analisis IA coincidan
+SENT_MAPS = {
+    "political_climate": {
+        "positivo": ["Estabilidad relativa"],
+        "neutro":   ["Tension puntual","Tension puntual manejable"],
+        "negativo": ["Desconfianza institucional","Division comunitaria","Conflicto abierto entre actores"],
+    },
+    "authority_trust": {
+        "positivo": ["Alta"],
+        "neutro":   ["Media"],
+        "negativo": ["Baja"],
+    },
+    "investment_acceptance": {
+        "positivo": ["Aceptacion amplia","Aceptacion condicionada"],
+        "neutro":   [],
+        "negativo": ["Rechazo preventivo"],
+    },
+    "mine_reopening_perception": {
+        "positivo": ["Beneficiaria mucho","Beneficiaria algo"],
+        "neutro":   ["Beneficio dudoso"],
+        "negativo": ["No beneficiaria"],
+    },
+    "household_income": {
+        "positivo": ["Cubre con algo de holgura"],
+        "neutro":   ["Cubre apenas"],
+        "negativo": ["No cubre la canasta"],
+    },
+}
+
+# Dimension de aceptacion minera (solo mine_reopening_perception) para prediccion especifica
 CLASE_MAP = {
     'Beneficiaria mucho': 'Aceptacion',
     'Beneficiaria algo':  'Aceptacion',
     'Beneficio dudoso':   'Neutral',
     'No beneficiaria':    'Rechazo',
 }
+
+def classify_with_map(rows, field, mapa):
+    """Clasifica filas usando el mapa exacto de lib.php (comparacion insensible a tildes/espacios)."""
+    pos = neu = neg = 0
+    pos_vals = [v.lower().strip() for v in mapa.get("positivo", [])]
+    neu_vals  = [v.lower().strip() for v in mapa.get("neutro", [])]
+    neg_vals  = [v.lower().strip() for v in mapa.get("negativo", [])]
+    for r in rows:
+        v = (r.get(field) or "").strip().lower()
+        if v in pos_vals:
+            pos += 1
+        elif v in neg_vals:
+            neg += 1
+        elif v in neu_vals:
+            neu += 1
+        else:
+            neu += 1   # valor no mapeado → neutro (igual que lib.php)
+    return pos, neu, neg
 
 # ──────────────────────────────────────────────────────────────
 #  UTILIDADES
@@ -101,15 +149,32 @@ def analyze_statistics(rows):
     ingresos       = dist_field(rows, 'household_income')
     vias           = dist_field(rows, 'road_status')
 
+    # ── PROBABILIDADES GLOBALES: metodologia identica a lib.php ──────────
+    # Promedio ponderado de 5 dimensiones clave (mismo calculo que get_analisis_experto)
+    KEY_DIMS = ["political_climate","authority_trust","investment_acceptance",
+                "mine_reopening_perception","household_income"]
+    t_pos_glob = t_neu_glob = t_neg_glob = t_tot_glob = 0
+    for dim_field in KEY_DIMS:
+        mapa = SENT_MAPS[dim_field]
+        dp, dn, dng = classify_with_map(rows, dim_field, mapa)
+        dt = dp + dn + dng or 1
+        t_pos_glob += dp
+        t_neu_glob += dn
+        t_neg_glob += dng
+        t_tot_glob += dt
+    n_glob     = t_tot_glob or 1
+    prob_acept = pct(t_pos_glob, n_glob)   # positivo  → Aceptacion
+    prob_neu   = pct(t_neu_glob, n_glob)   # neutro    → Neutral
+    prob_rech  = pct(t_neg_glob, n_glob)   # negativo  → Rechazo
+
+    # Calculo especifico de aceptacion MINERA (solo mine_reopening_perception)
+    # — se usa para el plan estrategico y las zonas
     clases = {'Aceptacion': 0, 'Neutral': 0, 'Rechazo': 0}
     for r in rows:
         c = CLASE_MAP.get((r.get('mine_reopening_perception') or '').strip())
         if c:
             clases[c] += 1
-    n_class      = sum(clases.values()) or 1
-    prob_acept   = pct(clases['Aceptacion'], n_class)
-    prob_neu     = pct(clases['Neutral'],    n_class)
-    prob_rech    = pct(clases['Rechazo'],    n_class)
+    n_class = sum(clases.values()) or 1
 
     por_sector = {}
     for r in rows:
@@ -180,36 +245,16 @@ def analyze_statistics(rows):
         return {"positivo_pct": p_p, "neutro_pct": n_p, "negativo_pct": ng_p,
                 "indice": round(p_p - ng_p, 1)}
 
-    def classify_sent(field, pos_vals, neg_vals):
-        pos = neg = neu = 0
-        for r in rows:
-            v = (r.get(field) or '').strip().lower()
-            if any(v.startswith(p.lower()) for p in pos_vals):   pos += 1
-            elif any(v.startswith(ng.lower()) for ng in neg_vals): neg += 1
-            else: neu += 1
-        return pos, neu, neg
+    # Dimensiones usando los mapas exactos de lib.php
+    def dim_sent(field):
+        p2, nu2, ng2 = classify_with_map(rows, field, SENT_MAPS[field])
+        return sentimiento_dim(p2, nu2, ng2)
 
-    p, nu, ng = classify_sent('political_climate',
-        ('favorable','muy favorable','tranquilo'),
-        ('conflictivo','muy conflictivo','tensionado','polarizado'))
-    sent_clima = sentimiento_dim(p, nu, ng)
-
-    p, nu, ng = classify_sent('authority_trust',
-        ('alta','muy alta','mucha'),
-        ('baja','muy baja','poca','ninguna'))
-    sent_trust = sentimiento_dim(p, nu, ng)
-
-    p, nu, ng = classify_sent('household_income',
-        ('suficiente','bueno','alto'),
-        ('insuficiente','muy bajo','bajo','precario'))
-    sent_ingresos = sentimiento_dim(p, nu, ng)
-
-    sent_mineria = sentimiento_dim(clases['Aceptacion'], clases['Neutral'], clases['Rechazo'])
-
-    inv_counts = Counter((r.get('investment_acceptance') or '').strip() for r in rows)
-    pos_inv = sum(v for k, v in inv_counts.items() if any(p in k.lower() for p in ('acepta','favor','apoya','si')))
-    neg_inv = sum(v for k, v in inv_counts.items() if any(p in k.lower() for p in ('rechaza','opone','contra','no')))
-    sent_inversion = sentimiento_dim(pos_inv, n - pos_inv - neg_inv, neg_inv)
+    sent_clima     = dim_sent('political_climate')
+    sent_trust     = dim_sent('authority_trust')
+    sent_ingresos  = dim_sent('household_income')
+    sent_mineria   = dim_sent('mine_reopening_perception')
+    sent_inversion = dim_sent('investment_acceptance')
 
     know_si_total = sum(
         sum(1 for r in rows if (r.get(c) or '').strip().lower() in ('si','yes','conoce','sabe','1','true'))
@@ -220,26 +265,20 @@ def analyze_statistics(rows):
 
     idx_conocimiento = round(sum(k['si_pct'] for k in conocimiento) / len(conocimiento), 1) if conocimiento else 0
 
-    def lsm(label):
-        if label in ("Beneficiaria mucho","Beneficiaria algo"): return "positivo"
-        if label == "No beneficiaria": return "negativo"
+    def label_sent(field, label):
+        """Clasifica una etiqueta usando el mapa exacto de lib.php."""
+        mapa = SENT_MAPS.get(field, {})
+        lv = label.strip()
+        if lv in mapa.get("positivo", []): return "positivo"
+        if lv in mapa.get("negativo", []): return "negativo"
+        if lv in mapa.get("neutro",   []): return "neutro"
         return "neutro"
-    def lsc(label):
-        if any(p in label.lower() for p in ("favorable","tranquil")): return "positivo"
-        if any(p in label.lower() for p in ("conflicti","tensionado","polarizado")): return "negativo"
-        return "neutro"
-    def lst(label):
-        if any(p in label.lower() for p in ("alta","mucha")): return "positivo"
-        if any(p in label.lower() for p in ("baja","poca","ninguna")): return "negativo"
-        return "neutro"
-    def lsi(label):
-        if any(p in label.lower() for p in ("acepta","favor","apoya","si")): return "positivo"
-        if any(p in label.lower() for p in ("rechaza","opone","contra","no")): return "negativo"
-        return "neutro"
-    def lse(label):
-        if any(p in label.lower() for p in ("suficiente","bueno","alto")): return "positivo"
-        if any(p in label.lower() for p in ("insuficiente","bajo","precario")): return "negativo"
-        return "neutro"
+
+    lsm = lambda l: label_sent("mine_reopening_perception", l)
+    lsc = lambda l: label_sent("political_climate", l)
+    lst = lambda l: label_sent("authority_trust", l)
+    lsi = lambda l: label_sent("investment_acceptance", l)
+    lse = lambda l: label_sent("household_income", l)
 
     return {
         "total_encuestas": n,
@@ -797,3 +836,324 @@ def generate_instant_analysis(stats):
         "ejes_estrategicos":        ejes,
         "mejores_practicas":        mejores_practicas,
     }
+
+def merge_all(stats, texto):
+    probs = stats.get("probabilidades_globales", {})
+    pa    = probs.get('Aceptacion', 0)
+    pn    = probs.get('Neutral',    0)
+    pr    = probs.get('Rechazo',    0)
+    pred  = "Aceptacion" if pa >= pr else "Rechazo"
+
+    local_dims  = stats.get("sentimientos_dimensiones", [])
+    llm_interp  = {d['titulo']: d['interpretacion'] for d in texto.get("interpretaciones_dim", []) if 'titulo' in d}
+    dimensiones = []
+    for ld in local_dims:
+        titulo = ld['titulo']
+        dimensiones.append({
+            "titulo":        titulo,
+            "sentimiento":   ld['sentimiento'],
+            "distribucion":  ld['distribucion'],
+            "interpretacion": llm_interp.get(titulo, ""),
+        })
+
+    llm_hallazgos = {h['zona']: h['hallazgo'] for h in texto.get("hallazgos_zona", []) if 'zona' in h}
+    analisis_zona = [
+        {"zona": s['sector'], "n": s['n'],
+         "prediccion":     "Aceptacion" if s['aceptacion_pct'] >= s['rechazo_pct'] else "Rechazo",
+         "aceptacion_pct": s['aceptacion_pct'], "neutral_pct": s['neutral_pct'], "rechazo_pct": s['rechazo_pct'],
+         "hallazgo_clave": llm_hallazgos.get(s['sector'], "")}
+        for s in stats.get("sectores_detalle", [])
+    ]
+
+    return {
+        "ok": True,
+        "motor":                   "NVIDIA Análisis IA",
+        "total_encuestas":         stats.get("total_encuestas", 0),
+        "prediccion_global":       pred,
+        "probabilidades_globales": {"Aceptacion": pa, "Neutral": pn, "Rechazo": pr},
+        "sentimiento_global":      {"positivo_pct": pa, "neutro_pct": pn, "negativo_pct": pr},
+        "resumen_ejecutivo":       texto.get("resumen_ejecutivo", ""),
+        "importancia_factores":    texto.get("importancia_factores", []),
+        "dimensiones":             dimensiones,
+        "analisis_por_zona":       analisis_zona,
+        "recomendaciones_ia":      texto.get("recomendaciones_ia", []),
+        "plan_estrategico":        texto.get("plan_estrategico", {}),
+        "conclusion":              texto.get("conclusion", ""),
+        "stats_locales":           stats,
+    }
+
+# ──────────────────────────────────────────────────────────────
+#  ENRIQUECIMIENTO LLM  (prompt mínimo, solo texto narrativo)
+# ──────────────────────────────────────────────────────────────
+
+# ──────────────────────────────────────────────────────────────
+#  NUEVAS FUNCIONES DE ANÁLISIS  (cruces y carencias para el LLM)
+# ──────────────────────────────────────────────────────────────
+
+def _clase_de(row):
+    """Clasifica la percepción minera de una fila en Aceptacion/Neutral/Rechazo."""
+    return CLASE_MAP.get((row.get('mine_reopening_perception') or '').strip())
+
+
+def cruce_percepcion(rows, field, label='valor', top=None):
+    """Cruza cualquier campo con la percepción minera. Devuelve % acepta/neutral/rechaza por categoría."""
+    grupos = {}
+    for r in rows:
+        key = (r.get(field) or 'No especificado').strip() or 'No especificado'
+        clase = _clase_de(r)
+        if key not in grupos:
+            grupos[key] = {'Aceptacion': 0, 'Neutral': 0, 'Rechazo': 0, 'total': 0}
+        if clase:
+            grupos[key][clase] += 1
+        grupos[key]['total'] += 1
+    items = []
+    for k, c in grupos.items():
+        t = c['total'] or 1
+        items.append({
+            label: k, "n": c['total'],
+            "aceptacion_pct": pct(c['Aceptacion'], t),
+            "neutral_pct":    pct(c['Neutral'],    t),
+            "rechazo_pct":    pct(c['Rechazo'],    t),
+            "tendencia": "Aceptacion" if c['Aceptacion'] >= c['Rechazo'] else "Rechazo",
+        })
+    items.sort(key=lambda x: x['n'], reverse=True)
+    return items[:top] if top else items
+
+
+def conocimiento_vs_aceptacion(rows):
+    """Para cada pregunta de conocimiento: % de aceptación entre quienes conocen vs. quienes no."""
+    campos = {
+        'knows_mining_types':    'Conoce tipos de minería',
+        'knows_mining_benefits': 'Conoce beneficios mineros',
+        'knows_modern_mining':   'Conoce minería moderna',
+        'knows_local_mines':     'Conoce minas locales',
+        'knows_env_guarantees':  'Conoce garantías ambientales',
+    }
+    SI = ('si', 'sí', 'yes', 'conoce', 'sabe', '1', 'true')
+    out = []
+    for campo, preg in campos.items():
+        g_si = {'Aceptacion': 0, 'Rechazo': 0, 'Neutral': 0, 'total': 0}
+        g_no = {'Aceptacion': 0, 'Rechazo': 0, 'Neutral': 0, 'total': 0}
+        for r in rows:
+            clase = _clase_de(r)
+            if not clase:
+                continue
+            g = g_si if (r.get(campo) or '').strip().lower() in SI else g_no
+            g[clase] += 1
+            g['total'] += 1
+        a_si = pct(g_si['Aceptacion'], g_si['total'] or 1)
+        a_no = pct(g_no['Aceptacion'], g_no['total'] or 1)
+        out.append({
+            "campo": campo, "pregunta": preg,
+            "acept_conoce_pct": a_si, "acept_no_conoce_pct": a_no,
+            "n_conoce": g_si['total'], "n_no_conoce": g_no['total'],
+            "diferencia_pp": round(a_si - a_no, 1),
+        })
+    out.sort(key=lambda x: abs(x['diferencia_pp']), reverse=True)
+    return out
+
+
+def carencias_servicios(rows):
+    """Ranking de carencias de servicios básicos (% de respuestas negativas)."""
+    n = len(rows) or 1
+
+    def share(field, is_neg):
+        c = sum(1 for r in rows if is_neg((r.get(field) or '').strip().lower()))
+        return round(c / n * 100, 1)
+
+    def es_no(v):
+        return v.startswith('no') or v in ('', '0', 'false', 'ninguno', 'ninguna')
+
+    def via_mala(v):
+        return any(k in v for k in ('mala', 'malo', 'deficiente', 'pésim', 'pesim',
+                                    'intransitab', 'regular', 'tierra', 'lastre'))
+
+    def agua_insegura(v):
+        insegura = any(k in v for k in ('rio', 'río', 'pozo', 'acarre', 'lluvia',
+                                        'vertiente', 'quebrada', 'entubada'))
+        return insegura and 'trat' not in v
+
+    carencias = [
+        {"servicio": "Alcantarillado",            "carencia_pct": share('has_sewer',    es_no)},
+        {"servicio": "Internet",                  "carencia_pct": share('has_internet', es_no)},
+        {"servicio": "Pozo séptico",              "carencia_pct": share('has_septic',   es_no)},
+        {"servicio": "Agua segura (red/tratada)", "carencia_pct": share('water_source', agua_insegura)},
+        {"servicio": "Vías en buen estado",       "carencia_pct": share('road_status',  via_mala)},
+    ]
+    carencias.sort(key=lambda x: x['carencia_pct'], reverse=True)
+    return carencias
+
+
+def build_cruces(rows):
+    """Empaqueta todos los cruces nuevos en un solo dict para añadir a stats."""
+    return {
+        "cruce_percepcion_edad":      cruce_percepcion(rows, 'age_range',      'edad'),
+        "cruce_percepcion_educacion": cruce_percepcion(rows, 'education_level', 'educacion'),
+        "cruce_percepcion_sector":    cruce_percepcion(rows, 'sector',         'sector'),
+        "conocimiento_vs_aceptacion": conocimiento_vs_aceptacion(rows),
+        "carencias_servicios":        carencias_servicios(rows),
+    }
+
+
+def build_enrich_prompt(stats):
+    """Prompt que solicita razonamiento previo y luego JSON."""
+    probs = stats.get("probabilidades_globales", {})
+    pa    = probs.get('Aceptacion', 0)
+    pr    = probs.get('Rechazo',    0)
+    n     = stats.get("total_encuestas", 0)
+    dims  = stats.get("sentimientos_dimensiones", [])
+    pred  = "Aceptacion" if pa >= pr else "Rechazo"
+    dims_txt  = "; ".join(f"{d['titulo']}={d['sentimiento']['indice']}pts" for d in dims)
+    probs_lbl = ", ".join(p['label'] for p in stats.get("problemas", [])[:3])
+
+    edad     = stats.get("cruce_percepcion_edad", [])[:4]
+    edad_txt = "; ".join(f"{e.get('edad','?')} acepta {e['aceptacion_pct']}%/rechaza {e['rechazo_pct']}%" for e in edad)
+    edu      = stats.get("cruce_percepcion_educacion", [])[:4]
+    edu_txt  = "; ".join(f"{e.get('educacion','?')} acepta {e['aceptacion_pct']}%" for e in edu)
+    kva      = stats.get("conocimiento_vs_aceptacion", [])[:1]
+    kva_txt  = (f"{kva[0]['pregunta']}: conoce acepta {kva[0]['acept_conoce_pct']}% vs "
+                f"no-conoce {kva[0]['acept_no_conoce_pct']}% (dif {kva[0]['diferencia_pp']}pp)") if kva else "s/d"
+    car      = stats.get("carencias_servicios", [])[:3]
+    car_txt  = "; ".join(f"{c['servicio']} {c['carencia_pct']}%" for c in car)
+
+    return (
+        f"Eres analista minero y social en Ecuador. Datos de {n} encuestas en la parroquia San Bartolomé.\n"
+        f"Predicción global={pred}. Aceptación={pa}%, Rechazo={pr}%.\n"
+        f"Dimensiones (índice de sentimiento): {dims_txt}.\n"
+        f"Problemas principales: {probs_lbl}.\n"
+        f"Percepción por edad: {edad_txt}.\n"
+        f"Percepción por educación: {edu_txt}.\n"
+        f"Conocimiento vs aceptación: {kva_txt}.\n"
+        f"Carencias de servicios: {car_txt}.\n\n"
+        f"Por favor, piensa paso a paso analizando estos datos. Tu respuesta debe consistir de tu análisis y razonamiento, seguido de un ÚNICO bloque JSON válido (sin código markdown de preferencia, pero si lo usas que sea solo para el JSON) con esta estructura exacta:\n"
+        f'{{"resumen_ejecutivo":"2-3 oraciones que integren la percepción, el grupo etario y educativo más a favor y en contra, y la carencia más crítica.",'
+        f'"conclusion":"1-2 oraciones con el veredicto y la acción prioritaria.",'
+        f'"interpretaciones_dim":[{",".join(chr(123)+f""""titulo":"{d["titulo"]}","interpretacion":"1 oración basada en los datos."{chr(125)}""" for d in dims)}]}}'
+    )
+
+def call_nvidia_enrich(prompt):
+    """Llama al LLM con streaming. Emite eventos 'thinking' y devuelve el JSON extraído."""
+    try:
+        if HAS_OPENAI:
+            client = OpenAI(base_url=NVIDIA_BASE_URL, api_key=NVIDIA_API_KEY, timeout=60.0)
+            completion = client.chat.completions.create(
+                model=NVIDIA_MODEL,
+                messages=[
+                    {"role": "system", "content": "Eres un analista experto. Proporciona tu razonamiento y luego un bloque JSON válido."},
+                    {"role": "user",   "content": prompt}
+                ],
+                temperature=0.3, top_p=0.9, max_tokens=4096, stream=True,
+                extra_body={"chat_template_kwargs":{"enable_thinking":True},"reasoning_budget":2048}
+            )
+            raw = ""
+            for chunk in completion:
+                if not chunk.choices: continue
+                delta = chunk.choices[0].delta
+                # Alguns modelos envían el reasoning en atributos separados si están soportados, pero Nemotron lo pone en content
+                content = getattr(delta, "content", "") or ""
+                # Si el modelo soporta reasoning_content (ej. DeepSeek o Nemotron con extra_body)
+                reasoning = getattr(delta, "reasoning_content", "") or ""
+                
+                text_to_emit = reasoning + content
+                if text_to_emit:
+                    raw += text_to_emit
+                    emit({"type": "thinking", "text": text_to_emit})
+        else:
+            req_data = json.dumps({
+                "model": NVIDIA_MODEL,
+                "messages": [
+                    {"role": "system", "content": "Eres un analista experto. Proporciona tu razonamiento y luego un bloque JSON válido."},
+                    {"role": "user",   "content": prompt}
+                ],
+                "temperature": 0.3, "top_p": 0.9, "max_tokens": 4096, "stream": False,
+                "chat_template_kwargs": {"enable_thinking": True},
+                "reasoning_budget": 2048
+            }).encode('utf-8')
+            req = urllib.request.Request(
+                NVIDIA_BASE_URL + "/chat/completions",
+                data=req_data,
+                headers={'Content-Type': 'application/json',
+                         'Authorization': 'Bearer ' + NVIDIA_API_KEY}
+            )
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                body = json.loads(resp.read().decode('utf-8'))
+            raw = body['choices'][0]['message']['content']
+            emit({"type": "thinking", "text": raw})
+
+        start = raw.find('{')
+        end = raw.rfind('}')
+        if start != -1 and end > start:
+            return json.loads(raw[start:end+1])
+    except Exception as e:
+        emit({"type": "thinking", "text": f"\n[Error consultando a NVIDIA: {str(e)}]\n"})
+    return None
+
+# ──────────────────────────────────────────────────────────────
+#  MAIN
+# ──────────────────────────────────────────────────────────────
+
+def main():
+    try:
+        raw = sys.stdin.read()
+        if not raw.strip():
+            emit({"type": "error", "error": "No se recibieron datos de entrada."}); return
+        rows = json.loads(raw)
+    except Exception as e:
+        emit({"type": "error", "error": "Error parseando JSON: " + str(e)}); return
+
+    if not rows:
+        emit({"type": "error", "error": "No hay encuestas para analizar."}); return
+
+    sectores_list = sorted(list(set((r.get('sector') or 'general').strip() for r in rows)))
+    total = len(rows)
+
+    # ── FASE 1: Estadísticas instantáneas ──────────────────────
+    emit({"type": "progress",
+          "mensaje": f"Calculando estadísticas de {total} encuestas...",
+          "zonas": sectores_list, "total": total, "procesadas": total})
+
+    try:
+        stats = analyze_statistics(rows)
+        # Integrar las funciones de análisis faltantes (cruces y carencias)
+        stats.update(build_cruces(rows))
+    except Exception as e:
+        emit({"type": "error", "error": "Error en estadísticas: " + str(e)}); return
+
+    emit({"type": "stats", "stats": stats})
+
+    # ── FASE 2: Enriquecimiento NVIDIA con streaming de razonamiento ──
+    emit({"type": "progress", "mensaje": "Razonando con NVIDIA Nemotron...", "total": total, "procesadas": total})
+    
+    try:
+        texto_instant = generate_instant_analysis(stats)
+    except Exception as e:
+        texto_instant = {}
+
+    prompt   = build_enrich_prompt(stats)
+    llm_data = call_nvidia_enrich(prompt)
+
+    # Reemplazar análisis instantáneo con el del LLM si fue exitoso
+    if llm_data:
+        texto_instant["resumen_ejecutivo"] = llm_data.get("resumen_ejecutivo", texto_instant.get("resumen_ejecutivo", ""))
+        texto_instant["conclusion"]        = llm_data.get("conclusion",        texto_instant.get("conclusion", ""))
+        
+        # Mezclar interpretaciones
+        llm_interp = {d['titulo']: d['interpretacion'] for d in llm_data.get("interpretaciones_dim", []) if 'titulo' in d}
+        for d in texto_instant.get("interpretaciones_dim", []):
+            if d['titulo'] in llm_interp:
+                d['interpretacion'] = llm_interp[d['titulo']]
+
+    # ── FASE 3: Emitir el resultado final ──
+    result = merge_all(stats, texto_instant)
+    emit({"type": "result", **result})
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        import traceback
+        err_msg = traceback.format_exc()
+        emit({"type": "error", "error": f"Error fatal en Python: {str(e)}\n{err_msg}"})
+
+

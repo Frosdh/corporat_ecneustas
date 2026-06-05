@@ -313,7 +313,7 @@ header('Expires: 0');
                             </div>
 
                             <div class="mini-kpi strat-sector">
-                                <span class="strat-label">ðŸ“ Sector mas abierto</span>
+                                <span class="strat-label">ðŸ" Sector mas abierto</span>
                                 <strong id="strategy-open-sector">Sin datos</strong>
                                 <small style="color:#A67C52;font-size:.72rem;font-weight:400;">mayor concentracion favorable</small>
                                 <p class="strat-tip">Sector con la <strong>mayor cantidad absoluta</strong> de respuestas favorables ("Aceptacion amplia") entre todos los sectores encuestados.</p>
@@ -932,8 +932,17 @@ header('Expires: 0');
                         <span style="display:inline-block;width:14px;height:14px;border:2px solid #60a5fa;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0;"></span>
                         <span style="font-size:0.82rem;color:#93c5fd;">IA generando interpretaciones en segundo plano&hellip; Las gr&aacute;ficas ya est&aacute;n listas.</span>
                     </div>
-                    <div style="text-align:right;margin-bottom:12px;">
-                        <span id="llm-motor-badge" class="analisis-label-pill" style="background:#1e3a5f;color:#60a5fa;"></span>
+                    <!-- Barra: motor + zona analizada -->
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <span id="llm-motor-badge" class="analisis-label-pill" style="background:#1e3a5f;color:#60a5fa;"></span>
+                            <span style="font-size:0.72rem;color:#8D6E63;">&#128202; An&aacute;lisis generado por IA sobre datos reales de encuestas</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;background:#FFF8E1;border:1px solid #D7CCC8;border-radius:20px;padding:4px 12px;">
+                            <span style="font-size:0.8rem;">&#128507;</span>
+                            <span style="font-size:0.75rem;font-weight:700;color:#4E342E;">Zona:&nbsp;</span>
+                            <span id="llm-zona-activa-badge" style="font-size:0.78rem;font-weight:800;color:#6F4E37;">Todas las zonas</span>
+                        </div>
                     </div>
 
                     <!-- KPI Row -->
@@ -969,7 +978,10 @@ header('Expires: 0');
                     </div>
                     <!-- Barra de sentimiento global visual -->
                     <div id="llm-sentiment-bar-wrap" style="margin-bottom:20px;">
-                        <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Control de Sentimiento Global</div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:4px;">
+                            <span style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;">&#128202; Sentimiento Global &mdash; <span id="llm-sentiment-zona-label" style="color:#6F4E37;font-weight:700;">Todas las zonas</span></span>
+                            <span style="font-size:0.68rem;color:#8D6E63;font-style:italic;">&#129302; Calculado por IA sobre respuestas de encuestados</span>
+                        </div>
                         <div style="display:flex;height:14px;border-radius:8px;overflow:hidden;gap:2px;" id="llm-global-sentiment-bar">
                             <div id="llm-bar-acept" style="width:34%;background:linear-gradient(90deg,#16a34a,#22c55e);transition:width 0.8s;border-radius:6px 0 0 6px;"></div>
                             <div id="llm-bar-neutr" style="width:23%;background:linear-gradient(90deg,#d97706,#f59e0b);transition:width 0.8s;"></div>
@@ -1210,35 +1222,6 @@ header('Expires: 0');
                             <ol id="llm-rec-acciones" style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;"></ol>
                         </div>
 
-                        <!-- Pasos de licenciamiento -->
-                        <div style="margin-bottom:20px;">
-                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-                                <span style="font-size:1.1rem;">&#128203;</span>
-                                <h4 style="margin:0;font-size:0.95rem;font-weight:700;color:#4E342E;">Pasos para el Licenciamiento Minero (ARCOM)</h4>
-                            </div>
-                            <ol id="llm-rec-pasos" style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;"></ol>
-                        </div>
-
-                        <!-- Estrategia por zona -->
-                        <div style="margin-bottom:20px;">
-                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-                                <span style="font-size:1.1rem;">&#128205;</span>
-                                <h4 style="margin:0;font-size:0.95rem;font-weight:700;color:#4E342E;">Estrategia Diferenciada por Zona</h4>
-                            </div>
-                            <div id="llm-rec-zonas" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;"></div>
-                        </div>
-
-                        <!-- Indicadores semáforo -->
-                        <div>
-                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-                                <span style="font-size:1.1rem;">&#128308;</span>
-                                <h4 style="margin:0;font-size:0.95rem;font-weight:700;color:#4E342E;">Sem&aacute;foro de Licencia Social</h4>
-                            </div>
-                            <div id="llm-rec-semaforo" style="display:flex;flex-direction:column;gap:8px;"></div>
-                        </div>
-
-                    </div><!-- /llm-rec-mineras-section -->
-
                 </div><!-- /llm-results -->
             </section>
 
@@ -1338,7 +1321,7 @@ header('Expires: 0');
                         <div class="analisis-kpi-card">
                             <div class="kpi-icon-wrap kpi-teal">~</div>
                             <div class="kpi-info">
-                                <span class="kpi-label">Andice Neto Global</span>
+                                <span class="kpi-label">&Iacute;ndice Neto Global</span>
                                 <strong id="kpi-indice-global" class="kpi-value">&mdash;</strong>
                             </div>
                         </div>
@@ -1417,7 +1400,7 @@ header('Expires: 0');
                     <div class="analisis-section-row">
                         <div>
                             <h3 class="analisis-section-header">Percepciones sobre la Actividad Minera</h3>
-                            <p class=”analisis-section-desc”>Selecci&oacute;n m&uacute;ltiple &mdash; un encuestado puede indicar varios &iacute;tems.</p>
+                            <p class="analisis-section-desc">Selecci&oacute;n m&uacute;ltiple &mdash; un encuestado puede indicar varios &iacute;tems.</p>
                         </div>
                     </div>
                     <div class="analisis-mining-grid">

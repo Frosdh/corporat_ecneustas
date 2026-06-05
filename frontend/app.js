@@ -3015,11 +3015,21 @@ function renderLLMStats(stats) {
 }
 
 function renderLLMNvidia(payload) {
-    // Motor y resumen
+    // Motor, zona activa y resumen
     const motor = payload.motor || 'NVIDIA Nemotron-3-Super-120B';
     setText('llm-motor-badge', motor);
     setText('llm-resumen', payload.resumen_ejecutivo || '');
     setText('llm-conclusion', payload.conclusion || '');
+
+    // Actualizar badge de zona activa en todos los lugares donde aparece
+    const sector = document.getElementById('llm-sector-filter')?.value || 'general';
+    const sectorLabel = sector === 'general' ? 'Todas las zonas' : sector;
+    const zonaBadge = document.getElementById('llm-zona-activa-badge');
+    if (zonaBadge) zonaBadge.textContent = sectorLabel;
+    const factoresBadge = document.getElementById('llm-factores-sector-badge');
+    if (factoresBadge) factoresBadge.textContent = '\u{1F5FA}️ ' + sectorLabel;
+    const sentZonaLabel = document.getElementById('llm-sentiment-zona-label');
+    if (sentZonaLabel) sentZonaLabel.textContent = sectorLabel;
 
     // Grafica importancia de factores
     if (payload.importancia_factores && payload.importancia_factores.length)
@@ -4482,7 +4492,7 @@ async function generateAnalisisPDF() {
             dimsHtml += `
             <div class="dim-card no-break">
               <div class="dim-h" style="background:${col}">
-                <span class="dim-name">${esc(dim.nombre)}</span>
+                <span class="dim-name">${esc(dim.titulo || dim.nombre || '')}</span>
                 <span class="dim-badge">${lbl} &nbsp; ${sgn(ds.indice)} pts</span>
               </div>
               <div class="dim-stats">
@@ -5350,38 +5360,22 @@ h1,h2,h3,h4{font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif}
   ${imgDonut ? `
   <div class="st">2.1 Distribuci&oacute;n de Sentimiento Comunitario</div>
   <div class="sd">Proporci&oacute;n de encuestas clasificadas como Positivo, Neutro y Negativo sobre el total analizado.</div>
-  <div class="chart-wrap"><img src="${imgDonut}"></div>` : ''}
+  <div class="chart-wrap"><img src="${imgDonut}"></div>` : '<p style="color:#888;font-size:10pt;padding:20px 0;">Gr&aacute;fica de sentimiento no disponible (abrir el tab An&aacute;lisis IA antes de exportar).</p>'}
   ${imgRadar ? `
-  <div class="st">2.2 Fortaleza de Dimensiones</div>
-  <div class="sd">Puntaje neto obtenido en cada una de las dimensiones analizadas (de &minus;100 a +100 puntos).</div>
-  <div class="chart-wrap"><img src="${imgRadar}" style="max-height:360px"></div>` : ''}
+  <div class="st">2.2 Fortaleza de Dimensiones por &Aacute;rea</div>
+  <div class="sd">Puntaje neto obtenido en cada dimensi&oacute;n analizada (escala &minus;100 a +100 puntos). Verde = favorable, rojo = cr&iacute;tico.</div>
+  <div class="chart-wrap"><img src="${imgRadar}" style="max-height:380px"></div>` : '<p style="color:#888;font-size:10pt;padding:20px 0;">Gr&aacute;fica radar no disponible.</p>'}
+  ${imgTendencia ? `
+  <div class="st">2.3 Tendencia Temporal de Encuestas</div>
+  <div class="sd">Volumen de encuestas por d&iacute;a y evoluci&oacute;n del &iacute;ndice de apertura a la inversi&oacute;n.</div>
+  <div class="chart-wrap"><img src="${imgTendencia}" style="max-height:220px"></div>` : ''}
   <div class="pie"><span>Reporte T&eacute;cnico-Cient&iacute;fico &middot; Encuestas Parroquiales San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
 </div>
 
 <!-- PAG 3: DETALLE DE DIMENSIONES -->
 <div class="page">
   <div class="ph"><h2>3. Sentimiento Detallado por Dimensi&oacute;n</h2><p>An&aacute;lisis del &Iacute;ndice Neto y respuestas porcentuales por &aacute;rea de inter&eacute;s</p></div>
-  <div class="pie"><span>Reporte T&eacute;cnico-Cient&iacute;fico &middot; Encuestas Parroquiales San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
-</div>
-
-<!-- PAG 2: GRAFICAS -->
-<div class="page">
-  <div class="ph"><h2>2. An&aacute;lisis Gr&aacute;fico de Sentimiento</h2><p>Visualizaciones capturadas en tiempo real del sistema de an&aacute;lisis</p></div>
-  ${imgDonut ? `
-  <div class="st">2.1 Distribuci&oacute;n de Sentimiento Comunitario</div>
-  <div class="sd">Proporci&oacute;n de encuestas clasificadas como Positivo, Neutro y Negativo sobre el total analizado.</div>
-  <div class="chart-wrap"><img src="${imgDonut}"></div>` : ''}
-  ${imgRadar ? `
-  <div class="st">2.2 Fortaleza de Dimensiones</div>
-  <div class="sd">Puntaje neto obtenido en cada una de las dimensiones analizadas (de &minus;100 a +100 puntos).</div>
-  <div class="chart-wrap"><img src="${imgRadar}" style="max-height:360px"></div>` : ''}
-  <div class="pie"><span>Reporte T&eacute;cnico-Cient&iacute;fico &middot; Encuestas Parroquiales San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
-</div>
-
-<!-- PAG 3: DETALLE DE DIMENSIONES -->
-<div class="page">
-  <div class="ph"><h2>3. Sentimiento Detallado por Dimensi&oacute;n</h2><p>An&aacute;lisis del &Iacute;ndice Neto y respuestas porcentuales por &aacute;rea de inter&eacute;s</p></div>
-  ${dimsHtml}
+  ${dimsHtml || '<p style="color:#888;font-size:10pt;padding:20px 0;">Carga el tab An&aacute;lisis IA para ver el detalle por dimensi&oacute;n.</p>'}
   <div class="pie"><span>Reporte T&eacute;cnico-Cient&iacute;fico &middot; Encuestas Parroquiales San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
 </div>
 
@@ -5512,7 +5506,6 @@ ${chartsCode}
             if (iframe.contentWindow) {
                 iframe.contentWindow.onafterprint = cleanup;
             }
-            setTimeout(cleanup, 60000); // respaldo por si onafterprint no dispara
         };
 
         // Esperar a que carguen Chart.js y se dibujen las gráficas antes de imprimir
