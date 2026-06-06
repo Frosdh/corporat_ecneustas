@@ -1217,7 +1217,6 @@ function get_dashboard(string $sector = 'general'): array
         LEFT JOIN surveyors sv ON sv.id = s.surveyor_id
         $mapWhere
         ORDER BY survey_date DESC
-        LIMIT 30
     ";
     $mapStmt = db()->prepare($mapSql);
     $mapStmt->execute($params);

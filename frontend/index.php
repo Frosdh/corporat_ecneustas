@@ -907,8 +907,9 @@ header('Expires: 0');
                             <option value="general">Todas las zonas</option>
                         </select>
                     </div>
-                    <div style="padding-top:20px;">
+                    <div style="padding-top:20px;display:flex;gap:8px;flex-wrap:wrap;">
                         <button id="llm-generate-btn" class="primary-button" type="button" style="white-space:nowrap;">&#9889; Analizar con IA</button>
+                        <button id="llm-pdf-btn" class="analisis-refresh-btn" type="button" style="background:#6F4E37;white-space:nowrap;" title="Exportar reporte LLM NVIDIA en PDF">&#128196; Reporte PDF</button>
                     </div>
                 </div>
 

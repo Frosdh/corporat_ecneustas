@@ -2061,6 +2061,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Eventos para el nuevo modulo LLM Nvidia
     const llmBtn = document.getElementById('llm-generate-btn');
     if (llmBtn) llmBtn.addEventListener('click', () => generateLLMNvidia(true));
+
+    const llmPdfBtn = document.getElementById('llm-pdf-btn');
+    if (llmPdfBtn) llmPdfBtn.addEventListener('click', () => generateLLMNvidiaPDF());
     const llmFilter = document.getElementById('llm-sector-filter');
     if (llmFilter) llmFilter.addEventListener('change', () => {
         // Forzar nueva carga al cambiar zona — siempre resetear el sector guardado
@@ -2858,7 +2861,7 @@ function generateLLMNvidia(force = false) {
 
             case 'stats':
                 if (results) results.classList.remove('hidden');
-                if (obj.stats) renderLLMStats(obj.stats);
+                if (obj.stats) { renderLLMStats(obj.stats); window._llmLastStats = obj.stats; }
                 if (loading) loading.classList.add('hidden');
                 if (btn) btn.disabled = false;
                 // Mostrar indicador "IA enriqueciendo..." no bloqueante
@@ -2888,6 +2891,9 @@ function generateLLMNvidia(force = false) {
                 _llmEventSource = null;
                 const aiBoxResult = document.getElementById('llm-ai-enriching');
                 if (aiBoxResult) aiBoxResult.style.display = 'none';
+
+                // Guardar payload para generacion de PDF
+                window._llmLastPayload = obj;
 
                 // Renderizar DESPUÉS de que el browser haya recalculado el layout (container visible)
                 // para que Chart.js mida las dimensiones reales del canvas
@@ -5514,5 +5520,337 @@ ${chartsCode}
         const btn = document.getElementById('analisis-pdf-btn');
         if (btn) { btn.disabled = false; btn.textContent = 'Exportar Reporte PDF'; }
     }
-    
+
+}
+
+// ============================================================
+//  GENERADOR PDF — TAB LLM NVIDIA
+// ============================================================
+async function generateLLMNvidiaPDF() {
+    const data = window._llmLastPayload;
+    if (!data || !data.ok) {
+        alert('Ejecuta primero el análisis LLM antes de exportar el reporte PDF.');
+        return;
+    }
+    const btn = document.getElementById('llm-pdf-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '... Generando'; }
+
+    try {
+        const sEl    = document.getElementById('llm-sector-filter');
+        const sector = sEl?.selectedOptions[0]?.text || 'Todas las zonas';
+        const now    = new Date();
+        const meses  = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+        const fecha  = `${now.getDate()} de ${meses[now.getMonth()]} de ${now.getFullYear()}`;
+
+        const esc = v => String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const pct = v => (Number(v) || 0).toFixed(1) + '%';
+        const nv  = v => Number(v) || 0;
+        const sgn = v => { const x = nv(v); return (x >= 0 ? '+' : '') + x; };
+
+        const predColor = pr => {
+            if (!pr) return '#555';
+            if (pr === 'Aceptacion' || pr === 'Aceptación') return '#0f9f6e';
+            if (pr === 'Rechazo') return '#c43d45';
+            return '#d97706';
+        };
+        const sentColor = i => { const x = nv(i); return x >= 15 ? '#0f9f6e' : x <= -15 ? '#c43d45' : '#d97706'; };
+        const sentLabel = i => { const x = nv(i); return x >= 15 ? 'FAVORABLE' : x <= -15 ? 'CRITICO' : 'AMBIVALENTE'; };
+        const barRow = (label, pctVal, color) => {
+            const w = Math.min(100, Math.max(0, nv(pctVal)));
+            return `<div class="br"><span class="bl">${esc(label)}</span><div class="bt"><div class="bf" style="width:${w}%;background:${color}"></div></div><span class="bp" style="color:${color}">${w.toFixed(1)}%</span></div>`;
+        };
+
+        // Capturar graficas del tab LLM
+        const cap = async id => {
+            const el = document.getElementById(id);
+            if (!el) return null;
+            try {
+                const c = await html2canvas(el, { backgroundColor: '#1e2235', scale: 2, useCORS: true, logging: false });
+                return c.toDataURL('image/png');
+            } catch { return null; }
+        };
+        const [imgDonut, imgFactores, imgZonas] = await Promise.all([
+            cap('llm-donut-stats'), cap('llm-factores-chart'), cap('llm-zonas'),
+        ]);
+
+        const probs  = data.probabilidades_globales || {};
+        const pa     = nv(probs.Aceptacion);
+        const pn     = nv(probs.Neutral);
+        const prv    = nv(probs.Rechazo);
+        const pred   = data.prediccion_global || (pa >= prv ? 'Aceptacion' : 'Rechazo');
+        const pColor = predColor(pred);
+        const motor  = data.motor || 'NVIDIA Nemotron-3-Super-120B';
+        const total  = nv(data.total_encuestas);
+
+        // CSS compartido
+        const CSS = `*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif;font-size:10.5pt;color:#1e293b;background:#fff;line-height:1.65}
+.portada{background:linear-gradient(150deg,#1e3a5f 0%,#3b82f6 55%,#1d4ed8 100%);color:#fff;padding:70px 55px 55px;min-height:100vh;display:flex;flex-direction:column;justify-content:space-between;page-break-after:always}
+.portada-insignia{font-size:9pt;letter-spacing:4px;text-transform:uppercase;opacity:.65;margin-bottom:50px;font-weight:600}
+.portada-titulo{font-size:28pt;font-weight:900;line-height:1.15;margin-bottom:12px}
+.portada-sub{font-size:13pt;opacity:.85;margin-bottom:35px;font-weight:300}
+.portada-tabla{width:100%;border-collapse:collapse;background:rgba(255,255,255,.10);border-radius:10px;overflow:hidden}
+.portada-tabla td{padding:12px 18px;font-size:10.5pt;border-bottom:1px solid rgba(255,255,255,.1)}
+.portada-tabla td:first-child{font-weight:700;font-size:9pt;letter-spacing:1px;text-transform:uppercase;opacity:.7;width:180px}
+.portada-tabla tr:last-child td{border-bottom:none}
+.nivel-pill{margin-top:28px;padding:16px 24px;border-radius:8px;text-align:center;font-size:13pt;font-weight:800}
+.portada-foot{font-size:8.5pt;opacity:.5;text-align:center;margin-top:35px}
+.page{padding:32px 42px;page-break-after:always}
+.page:last-of-type{page-break-after:auto}
+.ph{background:#1e3a5f;color:#fff;border-radius:7px;padding:12px 20px;margin-bottom:24px}
+.ph h2{font-size:14pt;font-weight:800;margin-bottom:2px}
+.ph p{font-size:9pt;opacity:.85;font-weight:300}
+.krow4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.kc{border-radius:9px;padding:18px 14px;text-align:center;color:#fff}
+.kc .v{font-size:20pt;font-weight:900;display:block;line-height:1.1;margin-bottom:4px}
+.kc .l{font-size:8.5pt;opacity:.9;text-transform:uppercase;font-weight:600}
+.narr{background:#f1f5f9;border-left:5px solid #1e3a5f;padding:16px 22px;border-radius:0 8px 8px 0;margin-bottom:20px;font-size:11pt;line-height:1.75;color:#334155}
+.stbl{width:100%;border-collapse:collapse;margin-bottom:24px}
+.stbl th{background:#1e3a5f;color:#fff;padding:10px 16px;font-size:9.5pt;text-align:left;font-weight:600}
+.stbl td{padding:10px 16px;font-size:10pt;border-bottom:1px solid #e2e8f0;color:#334155}
+.stbl tr:nth-child(even) td{background:#f8fafc}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px;vertical-align:middle}
+.metod{background:#fdfce8;border:1px solid #fde047;border-radius:8px;padding:16px 20px;font-size:9.5pt;line-height:1.75;margin-top:20px;color:#422006}
+.metod strong{color:#854d0e;font-weight:700}
+.br{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:9.5pt}
+.bl{width:200px;flex-shrink:0;color:#1e293b;font-weight:500}
+.bt{flex:1;height:10px;background:#e2e8f0;border-radius:5px;overflow:hidden}
+.bf{height:100%;border-radius:5px}
+.bp{width:90px;text-align:right;font-weight:700;font-size:9pt;color:#334155}
+.dim-card{border:1px solid #e2e8f0;border-radius:10px;margin-bottom:20px;overflow:hidden}
+.dim-h{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;color:#fff}
+.dim-name{font-weight:800;font-size:11pt}
+.dim-badge{font-size:9pt;background:rgba(0,0,0,.25);padding:3px 12px;border-radius:15px;font-weight:700}
+.dim-stats{display:flex;gap:24px;padding:10px 18px;background:#f8fafc;font-size:9.5pt;font-weight:700;border-bottom:1px solid #e2e8f0}
+.mine-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:26px}
+.mine-card{border:1px solid #e2e8f0;border-radius:10px;padding:18px;background:#fff}
+.mine-card h4{font-size:11pt;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid;font-weight:800}
+.krow{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f1f5f9;font-size:10pt;color:#334155;font-weight:500}
+.kdot{width:14px;height:14px;border-radius:50%;flex-shrink:0}
+.krow strong{margin-left:auto;font-size:11pt;font-weight:700}
+.chart-wrap{text-align:center;margin:12px 0 24px}
+.chart-wrap img{max-width:100%;border-radius:10px}
+.concl-box{background:#f8fafc;border:1px solid #cbd5e1;border-left:5px solid #0f9f6e;border-radius:8px;padding:24px 28px;font-size:11pt;line-height:1.8;color:#1e293b}
+.recomend{margin-top:16px;padding-left:24px;color:#334155}
+.recomend li{margin-bottom:12px;font-size:10.5pt;line-height:1.7}
+.st{font-size:12pt;font-weight:800;color:#1e3a5f;margin:24px 0 8px;padding-bottom:6px;border-bottom:2px solid #1e3a5f}
+.pie{margin-top:28px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:8.5pt;color:#94a3b8;display:flex;justify-content:space-between}
+.no-break{page-break-inside:avoid;break-inside:avoid}
+.cierre{text-align:center;padding:28px;background:#f1f5f9;border-radius:10px;margin-top:32px;font-size:10pt;color:#475569;line-height:1.9}
+@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}@page{size:A4;margin:0}body{font-size:10pt;margin:0;padding:0}.portada{height:297mm;min-height:297mm;box-sizing:border-box}.page{padding:20mm 15mm;min-height:297mm;box-sizing:border-box;width:100%;max-width:100%;overflow:hidden}.dim-card,.mine-card,.no-break{break-inside:avoid!important;page-break-inside:avoid!important}.bl{width:155px}.kc .v{font-size:16pt}}`;
+
+        // PAG 1: RESUMEN EJECUTIVO
+        const p1 = `<div class="page">
+<div class="ph"><h2>1. Resumen Ejecutivo</h2><p>An&aacute;lisis generado por ${esc(motor)}</p></div>
+<div class="krow4">
+  <div class="kc" style="background:#1e3a5f"><span class="v">${total}</span><span class="l">Total Encuestas</span></div>
+  <div class="kc" style="background:${pColor}"><span class="v">${esc(pred)}</span><span class="l">Predicci&oacute;n Global</span></div>
+  <div class="kc" style="background:#0f9f6e"><span class="v">${pct(pa)}</span><span class="l">Aceptaci&oacute;n</span></div>
+  <div class="kc" style="background:#c43d45"><span class="v">${pct(prv)}</span><span class="l">Rechazo</span></div>
+</div>
+<div class="narr">${esc(data.resumen_ejecutivo || '')}</div>
+<div class="st">Distribuci&oacute;n de Probabilidades</div>
+<table class="stbl">
+  <tr><th>Clase</th><th>Probabilidad</th><th>Interpretaci&oacute;n</th></tr>
+  <tr><td><span class="dot" style="background:#0f9f6e"></span>Aceptaci&oacute;n</td><td><strong style="color:#0f9f6e">${pct(pa)}</strong></td><td>Proporci&oacute;n favorable a la actividad minera</td></tr>
+  <tr><td><span class="dot" style="background:#d97706"></span>Neutro</td><td><strong style="color:#d97706">${pct(pn)}</strong></td><td>Posici&oacute;n ambivalente o condicionada</td></tr>
+  <tr><td><span class="dot" style="background:#c43d45"></span>Rechazo</td><td><strong style="color:#c43d45">${pct(prv)}</strong></td><td>Rechazo o preocupaciones cr&iacute;ticas no resueltas</td></tr>
+</table>
+<div class="metod"><strong>Motor IA:</strong> ${esc(motor)}. M&eacute;todo: Random Forest + Red Neuronal MLP sobre encuestas reales enriquecidas con NVIDIA Nemotron. Escala: &ge;60% = Licencia Social viable &middot; 40-59% = Condicional &middot; &lt;40% = No viable sin intervenci&oacute;n.</div>
+<div class="pie"><span>Reporte LLM NVIDIA &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
+</div>`;
+
+        // PAG 2: GRAFICAS
+        let p2 = `<div class="page"><div class="ph"><h2>2. Visualizaciones del An&aacute;lisis IA</h2><p>Gr&aacute;ficas generadas por el modelo NVIDIA</p></div>`;
+        if (imgDonut)   p2 += `<div class="st">2.1 Distribuci&oacute;n de Sentimiento</div><div class="chart-wrap"><img src="${imgDonut}" style="max-height:260px"></div>`;
+        if (imgFactores) p2 += `<div class="st">2.2 Importancia de Factores (Random Forest + MLP)</div><div class="chart-wrap"><img src="${imgFactores}" style="max-height:220px"></div>`;
+        if (imgZonas)   p2 += `<div class="st">2.3 Aceptaci&oacute;n por Zona Geogr&aacute;fica</div><div class="chart-wrap"><img src="${imgZonas}" style="max-height:220px"></div>`;
+        if (!imgDonut && !imgFactores && !imgZonas) p2 += `<p style="color:#888;padding:20px 0">Gr&aacute;ficas no disponibles. Aseg&uacute;rate de que el tab LLM est&eacute; visible antes de exportar.</p>`;
+        p2 += `<div class="pie"><span>Reporte LLM NVIDIA &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div></div>`;
+
+        // PAG 3: DIMENSIONES
+        let dimsHtml = '';
+        (data.dimensiones || []).forEach(dim => {
+            const ds  = dim.sentimiento || {};
+            const col = sentColor(ds.indice);
+            const lbl = sentLabel(ds.indice);
+            const bars = (dim.distribucion?.items || []).slice(0, 8).map(it => barRow(it.label, it.pct, col)).join('');
+            dimsHtml += `<div class="dim-card no-break">
+<div class="dim-h" style="background:${col}"><span class="dim-name">${esc(dim.titulo||'')}</span><span class="dim-badge">${lbl} &nbsp; ${sgn(ds.indice)} pts</span></div>
+<div class="dim-stats"><span style="color:#0f9f6e">&#9650; Aceptaci&oacute;n: ${pct(ds.positivo_pct)}</span><span style="color:#d97706">&#9679; Neutro: ${pct(ds.neutro_pct)}</span><span style="color:#c43d45">&#9660; Rechazo: ${pct(ds.negativo_pct)}</span></div>
+<div style="padding:14px 18px">${bars}${dim.interpretacion ? `<div style="margin-top:10px;font-size:9.5pt;color:#475569;background:#f8fafc;padding:10px 14px;border-radius:6px;border-left:3px solid ${col};line-height:1.6">${esc(dim.interpretacion)}</div>` : ''}</div>
+</div>`;
+        });
+        const p3 = `<div class="page"><div class="ph"><h2>3. Sentimiento por Dimensi&oacute;n</h2><p>9 dimensiones analizadas por el modelo IA</p></div>${dimsHtml || '<p style="color:#888">Carga el tab LLM primero.</p>'}<div class="pie"><span>Reporte LLM NVIDIA &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div></div>`;
+
+        // PAG 4: ZONAS
+        const zonas = data.analisis_por_zona || [];
+        const zonaRows = zonas.map(z => {
+            const zc = predColor(z.prediccion);
+            return `<tr>
+<td><strong>${esc(z.zona)}</strong></td>
+<td style="text-align:center;color:#94a3b8">${nv(z.n)}</td>
+<td style="text-align:center;color:#0f9f6e;font-weight:700">${nv(z.aceptacion_pct)}%</td>
+<td style="text-align:center;color:#d97706;font-weight:700">${nv(z.neutral_pct)}%</td>
+<td style="text-align:center;color:#c43d45;font-weight:700">${nv(z.rechazo_pct)}%</td>
+<td style="color:${zc};font-weight:700">${esc(z.prediccion||'')}</td>
+</tr>${z.hallazgo_clave ? `<tr><td colspan="6" style="font-size:8.5pt;color:#475569;padding:4px 12px 10px;border-bottom:2px solid #e2e8f0;font-style:italic">&rarr; ${esc(z.hallazgo_clave)}</td></tr>` : ''}`;
+        }).join('');
+        const p4 = `<div class="page"><div class="ph"><h2>4. An&aacute;lisis por Zona Geogr&aacute;fica</h2><p>Predicci&oacute;n de sentimiento por sector parroquial</p></div>
+${zonas.length ? `<table class="stbl"><tr><th>Zona</th><th>n</th><th>&#10003; Acepta</th><th>&#9878; Neutro</th><th>&#10007; Rechaza</th><th>Predicci&oacute;n</th></tr>${zonaRows}</table>` : '<p style="color:#888">Sin datos por zona.</p>'}
+<div class="pie"><span>Reporte LLM NVIDIA &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div></div>`;
+
+        // PAG 5: PERCEPCIONES MINERAS
+        const sl    = data.stats_locales || {};
+        const benH  = (sl.beneficios_mineros||[]).map(it => barRow(it.label, it.pct, '#0f9f6e')).join('');
+        const rskH  = (sl.riesgos_mineros  ||[]).map(it => barRow(it.label, it.pct, '#c43d45')).join('');
+        const idxC  = nv(sl.indice_conocimiento);
+        const cCol  = idxC >= 60 ? '#0f9f6e' : idxC >= 30 ? '#d97706' : '#c43d45';
+        const cNiv  = idxC >= 60 ? 'ALTO' : idxC >= 30 ? 'MEDIO' : 'BAJO';
+        const cRows = (sl.conocimiento_minero||[]).map(k => {
+            const kp = nv(k.pct ?? k.si_pct);
+            const kc = kp >= 60 ? '#0f9f6e' : kp >= 30 ? '#d97706' : '#c43d45';
+            return `<div class="krow"><span class="kdot" style="background:${kc}"></span><span>${esc(k.label||k.pregunta||'')}</span><strong style="color:${kc}">${kp.toFixed(1)}%</strong></div>`;
+        }).join('');
+        const p5 = `<div class="page"><div class="ph"><h2>5. Percepciones Mineras</h2><p>Beneficios y riesgos percibidos seg&uacute;n encuestas analizadas</p></div>
+<div class="mine-grid">
+  <div class="mine-card no-break"><h4 style="color:#0f9f6e;border-color:#0f9f6e">&#10003; Beneficios Percibidos</h4>${benH||'<p style="color:#888;font-size:9pt">Sin datos</p>'}</div>
+  <div class="mine-card no-break"><h4 style="color:#c43d45;border-color:#c43d45">&#9888; Riesgos Percibidos</h4>${rskH||'<p style="color:#888;font-size:9pt">Sin datos</p>'}</div>
+</div>
+<div class="st">5.3 &Iacute;ndice de Conocimiento Minero</div>
+<div style="text-align:center;margin:10px 0 16px"><span style="display:inline-block;padding:6px 20px;border-radius:20px;background:${cCol};color:#fff;font-weight:800;font-size:13pt">${idxC}% &mdash; ${cNiv}</span><p style="font-size:9pt;color:#64748b;margin-top:6px">Promedio de dimensiones de conocimiento minero evaluadas</p></div>
+${cRows}
+<div class="pie"><span>Reporte LLM NVIDIA &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div></div>`;
+
+        // PAG 6: RECOMENDACIONES MINERAS
+        const rm    = data.recomendaciones_mineras || {};
+        const viab  = rm.viabilidad_social || {};
+        const vMap  = { verde:'#0f9f6e', naranja:'#d97706', rojo:'#c43d45' };
+        const vCol  = vMap[viab.color] || '#555';
+        const fortH = (rm.fortalezas||[]).map(f => `<li style="margin-bottom:6px;font-size:9.5pt">${esc(f)}</li>`).join('');
+        const riesH = (rm.riesgos_criticos||[]).map(r => `<li style="margin-bottom:6px;font-size:9.5pt">${esc(r)}</li>`).join('');
+        const accsH = (rm.acciones_inmediatas||[]).map((a,i) => `<div style="display:flex;gap:10px;margin-bottom:8px;align-items:flex-start"><div style="min-width:20px;height:20px;background:#0e4eb0;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8pt;font-weight:800">${i+1}</div><span style="font-size:9.5pt;color:#334155;padding-top:1px">${esc(a)}</span></div>`).join('');
+        const pasH  = (rm.pasos_licenciamiento||[]).map(paso => `<div style="font-size:9.5pt;color:#334155;padding:6px 0;border-bottom:1px solid #f1f5f9;line-height:1.5">${esc(paso)}</div>`).join('');
+        const semH  = (rm.indicadores_licencia_social||[]).map(ind => {
+            const sc = { verde:'#0f9f6e', naranja:'#d97706', rojo:'#c43d45' }[ind.semaforo] || '#555';
+            return `<tr><td style="font-size:9pt">${esc(ind.indicador)}</td><td style="text-align:center;font-weight:700;color:${sc}">${esc(ind.actual)}</td><td style="text-align:center;color:#0f9f6e;font-weight:700">${esc(ind.meta)}</td><td style="text-align:center"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${sc}"></span></td></tr>`;
+        }).join('');
+        const p6 = `<div class="page"><div class="ph"><h2>6. Recomendaciones y Viabilidad Minera</h2><p>Diagn&oacute;stico de viabilidad social y plan de acci&oacute;n</p></div>
+<div style="background:${vCol};color:#fff;border-radius:8px;padding:14px 20px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+  <div><strong style="font-size:12pt">${esc(viab.titulo||'Viabilidad Social del Proyecto')}</strong><p style="opacity:.9;font-size:9.5pt;margin-top:4px">${esc(viab.resumen||'')}</p></div>
+  <div style="font-size:18pt;font-weight:900;white-space:nowrap;margin-left:16px">${esc(viab.nivel||'')}</div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+  <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 16px"><h5 style="color:#166534;font-size:10pt;font-weight:800;margin:0 0 8px">&#10003; Fortalezas</h5><ul style="padding-left:16px;margin:0">${fortH||'<li style="font-size:9pt;color:#888">Sin datos</li>'}</ul></div>
+  <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px 16px"><h5 style="color:#991b1b;font-size:10pt;font-weight:800;margin:0 0 8px">&#9888; Riesgos Cr&iacute;ticos</h5><ul style="padding-left:16px;margin:0">${riesH||'<li style="font-size:9pt;color:#888">Sin datos</li>'}</ul></div>
+</div>
+<div class="st">6.3 Acciones Inmediatas</div><div style="margin-bottom:16px">${accsH||'<p style="color:#888;font-size:9pt">Sin acciones.</p>'}</div>
+<div class="st">6.4 Pasos de Licenciamiento Social</div><div style="border:1px solid #e2e8f0;border-radius:8px;padding:0 14px;margin-bottom:16px;background:#fff">${pasH}</div>
+${semH ? `<div class="st">6.5 Sem&aacute;foro de Licencia Social</div><table class="stbl"><tr><th>Indicador</th><th>Actual</th><th>Meta</th><th>Estado</th></tr>${semH}</table>` : ''}
+<div class="pie"><span>Reporte LLM NVIDIA &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div></div>`;
+
+        // PAG 7: PLAN ESTRATEGICO
+        const plan  = data.plan_estrategico || {};
+        const fasH  = (plan.fases||[]).map(f => `<div style="border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;margin-bottom:12px;background:#fff;page-break-inside:avoid"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><strong style="color:#0e4eb0;font-size:10pt">${esc(f.fase)}</strong><span style="font-size:8.5pt;background:#e0e7ff;color:#3730a3;padding:3px 10px;border-radius:12px;font-weight:700">${esc(f.periodo)}</span></div><ul style="padding-left:16px;margin:0;font-size:9.5pt;color:#334155">${(f.acciones||[]).map(a => `<li style="margin-bottom:4px;line-height:1.5">${esc(a)}</li>`).join('')}</ul></div>`).join('');
+        const indH  = (plan.indicadores||[]).map(ind => `<tr><td style="font-size:9pt">${esc(ind.nombre)}</td><td style="text-align:center;color:#0f9f6e;font-weight:700">${esc(ind.meta)}</td><td style="text-align:center;color:#64748b">${esc(ind.plazo)}</td></tr>`).join('');
+        const rfH   = (plan.recomendaciones_finales||[]).map((r,i) => `<li style="margin-bottom:8px;font-size:9.5pt;line-height:1.6"><strong>R${i+1}:</strong> ${esc(r)}</li>`).join('');
+        const p7 = `<div class="page"><div class="ph"><h2>7. Plan Estrat&eacute;gico de Viabilidad Social</h2><p>${esc(plan.titulo||'Plan generado por NVIDIA LLM')}</p></div>
+${plan.diagnostico_contextual ? `<div style="font-size:9.5pt;line-height:1.6;color:#334155;background:#f8fafc;padding:12px 16px;border-radius:8px;border-left:4px solid #0e4eb0;margin-bottom:16px">${esc(plan.diagnostico_contextual)}</div>` : ''}
+<div class="st">7.1 Fases de Intervenci&oacute;n</div>${fasH||'<p style="color:#888;font-size:9pt">Sin fases definidas.</p>'}
+${indH ? `<div class="st">7.2 Indicadores de &Eacute;xito</div><table class="stbl"><tr><th>Indicador</th><th>Meta</th><th>Plazo</th></tr>${indH}</table>` : ''}
+${rfH  ? `<div class="st">7.3 Recomendaciones Finales</div><ul style="padding-left:20px;color:#334155;margin-bottom:16px">${rfH}</ul>` : ''}
+<div class="pie"><span>Reporte LLM NVIDIA &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div></div>`;
+
+        // PAG 8: EJES ESTRATEGICOS
+        const ejes = data.ejes_estrategicos || [];
+        let p8 = '';
+        if (ejes.length) {
+            const ejH = ejes.map(e => `<div style="border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;margin-bottom:12px;background:#fff;page-break-inside:avoid">
+<strong style="color:#0e4eb0;font-size:10.5pt;display:block;margin-bottom:4px">${esc(e.titulo||e.eje||'')}</strong>
+<p style="font-size:9.5pt;color:#475569;margin:0 0 8px;line-height:1.45">${esc(e.descripcion||'')}</p>
+<ul style="padding-left:16px;margin:0 0 8px;font-size:9pt;color:#334155">${(e.acciones||[]).map(a=>`<li style="margin-bottom:3px">${esc(a)}</li>`).join('')}</ul>
+${e.normativa ? `<div style="font-size:8.5pt;color:#64748b;background:#f8fafc;padding:5px 10px;border-radius:5px">Normativa: ${esc(e.normativa)}</div>` : ''}
+</div>`).join('');
+            p8 = `<div class="page"><div class="ph"><h2>8. Ejes Estrat&eacute;gicos de Intervenci&oacute;n</h2><p>Dimensiones prioritarias de acci&oacute;n seg&uacute;n el modelo IA</p></div>${ejH}<div class="pie"><span>Reporte LLM NVIDIA &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div></div>`;
+        }
+
+        // PAG 9: MEJORES PRACTICAS
+        const mp = data.mejores_practicas || {};
+        let p9 = '';
+        const mpList = items => (items||[]).map(item => {
+            if (typeof item === 'string') return `<li style="margin-bottom:6px;font-size:9.5pt">${esc(item)}</li>`;
+            const pr  = item.practica || item.nombre || '';
+            const ref = item.referencia || item.fuente || '';
+            const apl = item.aplicabilidad || item.descripcion || '';
+            return `<div style="margin-bottom:10px;padding:10px 12px;background:#f8fafc;border-left:4px solid #0e4eb0;border-radius:0 6px 6px 0">
+<strong style="font-size:9.5pt;color:#0e4eb0">${esc(pr)}</strong>
+${ref ? `<em style="font-size:8.5pt;color:#64748b;display:block;margin-top:2px">Referencia: ${esc(ref)}</em>` : ''}
+${apl ? `<p style="font-size:9pt;color:#475569;margin:4px 0 0;line-height:1.5">${esc(apl)}</p>` : ''}
+</div>`;
+        }).join('');
+        if ((mp.internacionales||[]).length || (mp.locales||[]).length) {
+            p9 = `<div class="page"><div class="ph"><h2>9. Mejores Pr&aacute;cticas de Sostenibilidad</h2><p>Referencias aplicables al contexto de San Bartolom&eacute;</p></div>
+${(mp.internacionales||[]).length ? `<div class="st">9.1 Internacionales</div><div>${mpList(mp.internacionales)}</div>` : ''}
+${(mp.locales||[]).length ? `<div class="st">9.2 Nacionales / Locales</div><div>${mpList(mp.locales)}</div>` : ''}
+<div class="pie"><span>Reporte LLM NVIDIA &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div></div>`;
+        }
+
+        // PAG 10: CONCLUSION
+        const rIaH = (data.recomendaciones_ia||[]).map((r,i) => `<li style="margin-bottom:10px;font-size:10.5pt;line-height:1.7"><strong>R${i+1}:</strong> ${esc(r)}</li>`).join('');
+        const p10 = `<div class="page"><div class="ph"><h2>10. Conclusi&oacute;n General</h2><p>S&iacute;ntesis del modelo NVIDIA LLM sobre la viabilidad social minera</p></div>
+<div class="concl-box">${esc(data.conclusion||'')}</div>
+${rIaH ? `<div class="st" style="margin-top:24px">Recomendaciones del Modelo IA</div><ul class="recomend">${rIaH}</ul>` : ''}
+<div class="cierre" style="margin-top:24px"><strong>Documento generado autom&aacute;ticamente</strong> &middot; Motor: ${esc(motor)} &middot; ${total} encuestas &middot; ${fecha}</div>
+<div class="pie"><span>Reporte LLM NVIDIA &middot; San Bartolom&eacute;</span><span>${fecha}</span></div></div>`;
+
+        // HTML FINAL
+        const cleanHtml = (`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<title>Reporte LLM NVIDIA - San Bartolome</title>
+<style>${CSS}</style></head><body>
+<div class="portada">
+  <div>
+    <div class="portada-insignia">NVIDIA LLM - Sistema de Analisis Comunitario - GAD Parroquial San Bartolome - Ecuador</div>
+    <div class="portada-titulo">Reporte Tecnico LLM - Analisis NVIDIA de Sentimiento Minero</div>
+    <div class="portada-sub">Prediccion de Aceptacion Social &amp; Plan de Viabilidad Estrategica</div>
+    <table class="portada-tabla">
+      <tr><td>Zona analizada</td><td>${esc(sector)}</td></tr>
+      <tr><td>Fecha de emision</td><td>${fecha}</td></tr>
+      <tr><td>Total encuestas</td><td>${total} encuestas procesadas</td></tr>
+      <tr><td>Motor IA</td><td>${esc(motor)}</td></tr>
+    </table>
+    <div class="nivel-pill" style="background:${pColor}">Prediccion Global: ${esc(pred)} | Aceptacion: ${pct(pa)} Rechazo: ${pct(prv)}</div>
+  </div>
+  <div class="portada-foot">Documento generado automaticamente - ${fecha}</div>
+</div>
+${p1}${p2}${p3}${p4}${p5}${p6}${p7}${p8}${p9}${p10}
+<div class="page" style="page-break-after:auto"><div class="cierre"><strong>Fin del Reporte LLM NVIDIA</strong><br>GAD Parroquial San Bartolome - Cuenca, Ecuador - ${fecha}</div></div>
+</body></html>`)
+            .replace(/á/g,'&aacute;').replace(/é/g,'&eacute;').replace(/í/g,'&iacute;')
+            .replace(/ó/g,'&oacute;').replace(/ú/g,'&uacute;').replace(/ñ/g,'&ntilde;')
+            .replace(/Á/g,'&Aacute;').replace(/É/g,'&Eacute;').replace(/Í/g,'&Iacute;')
+            .replace(/Ó/g,'&Oacute;').replace(/Ú/g,'&Uacute;').replace(/Ñ/g,'&Ntilde;')
+            .replace(/—/g,'&mdash;').replace(/–/g,'&ndash;');
+
+        const oldFrame = document.getElementById('pdf-print-frame');
+        if (oldFrame) oldFrame.remove();
+        const iframe = document.createElement('iframe');
+        iframe.id = 'pdf-print-frame';
+        iframe.style.cssText = 'position:fixed;right:-9999px;top:0;width:794px;height:1123px;border:none;';
+        document.body.appendChild(iframe);
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        doc.open(); doc.write(cleanHtml); doc.close();
+        const doPrint = () => {
+            try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch(e) {}
+            setTimeout(() => { const f = document.getElementById('pdf-print-frame'); if (f) f.remove(); }, 3000);
+        };
+        iframe.onload = doPrint;
+        setTimeout(doPrint, 2500);
+
+    } catch (err) {
+        console.error('Error generando PDF LLM:', err);
+        alert('Error al generar el reporte LLM: ' + err.message);
+    } finally {
+        const btn = document.getElementById('llm-pdf-btn');
+        if (btn) { btn.disabled = false; btn.textContent = '📄 Reporte PDF'; }
+    }
 }
