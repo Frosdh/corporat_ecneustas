@@ -448,17 +448,44 @@ function renderDashboard(dashboard) {
     setText('social-top-investment', social.investment_acceptance_top || 'Sin datos');
     setText('social-top-reopening', social.reopening_perception_top || 'Sin datos');
 
-    setText('strategy-favorable', `${strategic.favorable_pct ?? 0}%`);
-    setText('strategy-conditioned', `${strategic.conditioned_pct ?? 0}%`);
-    setText('strategy-contrary', `${strategic.contrary_pct ?? 0}%`);
+    // Usar dimsSentimiento para "Inversion Externa" — misma fuente que análisis IA
+    const dims = dashboard.dimensiones_sentimiento || [];
+    const invDim = dims.find(d => d.titulo === 'Inversion Externa') || null;
+    if (invDim && invDim.n > 0) {
+        const favCount  = Math.round((invDim.positivo_pct / 100) * invDim.n);
+        const condCount = Math.round((invDim.neutro_pct   / 100) * invDim.n);
+        const conCount  = Math.round((invDim.negativo_pct / 100) * invDim.n);
+        setText('strategy-favorable',        `${invDim.positivo_pct}%`);
+        setText('strategy-conditioned',      `${invDim.neutro_pct}%`);
+        setText('strategy-contrary',         `${invDim.negativo_pct}%`);
+        setText('strategy-favorable-count',  `${favCount} de ${invDim.n} respuestas`);
+        setText('strategy-conditioned-count',`${condCount} de ${invDim.n} respuestas`);
+        setText('strategy-contrary-count',   `${conCount} de ${invDim.n} respuestas`);
+        setText('strategy-base', `Base: ${invDim.n} encuestados - consistente con analisis IA`);
+    } else {
+        // fallback al cálculo anterior
+        setText('strategy-favorable',        `${strategic.favorable_pct ?? 0}%`);
+        setText('strategy-conditioned',      `${strategic.conditioned_pct ?? 0}%`);
+        setText('strategy-contrary',         `${strategic.contrary_pct ?? 0}%`);
+        const stBase = strategic.stance_total ?? 0;
+        setText('strategy-favorable-count',  `${strategic.favorable_count ?? 0} de ${stBase} respuestas`);
+        setText('strategy-conditioned-count',`${strategic.conditioned_count ?? 0} de ${stBase} respuestas`);
+        setText('strategy-contrary-count',   `${strategic.contrary_count ?? 0} de ${stBase} respuestas`);
+        setText('strategy-base', stBase > 0 ? `Base: ${stBase} encuestados respondieron esta pregunta` : '');
+    }
     setText('strategy-open-sector', strategic.top_open_sector || 'Sin datos');
-    const stBase = strategic.stance_total ?? 0;
-    setText('strategy-favorable-count', `${strategic.favorable_count ?? 0} de ${stBase} respuestas`);
-    setText('strategy-conditioned-count', `${strategic.conditioned_count ?? 0} de ${stBase} respuestas`);
-    setText('strategy-contrary-count', `${strategic.contrary_count ?? 0} de ${stBase} respuestas`);
-    setText('strategy-base', stBase > 0 ? `Base: ${stBase} encuestados respondieron esta pregunta` : '');
 
-    renderDimGauges(dashboard.dimensiones_sentimiento || []);
+    // Error muestral y nivel de confianza (95%, p=0.5)
+    const n = totalRegistradas || 0;
+    if (n > 0) {
+        const errorMuestral = (1.96 * Math.sqrt(0.25 / n) * 100).toFixed(1);
+        const elMargin = document.getElementById('kpi-margin-error');
+        const elFormula = document.getElementById('kpi-margin-formula');
+        if (elMargin)  elMargin.textContent  = `±${errorMuestral}%`;
+        if (elFormula) elFormula.textContent = `n=${n} · 1.96 × √(0.25/${n})`;
+    }
+
+    renderDimGauges(dims);
     renderMap(dashboard.map_points || []);
     renderReports(dashboard);
 

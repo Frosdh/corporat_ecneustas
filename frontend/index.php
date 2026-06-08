@@ -206,6 +206,16 @@ header('Expires: 0');
                         <span class="eyebrow">Clima politico</span>
                         <h3 id="kpi-climate">Sin datos</h3>
                     </article>
+                    <article class="card kpi-card" title="Nivel de confianza estadistica del muestreo">
+                        <span class="eyebrow">Nivel de confianza</span>
+                        <h3 id="kpi-confidence" style="color:#0f9f6e;">95%</h3>
+                        <small style="font-size:.72rem;color:var(--muted);">Z = 1.96 &middot; p = 0.5</small>
+                    </article>
+                    <article class="card kpi-card" title="Margen de error muestral para las encuestas registradas">
+                        <span class="eyebrow">Error muestral</span>
+                        <h3 id="kpi-margin-error" style="color:#d97706;">&plusmn;--</h3>
+                        <small id="kpi-margin-formula" style="font-size:.72rem;color:var(--muted);">1.96 &times; &radic;(0.25/n)</small>
+                    </article>
                 </div>
 
                 <!-- Tacometros de sentimiento por dimension -->
@@ -286,34 +296,34 @@ header('Expires: 0');
                             <h3>Aceptacion a Inversion Externa</h3>
                         </div>
                         <p style="font-size:.78rem;color:#A67C52;margin-bottom:.9rem;">
-                            Pregunta: <em>"Â¿Acepta usted inversion externa en su comunidad?"</em>
+                            Pregunta: <em>"&iquest;Acepta usted inversion externa en su comunidad?"</em>
                             &mdash; calculado sobre encuestados que respondieron esa pregunta.
                         </p>
                         <div class="application-kpis" style="grid-template-columns:1fr 1fr;gap:.75rem;">
 
                             <div class="mini-kpi strat-favorable">
-                                <span class="strat-label">âœ… Favorable</span>
+                                <span class="strat-label">&#10003; Favorable</span>
                                 <strong id="strategy-favorable">0%</strong>
                                 <small id="strategy-favorable-count" style="color:#A67C52;font-size:.72rem;font-weight:400;"></small>
                                 <p class="strat-tip">Respondieron <strong>"Aceptacion amplia"</strong>. Personas completamente abiertas a recibir inversion externa sin condiciones.</p>
                             </div>
 
                             <div class="mini-kpi strat-conditioned">
-                                <span class="strat-label">âš ï¸ Condicionada</span>
+                                <span class="strat-label">&#9888; Condicionada</span>
                                 <strong id="strategy-conditioned">0%</strong>
                                 <small id="strategy-conditioned-count" style="color:#A67C52;font-size:.72rem;font-weight:400;"></small>
                                 <p class="strat-tip">Respondieron <strong>"Aceptacion condicionada"</strong>. Abiertos a inversion pero con condiciones o garantias previas.</p>
                             </div>
 
                             <div class="mini-kpi strat-contrary">
-                                <span class="strat-label">âŒ Contraria</span>
+                                <span class="strat-label">&#10007; Contraria</span>
                                 <strong id="strategy-contrary">0%</strong>
                                 <small id="strategy-contrary-count" style="color:#A67C52;font-size:.72rem;font-weight:400;"></small>
                                 <p class="strat-tip">Respondieron <strong>"Rechazo preventivo"</strong>. Personas que rechazan la inversion externa como medida de precaucion.</p>
                             </div>
 
                             <div class="mini-kpi strat-sector">
-                                <span class="strat-label">ðŸ" Sector mas abierto</span>
+                                <span class="strat-label">&#128205; Sector mas abierto</span>
                                 <strong id="strategy-open-sector">Sin datos</strong>
                                 <small style="color:#A67C52;font-size:.72rem;font-weight:400;">mayor concentracion favorable</small>
                                 <p class="strat-tip">Sector con la <strong>mayor cantidad absoluta</strong> de respuestas favorables ("Aceptacion amplia") entre todos los sectores encuestados.</p>
@@ -1495,19 +1505,4 @@ header('Expires: 0');
     </div><!-- /app-shell -->
 
     <!-- ===================== MODAL VER ENCUESTA ===================== -->
-    <div id="survey-detail-modal" class="survey-modal-overlay" style="display:none;" onclick="closeSurveyModal(event)">
-        <div class="survey-modal-box">
-            <div class="survey-modal-header">
-                <div id="survey-modal-header-left" class="survey-modal-header-left"></div>
-                <span id="survey-modal-status-badge" class="survey-modal-status-badge"></span>
-                <button class="survey-modal-close" type="button" onclick="closeSurveyModal(event)" aria-label="Cerrar">&times;</button>
-            </div>
-            <div id="survey-modal-body" class="survey-modal-body"></div>
-        </div>
-    </div>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-    <script src="frontend/app.js?v=<?= time() ?>" charset="utf-8"></script>
-</body>
-</html>
+    <div id="survey-detail-modal" class="survey-modal-overlay" style=
