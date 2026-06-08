@@ -18,6 +18,7 @@ Protocolo NDJSON (una línea JSON por evento):
 
 from asyncio import exceptions
 import os
+import unicodedata
 
 # ML libraries (mismo modelo que ia_minera.py)
 try:
@@ -110,12 +111,26 @@ SENT_MAPS = {
     },
 }
 
-# Dimension de aceptacion minera (solo mine_reopening_perception) para prediccion especifica
+# ── NORMALIZACIÓN DE TEXTO ─────────────────────────────────
+def clean_text(text):
+    """Normaliza texto: minúsculas, sin tildes/diacríticos, sin espacios extra.
+    Garantiza que 'Beneficiaría mucho' y 'beneficiaria mucho' sean equivalentes."""
+    if not text:
+        return ''
+    text = text.strip().lower()
+    nfkd = unicodedata.normalize('NFD', text)
+    return ''.join(c for c in nfkd if unicodedata.category(c) != 'Mn')
+
+def normalize_sector(text):
+    """Normaliza sector igual que app.js: sin tildes + minúsculas."""
+    return clean_text(text) or 'general'
+
+# Dimension de aceptacion minera — claves normalizadas (sin tildes, minúsculas)
 CLASE_MAP = {
-    'Beneficiaria mucho': 'Aceptacion',
-    'Beneficiaria algo':  'Aceptacion',
-    'Beneficio dudoso':   'Neutral',
-    'No beneficiaria':    'Rechazo',
+    'beneficiaria mucho': 'Aceptacion',
+    'beneficiaria algo':  'Aceptacion',
+    'beneficio dudoso':   'Neutral',
+    'no beneficiaria':    'Rechazo',
 }
 
 # ── MISMAS CONSTANTES QUE ia_minera.py ──────────────────────
@@ -128,10 +143,10 @@ ML_FEATURE_COLS = [
     'has_septic','road_who_fixes',
 ]
 ML_CLASE_MAP = {
-    'Beneficiaria mucho': 'Aceptacion',
-    'Beneficiaria algo':  'Aceptacion',
-    'Beneficio dudoso':   'Neutral',
-    'No beneficiaria':    'Rechazo',
+    'beneficiaria mucho': 'Aceptacion',
+    'beneficiaria algo':  'Aceptacion',
+    'beneficio dudoso':   'Neutral',
+    'no beneficiaria':    'Rechazo',
 }
 
 def ml_train_predict(rows):
@@ -145,11 +160,13 @@ def ml_train_predict(rows):
 
     X_raw, y_raw, sectors = [], [], []
     for row in rows:
-        clase = ML_CLASE_MAP.get((row.get('mine_reopening_perception') or '').strip(), 'Neutral')
+        # Normalizar texto antes de buscar en el mapa (tolera tildes y mayúsculas)
+        clase = ML_CLASE_MAP.get(clean_text(row.get('mine_reopening_perception') or ''), 'Neutral')
         feats = [(row.get(c) or '').strip() or 'Sin dato' for c in ML_FEATURE_COLS]
         X_raw.append(feats)
         y_raw.append(clase)
-        sectors.append((row.get('sector') or 'general').strip() or 'general')
+        # Normalizar sector igual que app.js (evita duplicados por tildes)
+        sectors.append(normalize_sector(row.get('sector') or ''))
 
     n_train = len(y_raw)
     if n_train < 5:
@@ -236,25 +253,26 @@ def ml_train_predict(rows):
 
 def classify_with_map(rows, field, mapa):
     """
-    Clasifica filas usando los mapas exactos de lib.php.
-    - Omite filas con campo vacio (igual que lib.php freq_dist skip empty).
-    - Valores no mapeados → neutro (igual que lib.php default 'neutro').
+    Clasifica filas usando los mapas de SENT_MAPS.
+    - Normaliza texto (sin tildes, minúsculas) para tolerar variantes ortográficas.
+    - Valores vacíos o no mapeados → neutro (ninguna encuesta se descarta).
     """
     pos = neu = neg = 0
-    pos_vals = [v.lower().strip() for v in mapa.get("positivo", [])]
-    neu_vals  = [v.lower().strip() for v in mapa.get("neutro",   [])]
-    neg_vals  = [v.lower().strip() for v in mapa.get("negativo", [])]
+    # Normalizar las claves del mapa también para comparación consistente
+    pos_vals = [clean_text(v) for v in mapa.get("positivo", [])]
+    neu_vals  = [clean_text(v) for v in mapa.get("neutro",   [])]
+    neg_vals  = [clean_text(v) for v in mapa.get("negativo", [])]
     for r in rows:
-        v = (r.get(field) or "").strip()
+        v = clean_text(r.get(field) or '')
         if not v:
-            v = "No especificado"
-        v_low = v.lower()
-        if v_low in pos_vals:
+            neu += 1   # campo vacío → neutro, no se descarta
+            continue
+        if v in pos_vals:
             pos += 1
-        elif v_low in neg_vals:
+        elif v in neg_vals:
             neg += 1
         else:
-            neu += 1        # neutro explicito O no mapeado
+            neu += 1   # valor no mapeado → neutro
     return pos, neu, neg
 
 # ──────────────────────────────────────────────────────────────
@@ -333,16 +351,17 @@ def analyze_statistics(rows):
         ml_n_train = 0; ml_acc = 0.0
 
     # Calculo especifico de aceptacion MINERA (mine_reopening_perception) para zonas
+    # Usando clean_text para tolerar tildes y mayúsculas — 100% de encuestas incluidas
     clases = {'Aceptacion': 0, 'Neutral': 0, 'Rechazo': 0}
     for r in rows:
-        c = ML_CLASE_MAP.get((r.get('mine_reopening_perception') or '').strip(), 'Neutral')
+        c = ML_CLASE_MAP.get(clean_text(r.get('mine_reopening_perception') or ''), 'Neutral')
         clases[c] += 1
     n_class = sum(clases.values()) or 1
 
     por_sector = {}
     for r in rows:
-        sec = (r.get('sector') or 'general').strip()
-        c   = ML_CLASE_MAP.get((r.get('mine_reopening_perception') or '').strip(), 'Neutral')
+        sec = normalize_sector(r.get('sector') or '')   # normalizado = sin tildes, minúsculas
+        c   = ML_CLASE_MAP.get(clean_text(r.get('mine_reopening_perception') or ''), 'Neutral')
         if sec not in por_sector:
             por_sector[sec] = {'Aceptacion': 0, 'Neutral': 0, 'Rechazo': 0, 'total': 0}
         por_sector[sec][c] += 1
@@ -391,9 +410,9 @@ def analyze_statistics(rows):
     }
     conocimiento = []
     for campo, pregunta in know_fields.items():
-        vals       = [(r.get(campo) or '').strip() for r in rows]
+        vals       = [clean_text(r.get(campo) or '') for r in rows]
         total_resp = len([v for v in vals if v]) or 1
-        si = sum(1 for v in vals if v.lower() in ('si','yes','conoce','sabe','1','true'))
+        si = sum(1 for v in vals if v in ('si', 'yes', 'conoce', 'sabe', '1', 'true'))
         no = total_resp - si
         conocimiento.append({
             "campo": campo, "pregunta": pregunta,
@@ -419,7 +438,7 @@ def analyze_statistics(rows):
     sent_inversion = dim_sent('investment_acceptance')
 
     know_si_total = sum(
-        sum(1 for r in rows if (r.get(c) or '').strip().lower() in ('si','yes','conoce','sabe','1','true'))
+        sum(1 for r in rows if clean_text(r.get(c) or '') in ('si', 'yes', 'conoce', 'sabe', '1', 'true'))
         for c in know_fields
     )
     know_total = len(rows) * len(know_fields) or 1
@@ -428,12 +447,15 @@ def analyze_statistics(rows):
     idx_conocimiento = round(sum(k['si_pct'] for k in conocimiento) / len(conocimiento), 1) if conocimiento else 0
 
     def label_sent(field, label):
-        """Clasifica una etiqueta usando el mapa exacto de lib.php."""
+        """Clasifica una etiqueta normalizando texto (sin tildes) antes de comparar."""
         mapa = SENT_MAPS.get(field, {})
-        lv = label.strip()
-        if lv in mapa.get("positivo", []): return "positivo"
-        if lv in mapa.get("negativo", []): return "negativo"
-        if lv in mapa.get("neutro",   []): return "neutro"
+        lv = clean_text(label)
+        pos_n = [clean_text(v) for v in mapa.get("positivo", [])]
+        neg_n = [clean_text(v) for v in mapa.get("negativo", [])]
+        neu_n = [clean_text(v) for v in mapa.get("neutro",   [])]
+        if lv in pos_n: return "positivo"
+        if lv in neg_n: return "negativo"
+        if lv in neu_n: return "neutro"
         return "neutro"
 
     lsm = lambda l: label_sent("mine_reopening_perception", l)
@@ -1096,8 +1118,9 @@ def merge_all(stats, texto):
 # ──────────────────────────────────────────────────────────────
 
 def _clase_de(row):
-    """Clasifica la percepción minera de una fila en Aceptacion/Neutral/Rechazo."""
-    return ML_CLASE_MAP.get((row.get('mine_reopening_perception') or '').strip(), 'Neutral')
+    """Clasifica la percepción minera de una fila en Aceptacion/Neutral/Rechazo.
+    Normaliza texto (sin tildes, minúsculas) — nunca descarta una encuesta."""
+    return ML_CLASE_MAP.get(clean_text(row.get('mine_reopening_perception') or ''), 'Neutral')
 
 
 def cruce_percepcion(rows, field, label='valor', top=None):
@@ -1108,8 +1131,7 @@ def cruce_percepcion(rows, field, label='valor', top=None):
         clase = _clase_de(r)
         if key not in grupos:
             grupos[key] = {'Aceptacion': 0, 'Neutral': 0, 'Rechazo': 0, 'total': 0}
-        if clase:
-            grupos[key][clase] += 1
+        grupos[key][clase] += 1   # _clase_de siempre devuelve una clase válida
         grupos[key]['total'] += 1
     items = []
     for k, c in grupos.items():
@@ -1134,16 +1156,14 @@ def conocimiento_vs_aceptacion(rows):
         'knows_local_mines':     'Conoce minas locales',
         'knows_env_guarantees':  'Conoce garantías ambientales',
     }
-    SI = ('si', 'sí', 'yes', 'conoce', 'sabe', '1', 'true')
+    SI = ('si', 'yes', 'conoce', 'sabe', '1', 'true')  # normalizado: sin tildes
     out = []
     for campo, preg in campos.items():
         g_si = {'Aceptacion': 0, 'Rechazo': 0, 'Neutral': 0, 'total': 0}
         g_no = {'Aceptacion': 0, 'Rechazo': 0, 'Neutral': 0, 'total': 0}
         for r in rows:
-            clase = _clase_de(r)
-            if not clase:
-                continue
-            g = g_si if (r.get(campo) or '').strip().lower() in SI else g_no
+            clase = _clase_de(r)   # Siempre devuelve Aceptacion/Neutral/Rechazo
+            g = g_si if clean_text(r.get(campo) or '') in SI else g_no
             g[clase] += 1
             g['total'] += 1
         a_si = pct(g_si['Aceptacion'], g_si['total'] or 1)

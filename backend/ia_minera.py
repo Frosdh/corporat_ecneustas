@@ -14,6 +14,7 @@ import sys
 import os
 import json
 import re
+import unicodedata
 import numpy as np
 from collections import Counter
 import urllib.request
@@ -34,55 +35,75 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 # ============================================================
 #  CONSTANTES
 # ============================================================
+
+def clean_text(text):
+    """Normaliza texto: minúsculas, sin tildes/diacríticos, sin espacios extra.
+    Esto garantiza que variantes como 'Beneficiaría mucho' o 'beneficiaria mucho'
+    coincidan correctamente con los mapas de clasificación."""
+    if not text:
+        return ''
+    text = text.strip().lower()
+    # Descomponer caracteres Unicode y eliminar marcas diacríticas (tildes, etc.)
+    nfkd = unicodedata.normalize('NFD', text)
+    return ''.join(c for c in nfkd if unicodedata.category(c) != 'Mn')
+
+def normalize_sector(text):
+    """Normaliza nombre de sector igual que app.js: minúsculas + sin tildes."""
+    return clean_text(text) or 'general'
+
+# Mapas con claves normalizadas (sin tildes, minúsculas) para tolerancia total
 CLASE_MAP = {
-    'Beneficiaria mucho': 'Aceptacion',
-    'Beneficiaria algo':  'Aceptacion',
-    'Beneficio dudoso':   'Neutral',
-    'No beneficiaria':    'Rechazo',
+    'beneficiaria mucho': 'Aceptacion',
+    'beneficiaria algo':  'Aceptacion',
+    'beneficio dudoso':   'Neutral',
+    'no beneficiaria':    'Rechazo',
 }
 
 # Mapa de respaldo: cuando mine_reopening_perception está vacío,
 # se infiere la clase desde investment_acceptance para incluir el 100% de encuestas
 CLASE_MAP_INVESTMENT = {
-    'Aceptacion amplia':       'Aceptacion',
-    'Aceptación amplia':       'Aceptacion',
-    'Aceptacion condicionada': 'Neutral',
-    'Aceptación condicionada': 'Neutral',
-    'Rechazo':                 'Rechazo',
-    'No acepta':               'Rechazo',
+    'aceptacion amplia':       'Aceptacion',
+    'aceptacion condicionada': 'Neutral',
+    'rechazo':                 'Rechazo',
+    'no acepta':               'Rechazo',
 }
 
 def get_clase(row):
     """
     Devuelve la clase (Aceptacion/Neutral/Rechazo) para una encuesta.
     Orden de prioridad:
-      1. mine_reopening_perception (fuente principal)
-      2. investment_acceptance (fallback)
+      1. mine_reopening_perception (normalizado — tolera tildes y mayúsculas)
+      2. investment_acceptance (fallback normalizado)
       3. Inferencia por texto parcial
-    Garantiza que el 100% de las encuestas sean analizadas,
-    no solo las que tienen mine_reopening_perception completo.
+      4. 'Neutral' como valor por defecto (NUNCA descarta una encuesta)
+    Garantiza que el 100% de las encuestas sean analizadas.
     """
-    # 1. Fuente principal
-    clase = CLASE_MAP.get((row.get('mine_reopening_perception') or '').strip())
+    # 1. Fuente principal (normalizada)
+    raw = clean_text(row.get('mine_reopening_perception') or '')
+    clase = CLASE_MAP.get(raw)
     if clase:
         return clase
 
-    # 2. Fallback: investment_acceptance
-    inv = (row.get('investment_acceptance') or '').strip()
-    clase = CLASE_MAP_INVESTMENT.get(inv)
+    # 2. Fallback: investment_acceptance (normalizado)
+    inv_raw = clean_text(row.get('investment_acceptance') or '')
+    clase = CLASE_MAP_INVESTMENT.get(inv_raw)
     if clase:
         return clase
 
-    # 3. Inferencia por texto parcial (tolera variantes de acentuación y mayúsculas)
-    inv_low = inv.lower()
-    if 'amplia' in inv_low:
+    # 3. Inferencia por texto parcial (doble seguridad)
+    if 'amplia' in inv_raw:
         return 'Aceptacion'
-    if 'condicion' in inv_low or 'condición' in inv_low:
+    if 'condicion' in inv_raw:
         return 'Neutral'
-    if 'rechazo' in inv_low or 'no acepta' in inv_low:
+    if 'rechazo' in inv_raw or 'no acepta' in inv_raw:
         return 'Rechazo'
+    if 'benefici' in raw:
+        return 'Aceptacion'
+    if 'no benefici' in raw or 'dud' in raw:
+        return 'Neutral'
 
-    return None  # Sin datos suficientes para inferir
+    # 4. Valor por defecto — la encuesta NUNCA se descarta
+    return 'Neutral'
 
 # Features base (modelo predictivo)
 FEATURE_COLS = [
@@ -322,7 +343,7 @@ def analyze_mining_knowledge(rows):
         total = len(respuestas) or 1
 
         # Contar respuestas afirmativas (Sí, sí, Si, si, Yes, Conoce, etc.)
-        positivos = sum(1 for r in respuestas if r.lower() in ('sí', 'si', 'yes', 'conoce', 'sabe', '1', 'true'))
+        positivos = sum(1 for r in respuestas if clean_text(r) in ('si', 'yes', 'conoce', 'sabe', '1', 'true'))
         pct_positivo = round(positivos / total * 100, 1)
 
         dist_raw = Counter(respuestas)
@@ -350,9 +371,9 @@ def analyze_mining_knowledge(rows):
         acept_conoce = {'Aceptacion': 0, 'Neutral': 0, 'Rechazo': 0, 'total': 0}
         acept_no_conoce = {'Aceptacion': 0, 'Neutral': 0, 'Rechazo': 0, 'total': 0}
         for r in rows:
-            clase = (get_clase(r) or 'Neutral')
-            val = (r.get(campo) or '').strip().lower()
-            conoce = val in ('sí', 'si', 'yes', 'conoce', 'sabe', '1', 'true')
+            clase = get_clase(r)   # Siempre devuelve una clase válida
+            val = clean_text(r.get(campo) or '')
+            conoce = val in ('si', 'yes', 'conoce', 'sabe', '1', 'true')
             grupo = acept_conoce if conoce else acept_no_conoce
             grupo[clase] += 1
             grupo['total'] += 1
@@ -610,12 +631,13 @@ def train_and_analyze():
     class_counts = {'Aceptacion': 0, 'Neutral': 0, 'Rechazo': 0}
 
     for row in rows:
-        clase = (get_clase(row) or 'Neutral')
+        clase = get_clase(row)   # Siempre devuelve Aceptacion/Neutral/Rechazo (nunca None)
         class_counts[clase] += 1
         feats = [row.get(col, '').strip() or 'Sin dato' for col in FEATURE_COLS_EXT]
         X_raw.append(feats)
         y_raw.append(clase)
-        sectors.append(row.get('sector', 'general').strip() or 'general')
+        # Normalizar sector igual que app.js para evitar duplicados por tildes
+        sectors.append(normalize_sector(row.get('sector', '')))
 
     n_train = len(y_raw)
     if n_train < 5:
@@ -664,7 +686,7 @@ def train_and_analyze():
         for i in range(len(FEATURE_COLS_EXT))
     ], key=lambda x: x['score'], reverse=True)
 
-    # 6. Predicción por sector
+    # 6. Predicción por sector (sectores ya normalizados en el bucle anterior)
     sector_results = []
     for sec in list(set(sectors)):
         idx_sec = [i for i, s in enumerate(sectors) if s == sec]

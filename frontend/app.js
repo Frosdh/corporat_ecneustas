@@ -5794,6 +5794,17 @@ body{font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif;font-size:10.5pt;
 .dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px;vertical-align:middle}
 .metod{background:#fdfce8;border:1px solid #fde047;border-radius:8px;padding:16px 20px;font-size:9.5pt;line-height:1.75;margin-top:20px;color:#422006}
 .metod strong{color:#854d0e;font-weight:700}
+.metod-tags{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 14px}
+.mtag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:7.5pt;font-weight:700;letter-spacing:.3px;text-transform:uppercase}
+.mtag-blue{background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd}
+.mtag-green{background:#dcfce7;color:#166534;border:1px solid #86efac}
+.mtag-purple{background:#f3e8ff;color:#6b21a8;border:1px solid #c4b5fd}
+.mtag-orange{background:#ffedd5;color:#9a3412;border:1px solid #fdba74}
+.mtag-yellow{background:#fefce8;color:#854d0e;border:1px solid #fde047}
+.mtag-slate{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
+.mtag-red{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+.metod-box{background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #0e4eb0;border-radius:0 8px 8px 0;padding:12px 16px;margin:0 0 16px;font-size:9pt;color:#334155;line-height:1.7}
+.metod-box strong{color:#0e4eb0;display:block;margin-bottom:4px;font-size:9.5pt}
 .br{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:9.5pt}
 .bl{width:200px;flex-shrink:0;color:#1e293b;font-weight:500}
 .bt{flex:1;height:10px;background:#e2e8f0;border-radius:5px;overflow:hidden}
@@ -5831,6 +5842,20 @@ body{font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif;font-size:10.5pt;
         // PAG 1: RESUMEN EJECUTIVO
         const p1 = `<div class="page">
 <div class="ph"><h2>1. Resumen Ejecutivo</h2><p>An&aacute;lisis generado por ${esc(motor)}</p></div>
+<div class="metod-tags">
+  <span class="mtag mtag-purple">&#129504; Random Forest + Red Neuronal MLP</span>
+  <span class="mtag mtag-blue">&#129302; NVIDIA Nemotron LLM</span>
+  <span class="mtag mtag-green">&#128203; Aprendizaje Supervisado</span>
+  <span class="mtag mtag-orange">&#128202; An&aacute;lisis Cuantitativo</span>
+  <span class="mtag mtag-slate">&#127759; Encuestas de Campo</span>
+</div>
+<div class="metod-box">
+  <strong>&#128220; Metodolog&iacute;a &mdash; IA H&iacute;brida (Random Forest + Red Neuronal + LLM NVIDIA)</strong>
+  <strong>Random Forest (150 &aacute;rboles):</strong> mide la importancia relativa de cada factor socioecon&oacute;mico. &nbsp;|&nbsp;
+  <strong>Red Neuronal MLP (64-32-16-8 neuronas):</strong> clasifica cada encuesta como Aceptaci&oacute;n / Neutral / Rechazo aprendiendo patrones no lineales. &nbsp;|&nbsp;
+  <strong>NVIDIA Nemotron LLM:</strong> enriquece el diagn&oacute;stico con an&aacute;lisis narrativo contextualizado al territorio. &nbsp;|&nbsp;
+  <strong>Escala de viabilidad:</strong> &ge;60% = Licencia Social viable &middot; 40&ndash;59% = Condicional &middot; &lt;40% = No viable sin intervenci&oacute;n.
+</div>
 <div class="krow4">
   <div class="kc" style="background:#1e3a5f"><span class="v">${total}</span><span class="l">Total Encuestas</span></div>
   <div class="kc" style="background:${pColor}"><span class="v">${esc(pred)}</span><span class="l">Predicci&oacute;n Global</span></div>
@@ -5850,7 +5875,20 @@ body{font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif;font-size:10.5pt;
 </div>`;
 
         // PAG 2: GRAFICAS
-        let p2 = `<div class="page"><div class="ph"><h2>2. Visualizaciones del An&aacute;lisis IA</h2><p>Gr&aacute;ficas generadas por el modelo NVIDIA</p></div>`;
+        let p2 = `<div class="page"><div class="ph"><h2>2. Visualizaciones del An&aacute;lisis IA</h2><p>Gr&aacute;ficas generadas por el modelo NVIDIA</p></div>
+<div class="metod-tags">
+  <span class="mtag mtag-blue">&#128200; Visualizaci&oacute;n de Datos</span>
+  <span class="mtag mtag-purple">&#9685; Gr&aacute;fica Donut &mdash; Sentimiento</span>
+  <span class="mtag mtag-green">&#127759; Distribuci&oacute;n Geogr&aacute;fica por Zona</span>
+  <span class="mtag mtag-orange">&#9889; Importancia de Factores (RF)</span>
+  <span class="mtag mtag-slate">&#128202; Chart.js &mdash; Canvas API</span>
+</div>
+<div class="metod-box">
+  <strong>&#128220; Metodolog&iacute;a &mdash; Visualizaci&oacute;n de Resultados IA</strong>
+  <strong>Donut de Sentimiento:</strong> distribuci&oacute;n porcentual Aceptaci&oacute;n / Neutral / Rechazo calculada por el modelo IA. &nbsp;|&nbsp;
+  <strong>Importancia de Factores:</strong> ranking de variables socioecon&oacute;micas seg&uacute;n el &iacute;ndice Gini del Random Forest (150 &aacute;rboles). &nbsp;|&nbsp;
+  <strong>Aceptaci&oacute;n por Zona:</strong> promedio de aceptaci&oacute;n predicho por MLP agrupado geogr&aacute;ficamente por sector parroquial.
+</div>`;
         if (imgDonut)    p2 += `<div class="st">2.1 Distribuci&oacute;n de Sentimiento</div><div class="chart-wrap"><img src="${imgDonut}" style="max-height:250px"></div>`;
         if (imgFactores) p2 += `<div class="st">2.2 Importancia de Factores (Random Forest + MLP)</div><div class="chart-wrap"><img src="${imgFactores}" style="max-height:200px"></div>`;
         if (imgZonas)    p2 += `<div class="st">2.3 Aceptaci&oacute;n por Zona Geogr&aacute;fica</div><div class="chart-wrap"><img src="${imgZonas}" style="max-height:200px"></div>`;
@@ -5861,6 +5899,20 @@ body{font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif;font-size:10.5pt;
         let p2b = '';
         if (radarDims.length > 0) {
             p2b = `<div class="page"><div class="ph"><h2>2B. Vista Radar &mdash; Comparativa por Dimensi&oacute;n</h2><p>&Iacute;ndice Neto de Aceptaci&oacute;n por dimensi&oacute;n (escala -100 a +100 pts) &middot; Verde = favorable &middot; Rojo = cr&iacute;tico</p></div>
+<div class="metod-tags">
+  <span class="mtag mtag-purple">&#127962; An&aacute;lisis Multidimensional</span>
+  <span class="mtag mtag-blue">&#128202; Vista Radar (Spider Chart)</span>
+  <span class="mtag mtag-green">&#128203; &Iacute;ndice Neto Ponderado</span>
+  <span class="mtag mtag-orange">&#9889; Escala -100 a +100 pts</span>
+  <span class="mtag mtag-slate">&#127759; 6 Dimensiones Tem&aacute;ticas</span>
+</div>
+<div class="metod-box">
+  <strong>&#128220; Metodolog&iacute;a &mdash; An&aacute;lisis Radar Multidimensional</strong>
+  Cada eje del radar representa una dimensi&oacute;n tem&aacute;tica (ambiente, econom&iacute;a, gobernanza, etc.). &nbsp;|&nbsp;
+  <strong>&Iacute;ndice Neto:</strong> calculado como (% Positivo &minus; % Negativo), en escala de &minus;100 a +100 puntos. &nbsp;|&nbsp;
+  <strong>Color del punto:</strong> verde (&ge;+10 pts) = favorable &middot; naranja (entre &minus;10 y +10) = ambivalente &middot; rojo (&le;&minus;10 pts) = cr&iacute;tico. &nbsp;|&nbsp;
+  Procesado por <strong>NVIDIA Nemotron LLM</strong> sobre las respuestas de cada dimensi&oacute;n.
+</div>
 <div style="position:relative;width:100%;max-width:560px;height:420px;margin:0 auto 20px;"><canvas id="pdf-radar-main"></canvas></div>
 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px">
 ${radarDims.map(dim=>{const ds=dim.sentimiento||{};const col=sentColor(ds.indice);const lbl=sentLabel(ds.indice);return `<div style="border-radius:7px;padding:8px 12px;background:#f8fafc;border-left:4px solid ${col}"><div style="font-size:8.5pt;font-weight:700;color:#334155;margin-bottom:2px">${esc(dim.titulo||'')}</div><div style="font-size:9pt;font-weight:800;color:${col}">${sgn(ds.indice)} pts &mdash; ${lbl}</div></div>`;}).join('')}
@@ -5921,6 +5973,19 @@ ${radarDims.map(dim=>{const ds=dim.sentimiento||{};const col=sentColor(ds.indice
         }
         const pPreg = pregHtml ? `<div class="page">
 <div class="ph"><h2>2C. Respuestas Detalladas a Preguntas Clave</h2><p>Distribuci&oacute;n de opciones seleccionadas en el formulario de encuesta</p></div>
+<div class="metod-tags">
+  <span class="mtag mtag-blue">&#128203; Encuesta (Survey Research)</span>
+  <span class="mtag mtag-purple">&#128202; Distribuci&oacute;n de Frecuencias</span>
+  <span class="mtag mtag-green">&#128201; Escala Nominal / Ordinal</span>
+  <span class="mtag mtag-orange">&#9889; Investigaci&oacute;n Cuantitativa</span>
+  <span class="mtag mtag-slate">&#127759; Formulario Digital de Campo</span>
+</div>
+<div class="metod-box">
+  <strong>&#128220; Metodolog&iacute;a &mdash; Investigaci&oacute;n por Encuesta (Survey Research)</strong>
+  <strong>Tipo de pregunta:</strong> opciones m&uacute;ltiples (nominal) y escala de acuerdo (ordinal). &nbsp;|&nbsp;
+  <strong>Distribuci&oacute;n de frecuencias:</strong> cada barra / donut muestra el conteo de respuestas seleccionadas para esa opci&oacute;n. &nbsp;|&nbsp;
+  <strong>Visualizaci&oacute;n:</strong> gr&aacute;ficas de barra horizontal para preguntas de opci&oacute;n m&uacute;ltiple y donut para respuestas dicot&oacute;micas, renderizadas con Chart.js.
+</div>
 ${pregHtml}
 <div class="pie"><span>Reporte LLM NVIDIA &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
 </div>` : '';
@@ -5955,6 +6020,20 @@ ${dim.interpretacion ? `<div style="background:#f8fafc;border-left:3px solid ${c
 </div>`;
         });
         const p3 = `<div class="page"><div class="ph"><h2>3. Sentimiento por Dimensi&oacute;n</h2><p>An&aacute;lisis de sentimiento por cada eje tem&aacute;tico &mdash; procesado por IA</p></div>
+<div class="metod-tags">
+  <span class="mtag mtag-purple">&#129504; NLP &mdash; Procesamiento de Lenguaje Natural</span>
+  <span class="mtag mtag-blue">&#127962; An&aacute;lisis Multidimensional</span>
+  <span class="mtag mtag-green">&#128202; &Iacute;ndice Neto de Sentimiento</span>
+  <span class="mtag mtag-orange">&#9889; Clasificaci&oacute;n por Dimensi&oacute;n</span>
+  <span class="mtag mtag-slate">&#129302; NVIDIA Nemotron LLM</span>
+</div>
+<div class="metod-box">
+  <strong>&#128220; Metodolog&iacute;a &mdash; Sentimiento por Dimensi&oacute;n (NLP + Clasificaci&oacute;n IA)</strong>
+  Cada dimensi&oacute;n agrupa preguntas relacionadas del formulario (ambiente, econom&iacute;a, gobernanza, etc.). &nbsp;|&nbsp;
+  <strong>NLP (NVIDIA LLM):</strong> analiza el texto de respuestas abiertas para detectar polaridad (positivo / neutro / negativo). &nbsp;|&nbsp;
+  <strong>&Iacute;ndice Neto:</strong> % Positivo &minus; % Negativo &mdash; verde &ge;+10 pts, naranja entre &minus;10 y +10 pts, rojo &le;&minus;10 pts. &nbsp;|&nbsp;
+  <strong>Gauge:</strong> representaci&oacute;n visual del &iacute;ndice neto sobre escala semicircular de &minus;100 a +100 pts.
+</div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
 ${dimsHtml || '<p style="color:#888">Sin datos de dimensiones. Aseg&uacute;rate de que el tab LLM est&eacute; visible antes de exportar.</p>'}
 </div>
@@ -5990,6 +6069,20 @@ ${z.hallazgo_clave ? `<p style="font-size:7.5pt;color:#475569;margin:0;line-heig
 </div>`;
         });
         const p3b = zonasPdf.length ? `<div class="page"><div class="ph"><h2>3B. Evaluaci&oacute;n Zonal (NVIDIA)</h2><p>Predicci&oacute;n de sentimiento y distribuci&oacute;n por sector parroquial</p></div>
+<div class="metod-tags">
+  <span class="mtag mtag-blue">&#127759; An&aacute;lisis Geoespacial por Sector</span>
+  <span class="mtag mtag-purple">&#129504; Predicci&oacute;n por Zona (MLP)</span>
+  <span class="mtag mtag-green">&#127795; Random Forest &mdash; Segmentaci&oacute;n</span>
+  <span class="mtag mtag-orange">&#9889; NVIDIA Nemotron LLM</span>
+  <span class="mtag mtag-slate">&#128202; Gauge por Zona</span>
+</div>
+<div class="metod-box">
+  <strong>&#128220; Metodolog&iacute;a &mdash; Evaluaci&oacute;n Zonal con IA Predictiva</strong>
+  Las encuestas se segmentan geogr&aacute;ficamente por sector/comunidad declarado por el encuestado. &nbsp;|&nbsp;
+  <strong>MLP por zona:</strong> la Red Neuronal predice Aceptaci&oacute;n / Neutral / Rechazo para cada subgrupo zonal. &nbsp;|&nbsp;
+  <strong>Gauge visual:</strong> muestra el % de aceptaci&oacute;n predicho con sem&aacute;foro de color (verde / naranja / rojo). &nbsp;|&nbsp;
+  <strong>NVIDIA LLM:</strong> genera el hallazgo clave narrativo espec&iacute;fico para cada zona analizada.
+</div>
 ${imgZonas ? `<div class="chart-wrap" style="margin-bottom:20px;"><img src="${imgZonas}" style="max-height:200px;border-radius:8px;"></div>` : ''}
 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
 ${zonalHtml}
@@ -6010,6 +6103,20 @@ ${zonalHtml}
 </tr>${z.hallazgo_clave ? `<tr><td colspan="6" style="font-size:8.5pt;color:#475569;padding:4px 12px 10px;border-bottom:2px solid #e2e8f0;font-style:italic">&rarr; ${esc(z.hallazgo_clave)}</td></tr>` : ''}`;
         }).join('');
         const p4 = `<div class="page"><div class="ph"><h2>4. An&aacute;lisis por Zona Geogr&aacute;fica</h2><p>Predicci&oacute;n de sentimiento por sector parroquial</p></div>
+<div class="metod-tags">
+  <span class="mtag mtag-blue">&#127759; Distribuci&oacute;n Geogr&aacute;fica</span>
+  <span class="mtag mtag-purple">&#128202; Estad&iacute;stica Sectorial</span>
+  <span class="mtag mtag-green">&#129504; Predicci&oacute;n por Zona (Random Forest)</span>
+  <span class="mtag mtag-orange">&#128203; Segmentaci&oacute;n por Comunidad</span>
+  <span class="mtag mtag-slate">&#9889; NVIDIA LLM &mdash; Hallazgo Zonal</span>
+</div>
+<div class="metod-box">
+  <strong>&#128220; Metodolog&iacute;a &mdash; An&aacute;lisis Geogr&aacute;fico por Sector Parroquial</strong>
+  Las encuestas se agrupan por el campo <em>sector/comunidad</em> declarado en el formulario. &nbsp;|&nbsp;
+  <strong>Aceptaci&oacute;n / Neutro / Rechazo:</strong> porcentajes calculados como distribuci&oacute;n emp&iacute;rica dentro de cada zona. &nbsp;|&nbsp;
+  <strong>Predicci&oacute;n:</strong> etiqueta dominante asignada por el Random Forest para cada cluster zonal. &nbsp;|&nbsp;
+  <strong>Hallazgo clave:</strong> generado por NVIDIA Nemotron LLM con contexto espec&iacute;fico de la zona.
+</div>
 ${zonas.length ? `<table class="stbl"><tr><th>Zona</th><th>n</th><th>&#10003; Acepta</th><th>&#9878; Neutro</th><th>&#10007; Rechaza</th><th>Predicci&oacute;n</th></tr>${zonaRows}</table>` : '<p style="color:#888">Sin datos por zona.</p>'}
 <div class="pie"><span>Reporte LLM NVIDIA &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div></div>`;
 
@@ -6026,6 +6133,19 @@ ${zonas.length ? `<table class="stbl"><tr><th>Zona</th><th>n</th><th>&#10003; Ac
             return `<div class="krow"><span class="kdot" style="background:${kc}"></span><span>${esc(k.label||k.pregunta||'')}</span><strong style="color:${kc}">${kp.toFixed(1)}%</strong></div>`;
         }).join('');
         const p5 = `<div class="page"><div class="ph"><h2>5. Percepciones Mineras</h2><p>Beneficios y riesgos percibidos seg&uacute;n encuestas analizadas</p></div>
+<div class="metod-tags">
+  <span class="mtag mtag-purple">&#128221; Investigaci&oacute;n Cualitativa</span>
+  <span class="mtag mtag-blue">&#128202; An&aacute;lisis de Percepci&oacute;n Comunitaria</span>
+  <span class="mtag mtag-green">&#9881; Sem&aacute;foro de Conocimiento Minero</span>
+  <span class="mtag mtag-orange">&#9888; Evaluaci&oacute;n de Riesgo Percibido</span>
+  <span class="mtag mtag-slate">&#127795; M&eacute;todo Mixto</span>
+</div>
+<div class="metod-box">
+  <strong>&#128220; Metodolog&iacute;a &mdash; An&aacute;lisis de Percepci&oacute;n Minera Comunitaria (M&eacute;todo Mixto)</strong>
+  <strong>Beneficios / Riesgos:</strong> extra&iacute;dos de campos de selecci&oacute;n m&uacute;ltiple del formulario; las barras muestran % de encuestados que marcaron cada opci&oacute;n. &nbsp;|&nbsp;
+  <strong>&Iacute;ndice de Conocimiento Minero:</strong> promedio de respuestas afirmativas en 5 dimensiones de conocimiento (tipos de miner&iacute;a, beneficios, miner&iacute;a moderna, minas locales, garant&iacute;as ambientales). &nbsp;|&nbsp;
+  <strong>Sem&aacute;foro:</strong> &ge;60% = ALTO &middot; 30&ndash;59% = MEDIO &middot; &lt;30% = BAJO.
+</div>
 <div class="mine-grid">
   <div class="mine-card no-break"><h4 style="color:#0f9f6e;border-color:#0f9f6e">&#10003; Beneficios Percibidos</h4>${benH||'<p style="color:#888;font-size:9pt">Sin datos</p>'}</div>
   <div class="mine-card no-break"><h4 style="color:#c43d45;border-color:#c43d45">&#9888; Riesgos Percibidos</h4>${rskH||'<p style="color:#888;font-size:9pt">Sin datos</p>'}</div>
@@ -6049,6 +6169,19 @@ ${cRows}
             return `<tr><td style="font-size:9pt">${esc(ind.indicador)}</td><td style="text-align:center;font-weight:700;color:${sc}">${esc(ind.actual)}</td><td style="text-align:center;color:#0f9f6e;font-weight:700">${esc(ind.meta)}</td><td style="text-align:center"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${sc}"></span></td></tr>`;
         }).join('');
         const p6 = `<div class="page"><div class="ph"><h2>6. Recomendaciones y Viabilidad Minera</h2><p>Diagn&oacute;stico de viabilidad social y plan de acci&oacute;n</p></div>
+<div class="metod-tags">
+  <span class="mtag mtag-purple">&#128269; An&aacute;lisis FODA</span>
+  <span class="mtag mtag-blue">&#127881; Viabilidad Social &mdash; Licencia Social</span>
+  <span class="mtag mtag-green">&#9881; Sem&aacute;foro de Indicadores</span>
+  <span class="mtag mtag-orange">&#128220; Marco Regulatorio Ecuador</span>
+  <span class="mtag mtag-slate">&#129302; NVIDIA LLM &mdash; Plan de Acci&oacute;n</span>
+</div>
+<div class="metod-box">
+  <strong>&#128220; Metodolog&iacute;a &mdash; Diagn&oacute;stico de Viabilidad Social (FODA + Sem&aacute;foro de Indicadores)</strong>
+  <strong>Viabilidad Social:</strong> calculada por NVIDIA LLM combinando resultados del modelo IA con contexto regulatorio (ARCOM, Convenio 169 OIT, Art. 57 Constituci&oacute;n). &nbsp;|&nbsp;
+  <strong>FODA:</strong> fortalezas y riesgos extra&iacute;dos autom&aacute;ticamente de los patrones detectados por Random Forest + MLP. &nbsp;|&nbsp;
+  <strong>Sem&aacute;foro:</strong> verde = meta alcanzada &middot; naranja = en proceso &middot; rojo = cr&iacute;tico / requiere intervenci&oacute;n inmediata.
+</div>
 <div style="background:${vCol};color:#fff;border-radius:8px;padding:14px 20px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
   <div><strong style="font-size:12pt">${esc(viab.titulo||'Viabilidad Social del Proyecto')}</strong><p style="opacity:.9;font-size:9.5pt;margin-top:4px">${esc(viab.resumen||'')}</p></div>
   <div style="font-size:18pt;font-weight:900;white-space:nowrap;margin-left:16px">${esc(viab.nivel||'')}</div>
@@ -6068,6 +6201,19 @@ ${semH ? `<div class="st">6.5 Sem&aacute;foro de Licencia Social</div><table cla
         const indH  = (plan.indicadores||[]).map(ind => `<tr><td style="font-size:9pt">${esc(ind.nombre)}</td><td style="text-align:center;color:#0f9f6e;font-weight:700">${esc(ind.meta)}</td><td style="text-align:center;color:#64748b">${esc(ind.plazo)}</td></tr>`).join('');
         const rfH   = (plan.recomendaciones_finales||[]).map((r,i) => `<li style="margin-bottom:8px;font-size:9.5pt;line-height:1.6"><strong>R${i+1}:</strong> ${esc(r)}</li>`).join('');
         const p7 = `<div class="page"><div class="ph"><h2>7. Plan Estrat&eacute;gico de Viabilidad Social</h2><p>${esc(plan.titulo||'Plan generado por NVIDIA LLM')}</p></div>
+<div class="metod-tags">
+  <span class="mtag mtag-purple">&#128203; Marco L&oacute;gico</span>
+  <span class="mtag mtag-blue">&#129504; Planificaci&oacute;n Estrat&eacute;gica (NVIDIA LLM)</span>
+  <span class="mtag mtag-green">&#127881; Fases de Intervenci&oacute;n</span>
+  <span class="mtag mtag-orange">&#9881; Indicadores de &Eacute;xito SMART</span>
+  <span class="mtag mtag-slate">&#128269; Design Thinking</span>
+</div>
+<div class="metod-box">
+  <strong>&#128220; Metodolog&iacute;a &mdash; Planificaci&oacute;n Estrat&eacute;gica (Marco L&oacute;gico + NVIDIA LLM)</strong>
+  <strong>NVIDIA Nemotron LLM:</strong> genera el plan estrat&eacute;gico a partir del diagn&oacute;stico de IA, los factores cr&iacute;ticos del Random Forest y los hallazgos demogr&aacute;ficos. &nbsp;|&nbsp;
+  <strong>Marco L&oacute;gico:</strong> estructura las intervenciones en fases (corto / mediano / largo plazo) con hitos verificables. &nbsp;|&nbsp;
+  <strong>Indicadores SMART:</strong> m&eacute;tricas con meta num&eacute;rica, mecanismo de medici&oacute;n y responsable definido.
+</div>
 ${plan.diagnostico_contextual ? `<div style="font-size:9.5pt;line-height:1.6;color:#334155;background:#f8fafc;padding:12px 16px;border-radius:8px;border-left:4px solid #0e4eb0;margin-bottom:16px">${esc(plan.diagnostico_contextual)}</div>` : ''}
 <div class="st">7.1 Fases de Intervenci&oacute;n</div>${fasH||'<p style="color:#888;font-size:9pt">Sin fases definidas.</p>'}
 ${indH ? `<div class="st">7.2 Indicadores de &Eacute;xito</div><table class="stbl"><tr><th>Indicador</th><th>Meta</th><th>Plazo</th></tr>${indH}</table>` : ''}
@@ -6078,6 +6224,19 @@ ${rfH  ? `<div class="st">7.3 Recomendaciones Finales</div><ul style="padding-le
         // PAG 8: EJES
         const ejes = data.ejes_estrategicos || [];
         const p8 = ejes.length ? '<div class="page"><div class="ph"><h2>8. Ejes Estrategicos de Intervencion</h2><p>Dimensiones prioritarias de accion segun el modelo IA</p></div>' +
+            '<div class="metod-tags">' +
+            '<span class="mtag mtag-purple">&#9889; Ejes Estrat&eacute;gicos Priorizados por IA</span>' +
+            '<span class="mtag mtag-blue">&#129504; Random Forest &mdash; Importancia de Factores</span>' +
+            '<span class="mtag mtag-green">&#128220; Normativa Ecuatoriana (ARCOM)</span>' +
+            '<span class="mtag mtag-orange">&#129302; NVIDIA Nemotron LLM</span>' +
+            '<span class="mtag mtag-slate">&#127881; Design Thinking</span>' +
+            '</div>' +
+            '<div class="metod-box">' +
+            '<strong>&#128220; Metodolog&iacute;a &mdash; Definici&oacute;n de Ejes por Modelo IA + Normativa</strong>' +
+            'Los ejes estrat&eacute;gicos se derivan de los <strong>factores de mayor importancia</strong> detectados por el Random Forest (impacto &ge;10% en la decisi&oacute;n del modelo). &nbsp;|&nbsp;' +
+            '<strong>NVIDIA LLM:</strong> contextualiza cada eje con acciones concretas y referencia la normativa ecuatoriana vigente (ARCOM, Ministerio de Miner&iacute;a, Convenio 169 OIT). &nbsp;|&nbsp;' +
+            'Las acciones siguen el enfoque de <strong>Design Thinking</strong> centrado en las necesidades reales de la comunidad.' +
+            '</div>' +
             ejes.map(e => '<div style="border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;margin-bottom:12px;background:#fff;page-break-inside:avoid">' +
                 '<strong style="color:#0e4eb0;font-size:10.5pt;display:block;margin-bottom:4px">' + esc(e.titulo||e.eje||'') + '</strong>' +
                 '<p style="font-size:9.5pt;color:#475569;margin:0 0 8px;line-height:1.45">' + esc(e.descripcion||'') + '</p>' +
@@ -6099,6 +6258,19 @@ ${rfH  ? `<div class="st">7.3 Recomendaciones Finales</div><ul style="padding-le
         };
         const p9 = ((mp.internacionales||[]).length || (mp.locales||[]).length) ?
             '<div class="page"><div class="ph"><h2>9. Mejores Practicas de Sostenibilidad</h2><p>Referencias aplicables al contexto de San Bartolome</p></div>' +
+            '<div class="metod-tags">' +
+            '<span class="mtag mtag-blue">&#127758; Benchmarking Internacional</span>' +
+            '<span class="mtag mtag-green">&#127795; Est&aacute;ndares ICMM</span>' +
+            '<span class="mtag mtag-purple">&#128220; Normas IFC (Banco Mundial)</span>' +
+            '<span class="mtag mtag-orange">&#9881; Buenas Pr&aacute;cticas Mineras</span>' +
+            '<span class="mtag mtag-slate">&#127759; Casos Nacionales Ecuador</span>' +
+            '</div>' +
+            '<div class="metod-box">' +
+            '<strong>&#128220; Metodolog&iacute;a &mdash; Benchmarking de Mejores Pr&aacute;cticas (ICMM / IFC / Ecuador)</strong>' +
+            '<strong>Benchmarking internacional:</strong> pr&aacute;cticas extra&iacute;das de est&aacute;ndares ICMM (International Council on Mining &amp; Metals) e IFC Performance Standards (Banco Mundial). &nbsp;|&nbsp;' +
+            '<strong>Casos nacionales:</strong> experiencias documentadas de proyectos mineros en Ecuador analizadas por NVIDIA LLM para su aplicabilidad al contexto de San Bartolom&eacute;. &nbsp;|&nbsp;' +
+            'Cada pr&aacute;ctica incluye referencia bibliogr&aacute;fica y nivel de aplicabilidad local.' +
+            '</div>' +
             ((mp.internacionales||[]).length ? '<div class="st">9.1 Internacionales</div><div>' + (mp.internacionales||[]).map(mpItem).join('') + '</div>' : '') +
             ((mp.locales||[]).length ? '<div class="st">9.2 Nacionales / Locales</div><div>' + (mp.locales||[]).map(mpItem).join('') + '</div>' : '') +
             '<div class="pie"><span>Reporte LLM NVIDIA - San Bartolome</span><span>Zona: ' + esc(sector) + ' - ' + fecha + '</span></div></div>' : '';
@@ -6107,6 +6279,18 @@ ${rfH  ? `<div class="st">7.3 Recomendaciones Finales</div><ul style="padding-le
         const rIaH = (data.recomendaciones_ia||[]).map((r,i) =>
             '<li style="margin-bottom:10px;font-size:10.5pt;line-height:1.7"><strong>R' + (i+1) + ':</strong> ' + esc(r) + '</li>').join('');
         const p10 = '<div class="page"><div class="ph"><h2>10. Conclusion General</h2><p>Sintesis del modelo NVIDIA LLM sobre la viabilidad social minera</p></div>' +
+            '<div class="metod-tags">' +
+            '<span class="mtag mtag-purple">&#129504; S&iacute;ntesis Anal&iacute;tica Mixta</span>' +
+            '<span class="mtag mtag-blue">&#129302; NVIDIA Nemotron LLM</span>' +
+            '<span class="mtag mtag-green">&#127795; Random Forest + Red Neuronal MLP</span>' +
+            '<span class="mtag mtag-orange">&#128202; Modelo Predictivo de Aceptaci&oacute;n</span>' +
+            '<span class="mtag mtag-slate">&#128203; Recomendaciones IA</span>' +
+            '</div>' +
+            '<div class="metod-box">' +
+            '<strong>&#128220; Metodolog&iacute;a &mdash; S&iacute;ntesis del Modelo NVIDIA LLM</strong>' +
+            'La conclusi&oacute;n integra los resultados de <strong>tres capas de an&aacute;lisis</strong>: (1) modelo IA local (Random Forest + MLP entrenado con las encuestas reales); (2) enriquecimiento narrativo por <strong>NVIDIA Nemotron LLM</strong> con contexto territorial y regulatorio; (3) literatura cient&iacute;fica y buenas pr&aacute;cticas internacionales (ICMM / IFC). &nbsp;|&nbsp;' +
+            'Las recomendaciones finales son priorizadas autom&aacute;ticamente por nivel de impacto sobre la licencia social.' +
+            '</div>' +
             '<div class="concl-box">' + esc(data.conclusion||'') + '</div>' +
             (rIaH ? '<div class="st" style="margin-top:24px">Recomendaciones del Modelo IA</div><ul class="recomend">' + rIaH + '</ul>' : '') +
             '<div class="cierre" style="margin-top:24px">Documento generado automaticamente - Motor: ' + esc(motor) + ' - ' + total + ' encuestas - ' + fecha + '</div>' +

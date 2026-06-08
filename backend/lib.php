@@ -53,7 +53,7 @@ function ensure_schema_updates(PDO $pdo): void
             }
         }
 
-        // Aseguramos que todas las columnas de respuesta acepten NULL o string vacÃ­o
+        // Aseguramos que todas las columnas de respuesta acepten NULL o string vacío
         // Esto permite guardar encuestas con preguntas sin contestar
         $nullableColumns = [
             'sector'                 => "VARCHAR(120) NOT NULL DEFAULT ''",
@@ -814,7 +814,7 @@ function normalize_survey(array $survey): array
         'knows_mining_types', 'knows_mining_benefits', 'knows_modern_mining', 'knows_local_mines', 'knows_env_guarantees',
     ];
 
-    // Campos que siempre deben ser string (nunca null) â€” encuestas con campos vacÃ­os son vÃ¡lidas
+    // Campos que siempre deben ser string (nunca null) â€” encuestas con campos vacíos son válidas
     $stringFields = [
         'sector', 'community', 'survey_status', 'surveyor_name',
         'respondent_name', 'respondent_last_name', 'respondent_id_document',
@@ -832,7 +832,7 @@ function normalize_survey(array $survey): array
     foreach ($fields as $field) {
         $value = $survey[$field] ?? null;
         if (in_array($field, $stringFields)) {
-            // null o false â†' string vacÃ­o; cualquier otro valor â†' trim
+            // null o false â†' string vacío; cualquier otro valor â†' trim
             $normalized[$field] = ($value === null || $value === false) ? '' : trim((string) $value);
         } else {
             $normalized[$field] = is_string($value) ? trim($value) : $value;
@@ -883,7 +883,7 @@ function save_survey(array $survey): array
     }
 
     $survey = normalize_survey($survey);
-    // Todas las preguntas son opcionales â€” no se valida ningÃºn campo
+    // Todas las preguntas son opcionales â€” no se valida ningún campo
     if (($user['role'] ?? '') === 'surveyor') {
         if (empty($user['surveyor_id'])) {
             throw new InvalidArgumentException('Tu usuario no tiene un encuestador asignado.');
@@ -908,7 +908,7 @@ function save_survey(array $survey): array
     }
 
     // Mapa completo de todos los valores posibles.
-    // El INSERT se construye dinÃ¡micamente segÃºn las columnas que realmente existen
+    // El INSERT se construye dinámicamente según las columnas que realmente existen
     // en la tabla, por lo que funciona aunque ALTER TABLE haya fallado en el hosting.
     $allData = [
         'client_uuid'            => $survey['client_uuid'] ?: bin2hex(random_bytes(8)),
@@ -1078,8 +1078,8 @@ function normalize_sector_label(string $sector): string
 
     // Strip double-encoded UTF-8 artifacts (e.g. bytes c3 83 c2 a9 -> 'e')
     // AND proper UTF-8 accents (e.g. c3 a9 = é -> 'e') for detection
-    $double_encoded = ['Ã¡','Ã©','Ã­','Ã³','Ãº',
-                       'Ã','Ã‰','Ã','Ã“','Ãš'];
+    $double_encoded = ['á','é','í','ó','ú',
+                       'Á','Ã‰','Í','Ã“','Ãš'];
     $proper_accents = ['é','á','í','ó','ú',
                        'É','Á','Í','Ó','Ú'];
     $replace_ascii  = ['e','a','i','o','u','e','a','i','o','u'];
@@ -1427,8 +1427,8 @@ function get_dashboard(string $sector = 'general'): array
                      'neutro'   => ['Media'],
                      'negativo' => ['Baja']]],
         ['campo' => 'investment_acceptance',     'titulo' => 'Inversion Externa',
-         'mapa'  => ['positivo' => ['Aceptacion amplia','AceptaciÃ³n amplia'],
-                     'neutro'   => ['Aceptacion condicionada','AceptaciÃ³n condicionada'],
+         'mapa'  => ['positivo' => ['Aceptacion amplia','Aceptación amplia'],
+                     'neutro'   => ['Aceptacion condicionada','Aceptación condicionada'],
                      'negativo' => ['Rechazo preventivo']]],
         ['campo' => 'mine_reopening_perception', 'titulo' => 'Reapertura Minera',
          'mapa'  => ['positivo' => ['Beneficiaria mucho','Beneficiaria algo'],
@@ -1439,15 +1439,15 @@ function get_dashboard(string $sector = 'general'): array
                      'neutro'   => ['Cubre apenas'],
                      'negativo' => ['No cubre la canasta']]],
         ['campo' => 'water_source',              'titulo' => 'Acceso al Agua',
-         'mapa'  => ['positivo' => ['Red publica con tratamiento','Red pÃºblica con tratamiento'],
-                     'neutro'   => ['Vertiente comunal sin purificacion','Vertiente comunal sin purificaciÃ³n','Tanquero u otra compra'],
-                     'negativo' => ['Rio o acequia','RÃ­o o acequia']]],
+         'mapa'  => ['positivo' => ['Red publica con tratamiento','Red pública con tratamiento'],
+                     'neutro'   => ['Vertiente comunal sin purificacion','Vertiente comunal sin purificación','Tanquero u otra compra'],
+                     'negativo' => ['Rio o acequia','Río o acequia']]],
         ['campo' => 'has_sewer',                 'titulo' => 'Alcantarillado',
-         'mapa'  => ['positivo' => ['Si tiene','SÃ­ tiene'],
+         'mapa'  => ['positivo' => ['Si tiene','Sí tiene'],
                      'neutro'   => [],
                      'negativo' => ['No tiene']]],
         ['campo' => 'has_internet',              'titulo' => 'Acceso a Internet',
-         'mapa'  => ['positivo' => ['Si estable','SÃ­ estable'],
+         'mapa'  => ['positivo' => ['Si estable','Sí estable'],
                      'neutro'   => ['Intermitente'],
                      'negativo' => ['No tiene']]],
         ['campo' => 'road_status',               'titulo' => 'Estado Vial',
@@ -1890,8 +1890,8 @@ function stream_application_document(int $documentId): never
 }
 
 // ============================================================
-//  MÃ“DULO DE ANÃLISIS EXPERTO DE ENCUESTAS
-//  EstadÃ­stica descriptiva + sentimiento comunitario en tiempo real
+//  MÃ“DULO DE ANÁLISIS EXPERTO DE ENCUESTAS
+//  Estadística descriptiva + sentimiento comunitario en tiempo real
 // ============================================================
 
 function normalize_label(string $val): string
@@ -1997,7 +1997,7 @@ function analizar_conocimiento_minero(array $rows): array
         'knows_local_mines'     => 'Conoce minas locales',
         'knows_env_guarantees'  => 'Conoce garantias ambientales',
     ];
-    $mapC = ['positivo' => ['Si', 'SÃ­', 'Algo', 'Bastante', 'Mucho'], 'negativo' => ['No', 'Nada', 'Poco']];
+    $mapC = ['positivo' => ['Si', 'Sí', 'Algo', 'Bastante', 'Mucho'], 'negativo' => ['No', 'Nada', 'Poco']];
     $result = [];
     foreach ($campos as $campo => $label) {
         $d = freq_dist($rows, $campo, $mapC);
@@ -2042,8 +2042,8 @@ function get_analisis_experto(string $sector = 'general'): array
         'negativo' => ['Baja'],
     ];
     $mapInversion = [
-        'positivo' => ['Aceptacion amplia','AceptaciÃ³n amplia'],
-        'neutro'   => ['Aceptacion condicionada','AceptaciÃ³n condicionada'],
+        'positivo' => ['Aceptacion amplia','Aceptación amplia'],
+        'neutro'   => ['Aceptacion condicionada','Aceptación condicionada'],
         'negativo' => ['Rechazo preventivo'],
     ];
     $mapReapertura = [
@@ -2057,17 +2057,17 @@ function get_analisis_experto(string $sector = 'general'): array
         'negativo' => ['No cubre la canasta'],
     ];
     $mapAgua = [
-        'positivo' => ['Red publica con tratamiento','Red pÃºblica con tratamiento'],
-        'neutro'   => ['Vertiente comunal sin purificacion','Vertiente comunal sin purificaciÃ³n','Tanquero u otra compra'],
-        'negativo' => ['Rio o acequia','RÃ­o o acequia'],
+        'positivo' => ['Red publica con tratamiento','Red pública con tratamiento'],
+        'neutro'   => ['Vertiente comunal sin purificacion','Vertiente comunal sin purificación','Tanquero u otra compra'],
+        'negativo' => ['Rio o acequia','Río o acequia'],
     ];
     $mapAlcant = [
-        'positivo' => ['Si tiene','SÃ­ tiene'],
+        'positivo' => ['Si tiene','Sí tiene'],
         'neutro'   => [],
         'negativo' => ['No tiene'],
     ];
     $mapInternet = [
-        'positivo' => ['Si estable','SÃ­ estable'],
+        'positivo' => ['Si estable','Sí estable'],
         'neutro'   => ['Intermitente'],
         'negativo' => ['No tiene'],
     ];
@@ -2141,7 +2141,7 @@ function get_analisis_experto(string $sector = 'general'): array
     $tendSql = "
         SELECT DATE(survey_date) AS dia, COUNT(*) AS total,
                ROUND(AVG(CASE WHEN investment_acceptance IN
-                   ('Aceptacion amplia','AceptaciÃ³n amplia','Aceptacion condicionada','AceptaciÃ³n condicionada')
+                   ('Aceptacion amplia','Aceptación amplia','Aceptacion condicionada','Aceptación condicionada')
                    THEN 100 ELSE 0 END), 1) AS apertura_pct
         FROM surveys $where
         GROUP BY DATE(survey_date)
@@ -2151,7 +2151,7 @@ function get_analisis_experto(string $sector = 'general'): array
     $tendStmt->execute($params);
     $tendencia = array_reverse($tendStmt->fetchAll());
 
-    // CorrelaciÃ³n: ingreso bajo vs. apertura a inversiÃ³n
+    // Correlación: ingreso bajo vs. apertura a inversión
     $bajosAcep = 0; $bajosTotal = 0; $altosAcep = 0; $altosTotal = 0;
     foreach ($rows as $r) {
         $ing   = (string)($r['household_income']      ?? '');
@@ -2168,7 +2168,7 @@ function get_analisis_experto(string $sector = 'general'): array
     $corrBajo = $bajosTotal > 0 ? round(($bajosAcep / $bajosTotal) * 100, 1) : 0.0;
     $corrAlto = $altosTotal > 0 ? round(($altosAcep / $altosTotal) * 100, 1) : 0.0;
 
-    // DistribuciÃ³n por sector
+    // Distribución por sector
     $sectorDist = [];
     foreach ($rows as $r) {
         $sec = normalize_sector_label((string)($r['sector'] ?? 'Desconocido'));
@@ -2184,7 +2184,7 @@ function get_analisis_experto(string $sector = 'general'): array
     $nivel = $gIdx >= 20 ? 'POSITIVO' : ($gIdx >= -20 ? 'AMBIVALENTE' : 'CRITICO');
     $color = $gIdx >= 20 ? 'verde'    : ($gIdx >= -20 ? 'naranja'    : 'rojo');
 
-    // DimensiÃ³n mÃ¡s positiva y mÃ¡s negativa
+    // Dimensión más positiva y más negativa
     $dimsSorted = $dimensiones;
     usort($dimsSorted, fn($a, $b) => $b['sentimiento']['indice'] <=> $a['sentimiento']['indice']);
     $dimPos = $dimsSorted[0]  ?? null;
@@ -2206,8 +2206,8 @@ function get_analisis_experto(string $sector = 'general'): array
     arsort($probCounts);
     $probTop = !empty($probCounts) ? array_key_first($probCounts) : '';
 
-    // Limpiar caracteres corruptos (diamond) u otros caracteres invÃ¡lidos sin modificar la BD
-    $probTop = @mb_convert_encoding($probTop, 'UTF-8', 'UTF-8'); // limpia bytes invÃ¡lidos
+    // Limpiar caracteres corruptos (diamond) u otros caracteres inválidos sin modificar la BD
+    $probTop = @mb_convert_encoding($probTop, 'UTF-8', 'UTF-8'); // limpia bytes inválidos
     $probTop = str_replace(["\xEF\xBF\xBD", "", ""], "", $probTop);
     $probTop = trim($probTop);
     if (empty($probTop)) {
@@ -2215,7 +2215,7 @@ function get_analisis_experto(string $sector = 'general'): array
     }
 
     $narrativa = sprintf(
-        'Con base en %d encuestas levantadas en San BartolomÃ©, el Ã­ndice de sentimiento comunitario compuesto es %s puntos (escala -100 a +100), clasificado como %s. El %s%% de las percepciones evaluadas son positivas y el %s%% son negativas. La problemÃ¡tica que mÃ¡s preocupa a la ciudadanÃ­a es "%s". La dimensiÃ³n con mejor Ã­ndice es "%s" (%s pts) y la mÃ¡s crÃ­tica es "%s" (%s pts). Estos datos reflejan el pulso real del territorio al momento del anÃ¡lisis.',
+        'Con base en %d encuestas levantadas en San Bartolomé, el índice de sentimiento comunitario compuesto es %s puntos (escala -100 a +100), clasificado como %s. El %s%% de las percepciones evaluadas son positivas y el %s%% son negativas. La problemática que más preocupa a la ciudadanía es "%s". La dimensión con mejor índice es "%s" (%s pts) y la más crítica es "%s" (%s pts). Estos datos reflejan el pulso real del territorio al momento del análisis.',
         $n,
         ($gIdx > 0 ? '+' : '') . $gIdx,
         $nivel,
@@ -2352,19 +2352,19 @@ function get_preguntas_data(string $sector = 'general'): array
             'titulo'    => 'Condiciones de Hogar y Validacion',
             'preguntas' => [
                 ['campo' => 'water_source',     'pregunta' => 'Fuente principal de agua',                     'tipo' => 'bar',
-                 'norm'    => ['Rio o acequia'=>'Rio o acequia','RÃ­o o acequia'=>'Rio o acequia',
-                               'Red publica con tratamiento'=>'Red publica con tratamiento','Red pÃºblica con tratamiento'=>'Red publica con tratamiento',
-                               'Vertiente comunal sin purificacion'=>'Vertiente comunal sin purificacion','Vertiente comunal sin purificaciÃ³n'=>'Vertiente comunal sin purificacion',
+                 'norm'    => ['Rio o acequia'=>'Rio o acequia','Río o acequia'=>'Rio o acequia',
+                               'Red publica con tratamiento'=>'Red publica con tratamiento','Red pública con tratamiento'=>'Red publica con tratamiento',
+                               'Vertiente comunal sin purificacion'=>'Vertiente comunal sin purificacion','Vertiente comunal sin purificación'=>'Vertiente comunal sin purificacion',
                                'Tanquero u otra compra'=>'Tanquero u otra compra'],
                  'opciones' => ['Red publica con tratamiento','Vertiente comunal sin purificacion','Rio o acequia','Tanquero u otra compra']],
                 ['campo' => 'has_sewer',        'pregunta' => 'Alcantarillado',                               'tipo' => 'donut',
-                 'norm'    => ['Si tiene'=>'Si tiene','SÃ­ tiene'=>'Si tiene','si tiene'=>'Si tiene','No tiene'=>'No tiene','no tiene'=>'No tiene'],
+                 'norm'    => ['Si tiene'=>'Si tiene','Sí tiene'=>'Si tiene','si tiene'=>'Si tiene','No tiene'=>'No tiene','no tiene'=>'No tiene'],
                  'opciones' => ['Si tiene','No tiene']],
                 ['campo' => 'has_septic',       'pregunta' => 'Fosa septica',                                 'tipo' => 'donut',
-                 'norm'    => ['Si tiene'=>'Si tiene','SÃ­ tiene'=>'Si tiene','si tiene'=>'Si tiene','No tiene'=>'No tiene','no tiene'=>'No tiene'],
+                 'norm'    => ['Si tiene'=>'Si tiene','Sí tiene'=>'Si tiene','si tiene'=>'Si tiene','No tiene'=>'No tiene','no tiene'=>'No tiene'],
                  'opciones' => ['Si tiene','No tiene']],
                 ['campo' => 'has_internet',     'pregunta' => 'Conectividad a internet',                      'tipo' => 'bar',
-                 'norm'    => ['Si estable'=>'Si estable','SÃ­ estable'=>'Si estable','Intermitente'=>'Intermitente','No tiene'=>'No tiene','no tiene'=>'No tiene'],
+                 'norm'    => ['Si estable'=>'Si estable','Sí estable'=>'Si estable','Intermitente'=>'Intermitente','No tiene'=>'No tiene','no tiene'=>'No tiene'],
                  'opciones' => ['Si estable','Intermitente','No tiene']],
                 ['campo' => 'road_status',      'pregunta' => 'Estado de las vias de acceso',                 'tipo' => 'bar',
                  'norm'    => ['Bueno'=>'Bueno','Buen estado'=>'Bueno','Buena'=>'Bueno','bueno'=>'Bueno','Regular'=>'Regular','regular'=>'Regular','Malo'=>'Malo','Mal estado'=>'Malo','Mala'=>'Malo','malo'=>'Malo'],
@@ -2471,7 +2471,7 @@ function get_plan_minero_ia(string $sector = 'general'): array
     $model  = $cfg['gemini']['model']  ?? 'gemini-1.5-flash';
 
     if (empty($apiKey)) {
-        return ['ok' => false, 'error' => 'API key de Gemini no configurada. AgrÃ©gala en backend/config.php'];
+        return ['ok' => false, 'error' => 'API key de Gemini no configurada. Agrégala en backend/config.php'];
     }
 
     // --- Recopilar datos reales de encuestas para el prompt ---
@@ -2508,27 +2508,27 @@ function get_plan_minero_ia(string $sector = 'general'): array
     }
 
     $prompt = <<<PROMPT
-Eres un experto en planificaciÃ³n estratÃ©gica minera, desarrollo territorial sostenible y gestiÃ³n comunitaria en Ecuador.
+Eres un experto en planificación estratégica minera, desarrollo territorial sostenible y gestión comunitaria en Ecuador.
 
-Se te proporcionan los datos reales de {$totalEnc} encuestas comunitarias realizadas en la parroquia San BartolomÃ©, sector "{$sector}", sobre la percepciÃ³n ciudadana de la actividad minera:
+Se te proporcionan los datos reales de {$totalEnc} encuestas comunitarias realizadas en la parroquia San Bartolomé, sector "{$sector}", sobre la percepción ciudadana de la actividad minera:
 
 DATOS DE ENCUESTAS:
-- Ãndice neto de sentimiento: {$idxMin} puntos (escala -100 a +100)
+- Índice neto de sentimiento: {$idxMin} puntos (escala -100 a +100)
 - Nivel de sentimiento: {$nivelSent}
 - Apoyo a la actividad minera: {$apoyoPct}%
 - Rechazo a la actividad minera: {$rechPct}%
 - Problema principal identificado: {$probPrinc}
 - Beneficios reconocidos por la comunidad: {$benList}
 - Riesgos identificados por la comunidad: {$rskList}
-- Nivel de conocimiento sobre minerÃ­a: {$conocList}
+- Nivel de conocimiento sobre minería: {$conocList}
 - Correlaciones clave:
 {$corrTexto}
 
 INSTRUCCIÃ“N:
-Con base en estos datos reales, genera un Plan EstratÃ©gico Integral para la Reapertura de la Actividad Minera en el sector. El plan debe incluir exactamente estas secciones en formato JSON:
+Con base en estos datos reales, genera un Plan Estratégico Integral para la Reapertura de la Actividad Minera en el sector. El plan debe incluir exactamente estas secciones en formato JSON:
 
 {
-  "diagnostico": "PÃ¡rrafo de diagnÃ³stico situacional basado en los datos (3-4 oraciones, datos concretos)",
+  "diagnostico": "Párrafo de diagnóstico situacional basado en los datos (3-4 oraciones, datos concretos)",
   "factores_facilitadores": ["item1", "item2", "item3", "item4", "item5"],
   "factores_limitantes": ["item1", "item2", "item3", "item4", "item5"],
   "acciones_prioritarias": [
@@ -2560,10 +2560,10 @@ Con base en estos datos reales, genera un Plan EstratÃ©gico Integral para la R
     {"icono": "ðŸ'°", "titulo": "...", "descripcion": "..."},
     ... (5 beneficios)
   ],
-  "conclusion": "PÃ¡rrafo conclusivo estratÃ©gico basado en los datos reales (4-5 oraciones, concreto y orientado a acciÃ³n)"
+  "conclusion": "Párrafo conclusivo estratégico basado en los datos reales (4-5 oraciones, concreto y orientado a acción)"
 }
 
-Usa los datos reales de las encuestas. Responde ÃšNICAMENTE con el JSON vÃ¡lido, sin texto adicional.
+Usa los datos reales de las encuestas. Responde ÃšNICAMENTE con el JSON válido, sin texto adicional.
 PROMPT;
 
     // --- Llamada a Gemini API ---
@@ -2597,10 +2597,10 @@ PROMPT;
     $body = json_decode($resp, true);
     $text = $body['candidates'][0]['content']['parts'][0]['text'] ?? '';
     if (empty($text)) {
-        return ['ok' => false, 'error' => 'Gemini no devolviÃ³ contenido.'];
+        return ['ok' => false, 'error' => 'Gemini no devolvió contenido.'];
     }
 
-    // Limpiar posibles backticks si Gemini los incluyÃ³
+    // Limpiar posibles backticks si Gemini los incluyó
     $text = trim(preg_replace('/^```json\s*/i', '', preg_replace('/\s*```$/', '', trim($text))));
     $plan = json_decode($text, true);
 
@@ -2613,7 +2613,7 @@ PROMPT;
 
 // ============================================================
 //  IA MINERA â€” Clasificador Naive Bayes (PHP puro)
-//  Aprende de los datos de encuestas y predice aceptaciÃ³n
+//  Aprende de los datos de encuestas y predice aceptación
 // ============================================================
 function ia_minera_entrenar_y_analizar(string $sector = 'general'): array
 {
@@ -2785,7 +2785,7 @@ function ia_minera_entrenar_y_analizar(string $sector = 'general'): array
         }
         $contPred++;
 
-        // PredicciÃ³n por sector
+        // Predicción por sector
         $sec = $row['sector'] ?? 'General';
         if (!isset($prediccionesPorSector[$sec])) {
             $prediccionesPorSector[$sec] = array_fill_keys($clases, 0.0);
@@ -2848,7 +2848,7 @@ function ia_minera_entrenar_y_analizar(string $sector = 'general'): array
         }
     }
 
-    // --- Recomendaciones automÃ¡ticas basadas en el modelo ---
+    // --- Recomendaciones automáticas basadas en el modelo ---
     $recomendaciones = [];
     $featureLabels = array_values($features);
     $impKeys = array_keys($importancia);
@@ -2856,32 +2856,32 @@ function ia_minera_entrenar_y_analizar(string $sector = 'general'): array
     if (!empty($impKeys)) {
         $top1 = $impKeys[0];
         $top2 = $impKeys[1] ?? null;
-        $recomendaciones[] = "El factor mÃ¡s influyente en la predicciÃ³n es Â«{$features[$top1]}Â» â€” priorizar intervenciones en esta dimensiÃ³n.";
+        $recomendaciones[] = "El factor más influyente en la predicción es Â«{$features[$top1]}Â» â€” priorizar intervenciones en esta dimensión.";
         if ($top2) {
-            $recomendaciones[] = "Â«{$features[$top2]}Â» es el segundo factor mÃ¡s determinante â€” incluirlo en la estrategia de socializaciÃ³n.";
+            $recomendaciones[] = "Â«{$features[$top2]}Â» es el segundo factor más determinante â€” incluirlo en la estrategia de socialización.";
         }
     }
     if ($probGlobal['Rechazo'] > 40) {
-        $recomendaciones[] = "Alta probabilidad de rechazo ({$probGlobal['Rechazo']}%) â€” se recomienda proceso de consulta previa intensivo antes de cualquier operaciÃ³n.";
+        $recomendaciones[] = "Alta probabilidad de rechazo ({$probGlobal['Rechazo']}%) â€” se recomienda proceso de consulta previa intensivo antes de cualquier operación.";
     } elseif ($probGlobal['Aceptacion'] > 50) {
-        $recomendaciones[] = "MayorÃ­a predictiva favorable ({$probGlobal['Aceptacion']}%) â€” condiciones favorables para iniciar diÃ¡logo formal de reapertura.";
+        $recomendaciones[] = "Mayoría predictiva favorable ({$probGlobal['Aceptacion']}%) â€” condiciones favorables para iniciar diálogo formal de reapertura.";
     } else {
-        $recomendaciones[] = "Escenario ambivalente â€” la comunidad requiere informaciÃ³n objetiva y espacios de participaciÃ³n para consolidar una postura.";
+        $recomendaciones[] = "Escenario ambivalente â€” la comunidad requiere información objetiva y espacios de participación para consolidar una postura.";
     }
     if (!empty($perfil_rechazo)) {
         $fr = $perfil_rechazo[0];
         $recomendaciones[] = "El perfil con mayor probabilidad de rechazo se caracteriza por Â«{$fr['factor']}: {$fr['valor']}Â» ({$fr['pct']}% del grupo de rechazo).";
     }
-    $recomendaciones[] = "Implementar monitoreo continuo con encuestas periÃ³dicas para reentrenar el modelo conforme evolucione el sentimiento comunitario.";
+    $recomendaciones[] = "Implementar monitoreo continuo con encuestas periódicas para reentrenar el modelo conforme evolucione el sentimiento comunitario.";
 
-    // --- Enriquecer recomendaciones con base de conocimiento cientÃ­fico ---
+    // --- Enriquecer recomendaciones con base de conocimiento científico ---
     $kbPath = __DIR__ . '/knowledge_base_mineria.json';
     $kb     = [];
     if (file_exists($kbPath)) {
         $kb = json_decode(file_get_contents($kbPath), true) ?: [];
     }
 
-    // Si la base tiene menos de 5 entradas o tiene mÃ¡s de 7 dÃ­as, actualizar
+    // Si la base tiene menos de 5 entradas o tiene más de 7 días, actualizar
     $shouldUpdate = empty($kb['papers']) || (time() - ($kb['updated_at'] ?? 0)) > 604800;
     if ($shouldUpdate) {
         $papers = fetch_semantic_scholar_papers([
@@ -2943,8 +2943,8 @@ function ia_minera_entrenar_y_analizar(string $sector = 'general'): array
         }
     }
 
-    // --- MÃ©tricas del modelo ---
-    $precision_modelo = round(($totalEntrenados / $n) * 100, 1); // % de encuestas con clase vÃ¡lida
+    // --- Métricas del modelo ---
+    $precision_modelo = round(($totalEntrenados / $n) * 100, 1); // % de encuestas con clase válida
     $clasePredichaGlobal = array_search(max($probGlobal), $probGlobal);
 
     return [
@@ -2980,7 +2980,7 @@ function ia_minera_entrenar_y_analizar(string $sector = 'general'): array
                 ? date('d/m/Y', $kb['updated_at'])
                 : null,
         ],
-        // Campos compatibles con el modelo Python extendido (valores vacÃ­os como fallback)
+        // Campos compatibles con el modelo Python extendido (valores vacíos como fallback)
         'demografia'            => ['genero' => [], 'edad' => [], 'educacion' => [], 'ocupacion' => [], 'comunidad' => [], 'genero_vs_percepcion' => [], 'edad_vs_percepcion' => []],
         'conocimiento_minero'   => ['por_campo' => [], 'indice_conocimiento' => 0, 'cruce_vs_aceptacion' => []],
         'vectorizacion_temas'   => [],
@@ -2989,10 +2989,10 @@ function ia_minera_entrenar_y_analizar(string $sector = 'general'): array
             'nombre' => 'Naive Bayes Multinomial â€” Motor Experto PHP (Fallback)',
             'fase_recoleccion'    => ['descripcion' => 'Encuestas estructuradas en campo.', 'total_registros' => $n, 'variables_clave' => array_values($features), 'instrumento' => 'Formulario digital multidimensional'],
             'fase_vectorizacion'  => ['descripcion' => 'No disponible en modo fallback.', 'tecnica' => 'N/A', 'temas_identificados' => []],
-            'fase_clasificacion'  => ['descripcion' => 'Naive Bayes con suavizado de Laplace.', 'modelos' => [['nombre' => 'Naive Bayes Multinomial', 'arquitectura' => 'Suavizado Laplace Î±=1', 'precision' => null, 'uso' => 'ClasificaciÃ³n de percepciÃ³n minera']], 'variable_objetivo' => 'mine_reopening_perception -> Aceptacion/Neutral/Rechazo', 'n_entrenamiento' => $totalEntrenados],
-            'fase_analisis'       => ['descripcion' => 'AnÃ¡lisis estadÃ­stico descriptivo.', 'componentes' => ['DistribuciÃ³n de clases', 'Importancia de variables (Information Gain)', 'PredicciÃ³n por sector']],
-            'fase_plan_estrategico' => ['descripcion' => 'Plan generado con motor experto local.', 'proceso' => ['ClasificaciÃ³n Naive Bayes', 'AnÃ¡lisis de importancia de variables', 'GeneraciÃ³n de recomendaciones basadas en reglas']],
-            'limitaciones'        => ['Modelo fallback sin Red Neuronal ni Random Forest.', 'Sin vectorizaciÃ³n TF-IDF de textos libres.', 'Sin anÃ¡lisis demogrÃ¡fico completo.', 'Instalar scikit-learn en el servidor para activar el modelo completo.'],
+            'fase_clasificacion'  => ['descripcion' => 'Naive Bayes con suavizado de Laplace.', 'modelos' => [['nombre' => 'Naive Bayes Multinomial', 'arquitectura' => 'Suavizado Laplace Î±=1', 'precision' => null, 'uso' => 'Clasificación de percepción minera']], 'variable_objetivo' => 'mine_reopening_perception -> Aceptacion/Neutral/Rechazo', 'n_entrenamiento' => $totalEntrenados],
+            'fase_analisis'       => ['descripcion' => 'Análisis estadístico descriptivo.', 'componentes' => ['Distribución de clases', 'Importancia de variables (Information Gain)', 'Predicción por sector']],
+            'fase_plan_estrategico' => ['descripcion' => 'Plan generado con motor experto local.', 'proceso' => ['Clasificación Naive Bayes', 'Análisis de importancia de variables', 'Generación de recomendaciones basadas en reglas']],
+            'limitaciones'        => ['Modelo fallback sin Red Neuronal ni Random Forest.', 'Sin vectorización TF-IDF de textos libres.', 'Sin análisis demográfico completo.', 'Instalar scikit-learn en el servidor para activar el modelo completo.'],
         ],
         'aprendizaje_gemini'    => ['activo' => false, 'planes_previos' => 0, 'factores_gemini' => [], 'actores_gemini' => [], 'nota_alineacion' => null],
         'articulos_cientificos' => [],
@@ -3001,7 +3001,7 @@ function ia_minera_entrenar_y_analizar(string $sector = 'general'): array
 }
 
 // ============================================================
-//  HELPER: Buscar artÃ­culos cientÃ­ficos reales via Semantic Scholar API
+//  HELPER: Buscar artículos científicos reales via Semantic Scholar API
 // ============================================================
 function fetch_semantic_scholar_papers(array $queries, int $maxPerQuery = 3): array
 {
@@ -3065,7 +3065,7 @@ function save_gemini_knowledge(array $plan, string $sector, int $total_encuestas
         $kb = json_decode(file_get_contents($kbFile), true) ?: [];
     }
 
-    // --- Extraer factores clave de los ejes estratÃ©gicos ---
+    // --- Extraer factores clave de los ejes estratégicos ---
     $factoresGemini = [];
     foreach ($plan['ejes_estrategicos'] ?? [] as $eje) {
         $nombre = trim($eje['eje'] ?? '');
@@ -3082,7 +3082,7 @@ function save_gemini_knowledge(array $plan, string $sector, int $total_encuestas
     // --- Extraer recomendaciones finales ---
     $recsGemini = array_filter(array_map('trim', $plan['recomendaciones_finales'] ?? []));
 
-    // --- Extraer mejores prÃ¡cticas por nivel ---
+    // --- Extraer mejores prácticas por nivel ---
     $practicasGemini = [];
     foreach ($plan['mejores_practicas'] ?? [] as $mp) {
         $nivel    = $mp['nivel']    ?? 'Internacional';
@@ -3090,7 +3090,7 @@ function save_gemini_knowledge(array $plan, string $sector, int $total_encuestas
         if ($practica) $practicasGemini[] = ['nivel' => $nivel, 'practica' => $practica, 'referencia' => $mp['referencia'] ?? ''];
     }
 
-    // --- Extraer actores clave (quiÃ©nes Gemini recomienda involucrar) ---
+    // --- Extraer actores clave (quiénes Gemini recomienda involucrar) ---
     $actoresGemini = [];
     foreach ($plan['ejes_estrategicos'] ?? [] as $eje) {
         foreach ($eje['actores'] ?? [] as $actor) {
@@ -3099,7 +3099,7 @@ function save_gemini_knowledge(array $plan, string $sector, int $total_encuestas
         }
     }
 
-    // --- Construir entrada de esta sesiÃ³n ---
+    // --- Construir entrada de esta sesión ---
     $entrada = [
         'fecha'            => date('Y-m-d H:i:s'),
         'sector'           => $sector,
@@ -3114,7 +3114,7 @@ function save_gemini_knowledge(array $plan, string $sector, int $total_encuestas
         'actores_clave'    => $actoresGemini,
     ];
 
-    // Acumular: mÃ¡ximo 20 entradas histÃ³ricas (las mÃ¡s recientes)
+    // Acumular: máximo 20 entradas históricas (las más recientes)
     $kb['historial']   = array_slice(array_merge($kb['historial'] ?? [], [$entrada]), -20);
     $kb['updated_at']  = time();
     $kb['total_planes']= count($kb['historial']);
@@ -3131,7 +3131,7 @@ function save_gemini_knowledge(array $plan, string $sector, int $total_encuestas
         foreach ($h['mejores_practicas'] ?? [] as $p) $allPracticas[] = $p['practica'] ?? '';
     }
 
-    // Top factores por frecuencia (los que Gemini menciona mÃ¡s seguido)
+    // Top factores por frecuencia (los que Gemini menciona más seguido)
     $freqFactores = array_count_values($allFactores);
     arsort($freqFactores);
     $kb['factores_frecuentes'] = array_slice(array_keys($freqFactores), 0, 10);
@@ -3141,10 +3141,10 @@ function save_gemini_knowledge(array $plan, string $sector, int $total_encuestas
     arsort($freqActores);
     $kb['actores_frecuentes'] = array_slice(array_keys($freqActores), 0, 10);
 
-    // Recomendaciones Ãºnicas mÃ¡s recientes
+    // Recomendaciones únicas más recientes
     $kb['recomendaciones_consolidadas'] = array_values(array_unique(array_slice(array_reverse($allRecs), 0, 12)));
 
-    // Mejores prÃ¡cticas Ãºnicas
+    // Mejores prácticas únicas
     $kb['mejores_practicas_consolidadas'] = array_values(array_unique(array_filter($allPracticas)));
 
     @file_put_contents($kbFile, json_encode($kb, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
@@ -3163,7 +3163,7 @@ function get_plan_gemini(string $sector = 'general'): array
         return ['ok' => false, 'error' => 'Configura tu API key de Gemini en backend/config.php'];
     }
 
-    // ---- 1. Siempre correr la IA local primero (rÃ¡pida, sin cuota) ----
+    // ---- 1. Siempre correr la IA local primero (rápida, sin cuota) ----
     $analisis = get_analisis_experto($sector);
     $ia       = ia_minera_entrenar_y_analizar($sector);
     $total    = $analisis['total'] ?? 0;
@@ -3172,7 +3172,7 @@ function get_plan_gemini(string $sector = 'general'): array
         return ['ok' => false, 'error' => 'Sin datos de encuestas para generar el plan.'];
     }
 
-    // ---- 2. Revisar cachÃ© (6 horas) ----
+    // ---- 2. Revisar caché (6 horas) ----
     $cacheDir  = __DIR__ . '/storage';
     if (!is_dir($cacheDir)) {
         @mkdir($cacheDir, 0755, true);
@@ -3212,17 +3212,17 @@ function get_plan_gemini(string $sector = 'general'): array
         array_slice($ia['prediccion_por_sector'] ?? [], 0, 4)
     ));
 
-    // VectorizaciÃ³n: temas mÃ¡s frecuentes de los comentarios (del plan cientÃ­fico)
+    // Vectorización: temas más frecuentes de los comentarios (del plan científico)
     $temasComunidad = '';
     if (!empty($ia['plan_cientifico']['diagnostico_contextual'])) {
-        $temasComunidad = "- DiagnÃ³stico IA local: " . mb_substr($ia['plan_cientifico']['diagnostico_contextual'], 0, 300) . "...\n";
+        $temasComunidad = "- Diagnóstico IA local: " . mb_substr($ia['plan_cientifico']['diagnostico_contextual'], 0, 300) . "...\n";
     }
     if (!empty($ia['vectorizacion_temas'])) {
         $temas = array_slice($ia['vectorizacion_temas'], 0, 6);
         $temasComunidad .= "- Temas dominantes en comentarios comunitarios: " . implode(', ', array_column($temas, 'tema')) . "\n";
     }
 
-    // Buscar artÃ­culos cientÃ­ficos con Semantic Scholar
+    // Buscar artículos científicos con Semantic Scholar
     $papers = fetch_semantic_scholar_papers([
         'artisanal small-scale mining community acceptance Ecuador',
         'mineria sostenible comunidades rurales Ecuador Andes',
@@ -3323,7 +3323,7 @@ function get_plan_gemini(string $sector = 'general'): array
         }
     }
 
-    // ---- 5. Si Gemini fallÃ³ â†' fallback construido desde $analisis + $ia (siempre disponibles) ----
+    // ---- 5. Si Gemini falló â†' fallback construido desde $analisis + $ia (siempre disponibles) ----
     if (!is_array($plan)) {
         // Datos siempre presentes (tanto del modelo Python como del Naive Bayes PHP)
         $predIA    = $ia['prediccion_global']                    ?? 'Ambivalente';
@@ -3334,21 +3334,21 @@ function get_plan_gemini(string $sector = 'general'): array
         $recs      = $ia['recomendaciones_ia'] ?? ($ia['recomendaciones'] ?? []);
         $artCient  = $ia['articulos_cientificos'] ?? [];
 
-        // Si el plan cientÃ­fico de Python estÃ¡ disponible, usarlo
+        // Si el plan científico de Python está disponible, usarlo
         $planLocal = $ia['plan_cientifico'] ?? null;
 
-        $diagnostico = "AnÃ¡lisis basado en {$total} encuestas reales de la Parroquia San BartolomÃ©. "
-            . "La IA predice '{$predIA}' con {$probAcept}% de aceptaciÃ³n y {$probRech}% de rechazo. "
+        $diagnostico = "Análisis basado en {$total} encuestas reales de la Parroquia San Bartolomé. "
+            . "La IA predice '{$predIA}' con {$probAcept}% de aceptación y {$probRech}% de rechazo. "
             . "Problema principal: {$problema}. Nivel de sentimiento: {$nivel}. "
-            . "Factores determinantes: " . implode(', ', $topFacts ?: ['Clima PolÃ­tico', 'Confianza en Autoridades']) . ".";
+            . "Factores determinantes: " . implode(', ', $topFacts ?: ['Clima Político', 'Confianza en Autoridades']) . ".";
 
         $cronograma = is_array($planLocal) && !empty($planLocal['cronograma_estrategico'])
             ? $planLocal['cronograma_estrategico']
             : [
-                ['fase' => 'Fase 1', 'periodo' => 'Meses 1-3',  'hitos' => ['Conformar Mesa de DiÃ¡logo Comunitario', 'Instalar monitoreo hÃ­drico participativo', 'Firmar convenio con Universidad de Cuenca']],
-                ['fase' => 'Fase 2', 'periodo' => 'Meses 3-6',  'hitos' => ['Iniciar cursos tÃ©cnicos SECAP', 'Implementar invernaderos tecnificados', 'Plataforma digital para artesanos locales']],
-                ['fase' => 'Fase 3', 'periodo' => 'Meses 6-12', 'hitos' => ['Compras directas mina-agricultores', 'Centro Artesanal y EcoturÃ­stico', 'Primeras becas universitarias con regalÃ­as']],
-                ['fase' => 'Fase 4', 'periodo' => 'AÃ±o 2+',     'hitos' => ['AuditorÃ­as ambientales independientes', 'ExpansiÃ³n del fondo comunitario', 'EvaluaciÃ³n de impacto socioeconÃ³mico']],
+                ['fase' => 'Fase 1', 'periodo' => 'Meses 1-3',  'hitos' => ['Conformar Mesa de Diálogo Comunitario', 'Instalar monitoreo hídrico participativo', 'Firmar convenio con Universidad de Cuenca']],
+                ['fase' => 'Fase 2', 'periodo' => 'Meses 3-6',  'hitos' => ['Iniciar cursos técnicos SECAP', 'Implementar invernaderos tecnificados', 'Plataforma digital para artesanos locales']],
+                ['fase' => 'Fase 3', 'periodo' => 'Meses 6-12', 'hitos' => ['Compras directas mina-agricultores', 'Centro Artesanal y Ecoturístico', 'Primeras becas universitarias con regalías']],
+                ['fase' => 'Fase 4', 'periodo' => 'Año 2+',     'hitos' => ['Auditorías ambientales independientes', 'Expansión del fondo comunitario', 'Evaluación de impacto socioeconómico']],
             ];
 
         $referenciasCient = !empty($artCient)
@@ -3362,75 +3362,75 @@ function get_plan_gemini(string $sector = 'general'): array
             ], array_slice($artCient, 0, 5))
             : [
                 ['autor' => 'Bebbington A. et al.', 'anio' => 2008, 'titulo' => 'Mining and Social Movements: Struggles Over Livelihood and Rural Territorial Development in the Andes', 'revista' => 'World Development', 'doi_url' => 'https://doi.org/10.1016/j.worlddev.2007.09.010', 'relevancia' => 'Marco de referencia para conflictos mineros en los Andes.'],
-                ['autor' => 'Svampa M., Antonelli M.', 'anio' => 2009, 'titulo' => 'MinerÃ­a transnacional, narrativas del desarrollo y resistencias sociales', 'revista' => 'Editorial Biblos', 'doi_url' => '', 'relevancia' => 'AnÃ¡lisis de percepciones comunitarias frente a la minerÃ­a en AmÃ©rica Latina.'],
+                ['autor' => 'Svampa M., Antonelli M.', 'anio' => 2009, 'titulo' => 'Minería transnacional, narrativas del desarrollo y resistencias sociales', 'revista' => 'Editorial Biblos', 'doi_url' => '', 'relevancia' => 'Análisis de percepciones comunitarias frente a la minería en América Latina.'],
             ];
 
         $ejesEstrategicos = is_array($planLocal) && !empty($planLocal['acciones_prioritarias'])
             ? array_map(fn($a) => [
-                'eje'         => $a['limitacion'] ?? 'Eje estratÃ©gico',
+                'eje'         => $a['limitacion'] ?? 'Eje estratégico',
                 'descripcion' => $a['accion'] ?? '',
                 'actores'     => array_filter(explode(', ', $a['quien'] ?? '')),
                 'acciones'    => [$a['accion'] ?? ''],
                 'indicador'   => $a['contribucion'] ?? '',
             ], $planLocal['acciones_prioritarias'])
             : [
-                ['eje' => 'Gobernanza y DiÃ¡logo Social', 'descripcion' => 'Establecer espacios permanentes de participaciÃ³n comunitaria.', 'actores' => ['GAD Parroquial', 'Empresa Operadora', 'Colectivos locales'], 'acciones' => ['Crear Mesa de DiÃ¡logo Permanente', 'Realizar Consulta Previa conforme Art. 57 ConstituciÃ³n y Conv. 169 OIT', 'Publicar informes de avance cada trimestre'], 'indicador' => 'NÂ° de reuniones realizadas y acuerdos firmados'],
-                ['eje' => 'GarantÃ­as Ambientales e HÃ­dricas', 'descripcion' => 'Monitoreo independiente de agua y ecosistemas.', 'actores' => ['Universidad de Cuenca', 'Juntas de Agua', 'MAATE'], 'acciones' => ['Instalar estaciones de monitoreo hÃ­drico en tiempo real', 'Publicar datos abiertos de calidad del agua', 'AuditorÃ­as ambientales semestrales con veedurÃ­a acadÃ©mica'], 'indicador' => 'Ãndice Calidad del Agua (ICA) â‰¥ 80 pts'],
-                ['eje' => 'Empleo Local y FormaciÃ³n TÃ©cnica', 'descripcion' => 'Garantizar al menos el 80% de mano de obra local calificada.', 'actores' => ['SECAP', 'Empresa Operadora', 'GAD Parroquial'], 'acciones' => ['Programa de certificaciÃ³n tÃ©cnica minera (6 meses)', 'Preferencia contractual para residentes de San BartolomÃ©', 'Fondo de becas universitarias con regalÃ­as mineras'], 'indicador' => 'â‰¥80% nÃ³mina local certificada'],
-                ['eje' => 'DiversificaciÃ³n EconÃ³mica', 'descripcion' => 'Reducir dependencia extractiva con turismo y agroecologÃ­a.', 'actores' => ['Ministerio de Turismo', 'Asociaciones agrÃ­colas', 'Gremios artesanales'], 'acciones' => ['Ruta GeoturÃ­stica y EcoturÃ­stica San BartolomÃ©', 'Convenios de compra directa mina-agricultores locales', 'Centro Artesanal con exposiciÃ³n permanente de joyerÃ­a local'], 'indicador' => '+25% ingresos cooperativas agrÃ­colas/artesanales anuales'],
+                ['eje' => 'Gobernanza y Diálogo Social', 'descripcion' => 'Establecer espacios permanentes de participación comunitaria.', 'actores' => ['GAD Parroquial', 'Empresa Operadora', 'Colectivos locales'], 'acciones' => ['Crear Mesa de Diálogo Permanente', 'Realizar Consulta Previa conforme Art. 57 Constitución y Conv. 169 OIT', 'Publicar informes de avance cada trimestre'], 'indicador' => 'NÂ° de reuniones realizadas y acuerdos firmados'],
+                ['eje' => 'Garantías Ambientales e Hídricas', 'descripcion' => 'Monitoreo independiente de agua y ecosistemas.', 'actores' => ['Universidad de Cuenca', 'Juntas de Agua', 'MAATE'], 'acciones' => ['Instalar estaciones de monitoreo hídrico en tiempo real', 'Publicar datos abiertos de calidad del agua', 'Auditorías ambientales semestrales con veeduría académica'], 'indicador' => 'Índice Calidad del Agua (ICA) â‰¥ 80 pts'],
+                ['eje' => 'Empleo Local y Formación Técnica', 'descripcion' => 'Garantizar al menos el 80% de mano de obra local calificada.', 'actores' => ['SECAP', 'Empresa Operadora', 'GAD Parroquial'], 'acciones' => ['Programa de certificación técnica minera (6 meses)', 'Preferencia contractual para residentes de San Bartolomé', 'Fondo de becas universitarias con regalías mineras'], 'indicador' => 'â‰¥80% nómina local certificada'],
+                ['eje' => 'Diversificación Económica', 'descripcion' => 'Reducir dependencia extractiva con turismo y agroecología.', 'actores' => ['Ministerio de Turismo', 'Asociaciones agrícolas', 'Gremios artesanales'], 'acciones' => ['Ruta Geoturística y Ecoturística San Bartolomé', 'Convenios de compra directa mina-agricultores locales', 'Centro Artesanal con exposición permanente de joyería local'], 'indicador' => '+25% ingresos cooperativas agrícolas/artesanales anuales'],
             ];
 
         $recsFinales = !empty($recs) ? $recs : [
-            'Priorizar la Consulta Previa, Libre e Informada antes de cualquier operaciÃ³n minera.',
-            'Establecer monitoreo hÃ­drico participativo con Universidad de Cuenca como Ã¡rbitro tÃ©cnico.',
-            'Comprometer el 80% de contrataciÃ³n de mano de obra local calificada mediante SECAP.',
-            'Destinar el 50% de regalÃ­as a fondos de desarrollo: turismo, agricultura tecnificada y becas.',
-            'Realizar encuestas de seguimiento cada 3 meses para ajustar el plan estratÃ©gico.',
+            'Priorizar la Consulta Previa, Libre e Informada antes de cualquier operación minera.',
+            'Establecer monitoreo hídrico participativo con Universidad de Cuenca como árbitro técnico.',
+            'Comprometer el 80% de contratación de mano de obra local calificada mediante SECAP.',
+            'Destinar el 50% de regalías a fondos de desarrollo: turismo, agricultura tecnificada y becas.',
+            'Realizar encuestas de seguimiento cada 3 meses para ajustar el plan estratégico.',
         ];
 
         $planFallback = [
-            'titulo'                 => "Plan EstratÃ©gico Integral â€” Reapertura Minera Sostenible, San BartolomÃ© (sector: {$sector})",
+            'titulo'                 => "Plan Estratégico Integral â€” Reapertura Minera Sostenible, San Bartolomé (sector: {$sector})",
             'diagnostico_contextual' => $diagnostico,
             'marco_regulatorio'      => [
-                ['norma' => 'Ley de MinerÃ­a Ecuador (2009)', 'aplicacion' => 'Regula todas las fases de la actividad minera. Exige EIA, licencia ambiental y consulta previa.'],
-                ['norma' => 'ConstituciÃ³n 2008, Arts. 57, 407, 408', 'aplicacion' => 'Garantiza derechos de la naturaleza y consulta previa libre e informada a comunidades.'],
-                ['norma' => 'Convenio 169 OIT', 'aplicacion' => 'Obliga al Estado a consultar a pueblos indÃ­genas y comunidades antes de concesiones mineras.'],
-                ['norma' => 'Reglamento ARCOM / MAATE', 'aplicacion' => 'FiscalizaciÃ³n tÃ©cnica y ambiental de operaciones mineras en Ecuador.'],
-                ['norma' => 'EstÃ¡ndares IFC Performance Standards', 'aplicacion' => 'Buenas prÃ¡cticas internacionales de gestiÃ³n social y ambiental en minerÃ­a.'],
+                ['norma' => 'Ley de Minería Ecuador (2009)', 'aplicacion' => 'Regula todas las fases de la actividad minera. Exige EIA, licencia ambiental y consulta previa.'],
+                ['norma' => 'Constitución 2008, Arts. 57, 407, 408', 'aplicacion' => 'Garantiza derechos de la naturaleza y consulta previa libre e informada a comunidades.'],
+                ['norma' => 'Convenio 169 OIT', 'aplicacion' => 'Obliga al Estado a consultar a pueblos indígenas y comunidades antes de concesiones mineras.'],
+                ['norma' => 'Reglamento ARCOM / MAATE', 'aplicacion' => 'Fiscalización técnica y ambiental de operaciones mineras en Ecuador.'],
+                ['norma' => 'Estándares IFC Performance Standards', 'aplicacion' => 'Buenas prácticas internacionales de gestión social y ambiental en minería.'],
             ],
             'mejores_practicas'      => [
-                ['nivel' => 'Internacional', 'practica' => 'Principios ICMM para minerÃ­a responsable', 'referencia' => 'International Council on Mining & Metals (ICMM)', 'aplicabilidad' => 'Marco global de sostenibilidad aplicable a todo proyecto minero en San BartolomÃ©.'],
-                ['nivel' => 'Regional', 'practica' => 'Monitoreo hÃ­drico participativo comunitario (MHPC)', 'referencia' => 'Experiencias en PerÃº y Colombia con comunidades ribereÃ±as', 'aplicabilidad' => 'ReducciÃ³n documentada de conflictos hÃ­dricos en proyectos mineros andinos.'],
-                ['nivel' => 'Nacional', 'practica' => 'Fondos de desarrollo local con regalÃ­as mineras (Ecuador)', 'referencia' => 'ARCOM â€” DistribuciÃ³n de regalÃ­as a GADs', 'aplicabilidad' => 'Mecanismo legal vigente para financiar turismo, educaciÃ³n y agricultura con regalÃ­as.'],
-                ['nivel' => 'Local', 'practica' => 'Ruta artesanal y ecoturÃ­stica integrada a la minerÃ­a', 'referencia' => 'Experiencia de Portovelo-Zaruma, El Oro, Ecuador', 'aplicabilidad' => 'Demostrado en Ecuador: turismo minero como complemento econÃ³mico sostenible.'],
+                ['nivel' => 'Internacional', 'practica' => 'Principios ICMM para minería responsable', 'referencia' => 'International Council on Mining & Metals (ICMM)', 'aplicabilidad' => 'Marco global de sostenibilidad aplicable a todo proyecto minero en San Bartolomé.'],
+                ['nivel' => 'Regional', 'practica' => 'Monitoreo hídrico participativo comunitario (MHPC)', 'referencia' => 'Experiencias en Perú y Colombia con comunidades ribereñas', 'aplicabilidad' => 'Reducción documentada de conflictos hídricos en proyectos mineros andinos.'],
+                ['nivel' => 'Nacional', 'practica' => 'Fondos de desarrollo local con regalías mineras (Ecuador)', 'referencia' => 'ARCOM â€” Distribución de regalías a GADs', 'aplicabilidad' => 'Mecanismo legal vigente para financiar turismo, educación y agricultura con regalías.'],
+                ['nivel' => 'Local', 'practica' => 'Ruta artesanal y ecoturística integrada a la minería', 'referencia' => 'Experiencia de Portovelo-Zaruma, El Oro, Ecuador', 'aplicabilidad' => 'Demostrado en Ecuador: turismo minero como complemento económico sostenible.'],
             ],
             'ejes_estrategicos'      => $ejesEstrategicos,
             'vinculacion_academia'   => [
-                'instituciones_sugeridas' => ['Universidad de Cuenca (Facultad de Ciencias QuÃ­micas y Minas)', 'Universidad TÃ©cnica de Machala', 'ESPOL', 'FLACSO Ecuador'],
-                'lineas_investigacion'    => ['Impacto hÃ­drico y calidad del agua en zonas mineras', 'Licencia social para operar en comunidades andinas', 'AgroecologÃ­a y minerÃ­a: coexistencia sostenible'],
-                'programas_propuestos'    => ['Convenio de monitoreo ambiental participativo', 'PasantÃ­as tÃ©cnicas para jÃ³venes de San BartolomÃ©', 'InvestigaciÃ³n aplicada sobre flora y fauna local en zona de influencia'],
+                'instituciones_sugeridas' => ['Universidad de Cuenca (Facultad de Ciencias Químicas y Minas)', 'Universidad Técnica de Machala', 'ESPOL', 'FLACSO Ecuador'],
+                'lineas_investigacion'    => ['Impacto hídrico y calidad del agua en zonas mineras', 'Licencia social para operar en comunidades andinas', 'Agroecología y minería: coexistencia sostenible'],
+                'programas_propuestos'    => ['Convenio de monitoreo ambiental participativo', 'Pasantías técnicas para jóvenes de San Bartolomé', 'Investigación aplicada sobre flora y fauna local en zona de influencia'],
             ],
             'plan_empleo_formacion'  => [
-                'perfiles_requeridos'        => ['TÃ©cnico en operaciones mineras (SECAP)', 'Ingeniero ambiental junior', 'TÃ©cnico en monitoreo hÃ­drico', 'GuÃ­a ecoturÃ­stico certificado', 'Operador de maquinaria pesada'],
-                'instituciones_capacitacion' => ['SECAP', 'Universidad de Cuenca', 'Ministerio de Trabajo â€” formaciÃ³n dual'],
-                'metas'                      => ['â‰¥80% de la nÃ³mina operativa con residencia en San BartolomÃ©', 'CertificaciÃ³n tÃ©cnica en 6 meses previo al inicio de operaciones', '50% de regalÃ­as a fondo de becas universitarias locales'],
+                'perfiles_requeridos'        => ['Técnico en operaciones mineras (SECAP)', 'Ingeniero ambiental junior', 'Técnico en monitoreo hídrico', 'Guía ecoturístico certificado', 'Operador de maquinaria pesada'],
+                'instituciones_capacitacion' => ['SECAP', 'Universidad de Cuenca', 'Ministerio de Trabajo â€” formación dual'],
+                'metas'                      => ['â‰¥80% de la nómina operativa con residencia en San Bartolomé', 'Certificación técnica en 6 meses previo al inicio de operaciones', '50% de regalías a fondo de becas universitarias locales'],
             ],
             'turismo_agricultura'    => [
-                'oportunidades_turismo'     => ['Ruta GeoturÃ­stica: minerales, cristales y formaciones rocosas de San BartolomÃ©', 'Museo Minero Vivo con historia de la minerÃ­a local', 'Festival Artesanal-Minero anual con joyerÃ­a en plata y oro', 'Sendero ecoturÃ­stico con interpretaciÃ³n ambiental'],
-                'oportunidades_agricultura' => ['CertificaciÃ³n orgÃ¡nica de productos agrÃ­colas locales (cafÃ©, maÃ­z, frutales andinos)', 'Invernaderos tecnificados financiados con regalÃ­as mineras', 'Alianza directa mina-cooperativas agrÃ­colas para abastecimiento de insumos', 'ProducciÃ³n apÃ­cola en zonas de amortiguamiento'],
-                'sinergias'                 => 'La diversificaciÃ³n hacia turismo y agroecologÃ­a reduce la dependencia extractiva, mejora la licencia social y genera ingresos alternativos que persisten mÃ¡s allÃ¡ del ciclo de vida de la mina.',
+                'oportunidades_turismo'     => ['Ruta Geoturística: minerales, cristales y formaciones rocosas de San Bartolomé', 'Museo Minero Vivo con historia de la minería local', 'Festival Artesanal-Minero anual con joyería en plata y oro', 'Sendero ecoturístico con interpretación ambiental'],
+                'oportunidades_agricultura' => ['Certificación orgánica de productos agrícolas locales (café, maíz, frutales andinos)', 'Invernaderos tecnificados financiados con regalías mineras', 'Alianza directa mina-cooperativas agrícolas para abastecimiento de insumos', 'Producción apícola en zonas de amortiguamiento'],
+                'sinergias'                 => 'La diversificación hacia turismo y agroecología reduce la dependencia extractiva, mejora la licencia social y genera ingresos alternativos que persisten más allá del ciclo de vida de la mina.',
             ],
             'cronograma_estrategico'  => $cronograma,
             'referencias_cientificas' => $referenciasCient,
             'recomendaciones_finales' => $recsFinales,
-            'conclusion'              => "Con {$total} encuestas analizadas, la IA determina una predicciÃ³n de '{$predIA}' "
-                . "({$probAcept}% aceptaciÃ³n, {$probRech}% rechazo). La viabilidad de la reapertura minera en San BartolomÃ© "
-                . "depende de equilibrar el sector extractivo con la agricultura, el turismo artesanal y las garantÃ­as ambientales verificables. "
-                . "La participaciÃ³n activa de la comunidad desde el inicio es el factor mÃ¡s determinante para la licencia social.",
+            'conclusion'              => "Con {$total} encuestas analizadas, la IA determina una predicción de '{$predIA}' "
+                . "({$probAcept}% aceptación, {$probRech}% rechazo). La viabilidad de la reapertura minera en San Bartolomé "
+                . "depende de equilibrar el sector extractivo con la agricultura, el turismo artesanal y las garantías ambientales verificables. "
+                . "La participación activa de la comunidad desde el inicio es el factor más determinante para la licencia social.",
         ];
 
         $motivo = $lastStatus === 429
-            ? 'Cuota de Gemini agotada (429). Se muestra el Plan EstratÃ©gico generado por la IA local con datos reales de las encuestas. Se actualizarÃ¡ automÃ¡ticamente cuando se restablezca la cuota.'
+            ? 'Cuota de Gemini agotada (429). Se muestra el Plan Estratégico generado por la IA local con datos reales de las encuestas. Se actualizará automáticamente cuando se restablezca la cuota.'
             : "Gemini no disponible (HTTP {$lastStatus}). Se muestra el plan generado por la IA local.";
 
         return [
@@ -3443,7 +3443,7 @@ function get_plan_gemini(string $sector = 'general'): array
         ];
     }
 
-    // ---- 6. Enriquecer referencias con Semantic Scholar si Gemini no las incluyÃ³ ----
+    // ---- 6. Enriquecer referencias con Semantic Scholar si Gemini no las incluyó ----
     if (empty($plan['referencias_cientificas']) && !empty($papers)) {
         $plan['referencias_cientificas'] = array_map(fn($p) => [
             'autor'      => $p['autores'],
@@ -3458,7 +3458,7 @@ function get_plan_gemini(string $sector = 'general'): array
     // ---- 7. Guardar conocimiento acumulado de Gemini (aprendizaje persistente) ----
     save_gemini_knowledge($plan, $sector, $total);
 
-    // ---- 8. Guardar en cachÃ© ----
+    // ---- 8. Guardar en caché ----
     $result = ['ok' => true, 'plan' => $plan, 'sector' => $sector, 'total_encuestas' => $total, 'fuente' => 'gemini'];
     @file_put_contents($cacheFile, json_encode($result, JSON_UNESCAPED_UNICODE));
 
@@ -3545,7 +3545,7 @@ function get_python_cmd(): string {
 
 function get_llm_nvidia(string $sector = 'general'): array
 {
-    // Aumentar el lÃ­mite de tiempo a 5 minutos para el LLM con reasoning
+    // Aumentar el límite de tiempo a 5 minutos para el LLM con reasoning
     set_time_limit(300);
 
     $sw = sector_where($sector);
@@ -3575,20 +3575,20 @@ function get_llm_nvidia(string $sector = 'general'): array
     $process = proc_open("$pythonCmd \"$scriptPath\"", $descriptorspec, $pipes);
 
     if (!is_resource($process)) {
-        return ['ok' => false, 'error' => 'No se pudo ejecutar el script de Python. Verifique que Python estÃ© instalado.'];
+        return ['ok' => false, 'error' => 'No se pudo ejecutar el script de Python. Verifique que Python esté instalado.'];
     }
 
     fwrite($pipes[0], $inputData);
     fclose($pipes[0]);
 
-    // Leer lÃ­neas NDJSON â€” el Ãºltimo "result" es la respuesta final
+    // Leer líneas NDJSON â€” el último "result" es la respuesta final
     $stdout = stream_get_contents($pipes[1]);
     fclose($pipes[1]);
     $stderr = stream_get_contents($pipes[2]);
     fclose($pipes[2]);
     proc_close($process);
 
-    // Procesar lÃ­neas NDJSON: buscar la lÃ­nea type=result
+    // Procesar líneas NDJSON: buscar la línea type=result
     $finalResult = null;
     $statsResult = null;
     $lines = explode("\n", trim($stdout));
@@ -3611,10 +3611,10 @@ function get_llm_nvidia(string $sector = 'general'): array
         return $finalResult;
     }
 
-    // Si no hay result pero hay stats, devolver stats estadÃ­sticos
+    // Si no hay result pero hay stats, devolver stats estadísticos
     if ($statsResult) {
         $statsResult['ok']             = true;
-        $statsResult['motor']          = 'EstadÃ­stico (LLM no disponible)';
+        $statsResult['motor']          = 'Estadístico (LLM no disponible)';
         $statsResult['total_encuestas']= count($surveys);
         return $statsResult;
     }
