@@ -41,6 +41,49 @@ CLASE_MAP = {
     'No beneficiaria':    'Rechazo',
 }
 
+# Mapa de respaldo: cuando mine_reopening_perception está vacío,
+# se infiere la clase desde investment_acceptance para incluir el 100% de encuestas
+CLASE_MAP_INVESTMENT = {
+    'Aceptacion amplia':       'Aceptacion',
+    'Aceptación amplia':       'Aceptacion',
+    'Aceptacion condicionada': 'Neutral',
+    'Aceptación condicionada': 'Neutral',
+    'Rechazo':                 'Rechazo',
+    'No acepta':               'Rechazo',
+}
+
+def get_clase(row):
+    """
+    Devuelve la clase (Aceptacion/Neutral/Rechazo) para una encuesta.
+    Orden de prioridad:
+      1. mine_reopening_perception (fuente principal)
+      2. investment_acceptance (fallback)
+      3. Inferencia por texto parcial
+    Garantiza que el 100% de las encuestas sean analizadas,
+    no solo las que tienen mine_reopening_perception completo.
+    """
+    # 1. Fuente principal
+    clase = CLASE_MAP.get((row.get('mine_reopening_perception') or '').strip())
+    if clase:
+        return clase
+
+    # 2. Fallback: investment_acceptance
+    inv = (row.get('investment_acceptance') or '').strip()
+    clase = CLASE_MAP_INVESTMENT.get(inv)
+    if clase:
+        return clase
+
+    # 3. Inferencia por texto parcial (tolera variantes de acentuación y mayúsculas)
+    inv_low = inv.lower()
+    if 'amplia' in inv_low:
+        return 'Aceptacion'
+    if 'condicion' in inv_low or 'condición' in inv_low:
+        return 'Neutral'
+    if 'rechazo' in inv_low or 'no acepta' in inv_low:
+        return 'Rechazo'
+
+    return None  # Sin datos suficientes para inferir
+
 # Features base (modelo predictivo)
 FEATURE_COLS = [
     'political_climate', 'authority_trust', 'investment_acceptance',
@@ -197,8 +240,7 @@ def analyze_demographics(rows):
     """Analiza distribución por género, edad, educación, ocupación y comunidad."""
     def dist(field):
         counts = Counter(
-            (r.get(field) or 'No especificado').strip() for r in rows
-            if (r.get(field) or '').strip()
+            (r.get(field) or 'No especificado').strip() or 'No especificado' for r in rows
         )
         total = sum(counts.values()) or 1
         return sorted(
@@ -209,10 +251,8 @@ def analyze_demographics(rows):
     # Aceptación por género
     acept_por_genero = {}
     for r in rows:
-        g = (r.get('respondent_gender') or 'No esp.').strip()
-        clase = CLASE_MAP.get(r.get('mine_reopening_perception', '').strip())
-        if not clase:
-            continue
+        g = (r.get('respondent_gender') or 'No especificado').strip() or 'No especificado'
+        clase = (get_clase(r) or 'Neutral')
         if g not in acept_por_genero:
             acept_por_genero[g] = {'Aceptacion': 0, 'Neutral': 0, 'Rechazo': 0, 'total': 0}
         acept_por_genero[g][clase] += 1
@@ -231,10 +271,8 @@ def analyze_demographics(rows):
     # Aceptación por edad
     acept_por_edad = {}
     for r in rows:
-        edad = (r.get('age_range') or 'No esp.').strip()
-        clase = CLASE_MAP.get(r.get('mine_reopening_perception', '').strip())
-        if not clase:
-            continue
+        edad = (r.get('age_range') or 'No especificado').strip() or 'No especificado'
+        clase = (get_clase(r) or 'Neutral')
         if edad not in acept_por_edad:
             acept_por_edad[edad] = {'Aceptacion': 0, 'Neutral': 0, 'Rechazo': 0, 'total': 0}
         acept_por_edad[edad][clase] += 1
@@ -312,9 +350,7 @@ def analyze_mining_knowledge(rows):
         acept_conoce = {'Aceptacion': 0, 'Neutral': 0, 'Rechazo': 0, 'total': 0}
         acept_no_conoce = {'Aceptacion': 0, 'Neutral': 0, 'Rechazo': 0, 'total': 0}
         for r in rows:
-            clase = CLASE_MAP.get(r.get('mine_reopening_perception', '').strip())
-            if not clase:
-                continue
+            clase = (get_clase(r) or 'Neutral')
             val = (r.get(campo) or '').strip().lower()
             conoce = val in ('sí', 'si', 'yes', 'conoce', 'sabe', '1', 'true')
             grupo = acept_conoce if conoce else acept_no_conoce
@@ -371,9 +407,8 @@ def vectorize_survey_texts(rows):
         text_clean = ' '.join(tokens)
         if text_clean.strip():
             corpus_global.append(text_clean)
-            clase = CLASE_MAP.get(row.get('mine_reopening_perception', '').strip())
-            if clase:
-                corpus_por_clase[clase].append(text_clean)
+            clase = (get_clase(row) or 'Neutral')
+            corpus_por_clase[clase].append(text_clean)
 
     if not corpus_global:
         return [], {}
@@ -575,9 +610,7 @@ def train_and_analyze():
     class_counts = {'Aceptacion': 0, 'Neutral': 0, 'Rechazo': 0}
 
     for row in rows:
-        clase = CLASE_MAP.get(row.get('mine_reopening_perception', '').strip())
-        if not clase:
-            continue
+        clase = (get_clase(row) or 'Neutral')
         class_counts[clase] += 1
         feats = [row.get(col, '').strip() or 'Sin dato' for col in FEATURE_COLS_EXT]
         X_raw.append(feats)

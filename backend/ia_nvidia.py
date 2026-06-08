@@ -145,9 +145,7 @@ def ml_train_predict(rows):
 
     X_raw, y_raw, sectors = [], [], []
     for row in rows:
-        clase = ML_CLASE_MAP.get((row.get('mine_reopening_perception') or '').strip())
-        if not clase:
-            continue
+        clase = ML_CLASE_MAP.get((row.get('mine_reopening_perception') or '').strip(), 'Neutral')
         feats = [(row.get(c) or '').strip() or 'Sin dato' for c in ML_FEATURE_COLS]
         X_raw.append(feats)
         y_raw.append(clase)
@@ -249,11 +247,11 @@ def classify_with_map(rows, field, mapa):
     for r in rows:
         v = (r.get(field) or "").strip()
         if not v:
-            continue        # omitir vacio — igual que lib.php freq_dist
-        vl = v.lower()
-        if vl in pos_vals:
+            v = "No especificado"
+        v_low = v.lower()
+        if v_low in pos_vals:
             pos += 1
-        elif vl in neg_vals:
+        elif v_low in neg_vals:
             neg += 1
         else:
             neu += 1        # neutro explicito O no mapeado
@@ -337,19 +335,17 @@ def analyze_statistics(rows):
     # Calculo especifico de aceptacion MINERA (mine_reopening_perception) para zonas
     clases = {'Aceptacion': 0, 'Neutral': 0, 'Rechazo': 0}
     for r in rows:
-        c = ML_CLASE_MAP.get((r.get('mine_reopening_perception') or '').strip())
-        if c:
-            clases[c] += 1
+        c = ML_CLASE_MAP.get((r.get('mine_reopening_perception') or '').strip(), 'Neutral')
+        clases[c] += 1
     n_class = sum(clases.values()) or 1
 
     por_sector = {}
     for r in rows:
         sec = (r.get('sector') or 'general').strip()
-        c   = CLASE_MAP.get((r.get('mine_reopening_perception') or '').strip())
+        c   = ML_CLASE_MAP.get((r.get('mine_reopening_perception') or '').strip(), 'Neutral')
         if sec not in por_sector:
             por_sector[sec] = {'Aceptacion': 0, 'Neutral': 0, 'Rechazo': 0, 'total': 0}
-        if c:
-            por_sector[sec][c] += 1
+        por_sector[sec][c] += 1
         por_sector[sec]['total'] += 1
 
     sectores_detalle = []
@@ -1101,7 +1097,7 @@ def merge_all(stats, texto):
 
 def _clase_de(row):
     """Clasifica la percepción minera de una fila en Aceptacion/Neutral/Rechazo."""
-    return CLASE_MAP.get((row.get('mine_reopening_perception') or '').strip())
+    return ML_CLASE_MAP.get((row.get('mine_reopening_perception') or '').strip(), 'Neutral')
 
 
 def cruce_percepcion(rows, field, label='valor', top=None):

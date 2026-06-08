@@ -832,7 +832,7 @@ function normalize_survey(array $survey): array
     foreach ($fields as $field) {
         $value = $survey[$field] ?? null;
         if (in_array($field, $stringFields)) {
-            // null o false â†’ string vacÃ­o; cualquier otro valor â†’ trim
+            // null o false â†' string vacÃ­o; cualquier otro valor â†' trim
             $normalized[$field] = ($value === null || $value === false) ? '' : trim((string) $value);
         } else {
             $normalized[$field] = is_string($value) ? trim($value) : $value;
@@ -1909,7 +1909,9 @@ function freq_dist(array $rows, string $field, array $sentimentMap = []): array
     $total  = 0;
     foreach ($rows as $row) {
         $val = normalize_label(trim((string) ($row[$field] ?? '')));
-        if ($val === '' || $val === 'null') continue;
+        if ($val === '' || $val === 'null') {
+            $val = 'No especificado';
+        }
         $counts[$val] = ($counts[$val] ?? 0) + 1;
         $total++;
     }
@@ -2283,11 +2285,15 @@ function freq_dist_multi(array $rows, string $field, string $storage): array
         } else {
             $vals = array_filter(array_map('trim', explode('|', (string) $raw)));
         }
-        if (empty($vals)) continue;
+        if (empty($vals)) {
+            $vals = ['No especificado'];
+        }
         $respondents++;
         foreach ($vals as $v) {
             $v = normalize_label(trim((string) $v));
-            if ($v === '' || $v === 'null') continue;
+            if ($v === '' || $v === 'null') {
+                $v = 'No especificado';
+            }
             $counts[$v] = ($counts[$v] ?? 0) + 1;
         }
     }
@@ -2551,7 +2557,7 @@ Con base en estos datos reales, genera un Plan EstratÃ©gico Integral para la R
     ... (6 indicadores)
   ],
   "beneficios_esperados": [
-    {"icono": "ðŸ’°", "titulo": "...", "descripcion": "..."},
+    {"icono": "ðŸ'°", "titulo": "...", "descripcion": "..."},
     ... (5 beneficios)
   ],
   "conclusion": "PÃ¡rrafo conclusivo estratÃ©gico basado en los datos reales (4-5 oraciones, concreto y orientado a acciÃ³n)"
@@ -2651,21 +2657,44 @@ function ia_minera_entrenar_y_analizar(string $sector = 'general'): array
     }
 
     // --- Definir clases objetivo ---
-    // mine_reopening_perception â†’ AceptaciÃ³n / Neutral / Rechazo
+    // mine_reopening_perception → Aceptacion / Neutral / Rechazo
     $claseMap = [
         'Beneficiaria mucho' => 'Aceptacion',
         'Beneficiaria algo'  => 'Aceptacion',
         'Beneficio dudoso'   => 'Neutral',
         'No beneficiaria'    => 'Rechazo',
     ];
+    // Fallback: cuando mine_reopening_perception está vacío,
+    // se infiere la clase desde investment_acceptance para cubrir el 100% de encuestas
+    $claseMapInvestment = [
+        'Aceptacion amplia'       => 'Aceptacion',
+        'Aceptación amplia'       => 'Aceptacion',
+        'Aceptacion condicionada' => 'Neutral',
+        'Aceptación condicionada' => 'Neutral',
+        'Rechazo'                 => 'Rechazo',
+        'No acepta'               => 'Rechazo',
+    ];
+    $getClase = function(array $encuesta) use ($claseMap, $claseMapInvestment): string {
+        $c = $claseMap[trim($encuesta['mine_reopening_perception'] ?? '')] ?? '';
+        if ($c !== '') return $c;
+        $inv = trim($encuesta['investment_acceptance'] ?? '');
+        $c = $claseMapInvestment[$inv] ?? '';
+        if ($c !== '') return $c;
+        $invLow = mb_strtolower($inv, 'UTF-8');
+        if (str_contains($invLow, 'amplia'))    return 'Aceptacion';
+        if (str_contains($invLow, 'condicion')) return 'Neutral';
+        if (str_contains($invLow, 'rechazo'))   return 'Rechazo';
+        if (str_contains($invLow, 'no acepta')) return 'Rechazo';
+        return '';
+    };
     $clases = ['Aceptacion', 'Neutral', 'Rechazo'];
 
     // --- Features (predictores) ---
     $features = [
-        'political_climate'    => 'Clima PolÃ­tico',
+        'political_climate'    => 'Clima Político',
         'authority_trust'      => 'Confianza en Autoridades',
-        'investment_acceptance'=> 'Apertura a InversiÃ³n',
-        'household_income'     => 'SituaciÃ³n EconÃ³mica',
+        'investment_acceptance'=> 'Apertura a Inversión',
+        'household_income'     => 'Situación Económica',
         'water_source'         => 'Fuente de Agua',
         'has_internet'         => 'Acceso a Internet',
         'road_status'          => 'Estado Vial',
@@ -2678,9 +2707,8 @@ function ia_minera_entrenar_y_analizar(string $sector = 'general'): array
     $valoresFeat   = [];  // [feature] => set of values
 
     foreach ($rows as $row) {
-        $claseRaw = trim($row['mine_reopening_perception'] ?? '');
-        $clase    = $claseMap[$claseRaw] ?? null;
-        if (!$clase) continue;
+        $clase = $getClase($row);
+        if ($clase === '') continue;
 
         $conteoClase[$clase]++;
 
@@ -2694,7 +2722,7 @@ function ia_minera_entrenar_y_analizar(string $sector = 'general'): array
 
     $totalEntrenados = array_sum($conteoClase);
     if ($totalEntrenados === 0) {
-        return ['ok' => false, 'error' => 'No hay encuestas con percepciÃ³n minera registrada.'];
+        return ['ok' => false, 'error' => 'No hay encuestas con percepción minera registrada.'];
     }
 
     // --- Probabilidades a priori P(clase) ---
@@ -2961,7 +2989,7 @@ function ia_minera_entrenar_y_analizar(string $sector = 'general'): array
             'nombre' => 'Naive Bayes Multinomial â€” Motor Experto PHP (Fallback)',
             'fase_recoleccion'    => ['descripcion' => 'Encuestas estructuradas en campo.', 'total_registros' => $n, 'variables_clave' => array_values($features), 'instrumento' => 'Formulario digital multidimensional'],
             'fase_vectorizacion'  => ['descripcion' => 'No disponible en modo fallback.', 'tecnica' => 'N/A', 'temas_identificados' => []],
-            'fase_clasificacion'  => ['descripcion' => 'Naive Bayes con suavizado de Laplace.', 'modelos' => [['nombre' => 'Naive Bayes Multinomial', 'arquitectura' => 'Suavizado Laplace Î±=1', 'precision' => null, 'uso' => 'ClasificaciÃ³n de percepciÃ³n minera']], 'variable_objetivo' => 'mine_reopening_perception â†’ Aceptacion/Neutral/Rechazo', 'n_entrenamiento' => $totalEntrenados],
+            'fase_clasificacion'  => ['descripcion' => 'Naive Bayes con suavizado de Laplace.', 'modelos' => [['nombre' => 'Naive Bayes Multinomial', 'arquitectura' => 'Suavizado Laplace Î±=1', 'precision' => null, 'uso' => 'ClasificaciÃ³n de percepciÃ³n minera']], 'variable_objetivo' => 'mine_reopening_perception -> Aceptacion/Neutral/Rechazo', 'n_entrenamiento' => $totalEntrenados],
             'fase_analisis'       => ['descripcion' => 'AnÃ¡lisis estadÃ­stico descriptivo.', 'componentes' => ['DistribuciÃ³n de clases', 'Importancia de variables (Information Gain)', 'PredicciÃ³n por sector']],
             'fase_plan_estrategico' => ['descripcion' => 'Plan generado con motor experto local.', 'proceso' => ['ClasificaciÃ³n Naive Bayes', 'AnÃ¡lisis de importancia de variables', 'GeneraciÃ³n de recomendaciones basadas en reglas']],
             'limitaciones'        => ['Modelo fallback sin Red Neuronal ni Random Forest.', 'Sin vectorizaciÃ³n TF-IDF de textos libres.', 'Sin anÃ¡lisis demogrÃ¡fico completo.', 'Instalar scikit-learn en el servidor para activar el modelo completo.'],
@@ -3295,7 +3323,7 @@ function get_plan_gemini(string $sector = 'general'): array
         }
     }
 
-    // ---- 5. Si Gemini fallÃ³ â†’ fallback construido desde $analisis + $ia (siempre disponibles) ----
+    // ---- 5. Si Gemini fallÃ³ â†' fallback construido desde $analisis + $ia (siempre disponibles) ----
     if (!is_array($plan)) {
         // Datos siempre presentes (tanto del modelo Python como del Naive Bayes PHP)
         $predIA    = $ia['prediccion_global']                    ?? 'Ambivalente';

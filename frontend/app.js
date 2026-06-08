@@ -4462,23 +4462,32 @@ async function generateAnalisisPDF() {
             'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
         const fecha = `${now.getDate()} de ${meses[now.getMonth()]} de ${now.getFullYear()}`;
 
-        // --- Captura graficas ---
-        async function cap(id) {
+        // --- Captura graficas (canvas.toDataURL con fondo de color para respetar el estilo oscuro) ---
+        function cap(id, bgColor) {
             const el = document.getElementById(id);
             if (!el) return null;
             try {
-                const c = await html2canvas(el, { backgroundColor: '#1e2235', scale: 2, useCORS: true, logging: false });
-                return c.toDataURL('image/png');
+                const cv = el.tagName === 'CANVAS' ? el : el.querySelector('canvas');
+                if (!cv) return null;
+                if (!bgColor) return cv.toDataURL('image/png');
+                // Componer sobre fondo de color (para gráficas con fondo transparente en canvas)
+                const tmp = document.createElement('canvas');
+                tmp.width  = cv.width  || cv.offsetWidth  || 400;
+                tmp.height = cv.height || cv.offsetHeight || 400;
+                const ctx2 = tmp.getContext('2d');
+                ctx2.fillStyle = bgColor;
+                ctx2.fillRect(0, 0, tmp.width, tmp.height);
+                ctx2.drawImage(cv, 0, 0, tmp.width, tmp.height);
+                return tmp.toDataURL('image/png');
             } catch { return null; }
         }
-        const [imgDonut, imgRadar, imgTendencia] = await Promise.all([
-            cap('chart-sentimiento-global'),
-            cap('chart-radar-dimensiones'),
-            cap('chart-tendencia'),
-        ]);
+        // El radar y el donut están sobre fondo azul oscuro; se capturan CON ese fondo
+        const imgDonut    = cap('chart-sentimiento-global', '#0d1b3e');
+        const imgRadar    = cap('chart-radar-dimensiones', '#0d1b3e');
+        const imgTendencia = cap('chart-tendencia');
         const imgsDim = [];
         for (let i = 0; i < (data.dimensiones || []).length; i++) {
-            imgsDim.push(await cap('chart-dim-' + i));
+            imgsDim.push(cap('chart-dim-' + i));
         }
 
         // --- Fetch preguntas ---
@@ -4660,6 +4669,21 @@ async function generateAnalisisPDF() {
     <h2 style="font-size:16pt;font-weight:900;margin:0 0 4px">8A. Metodolog&iacute;a del Estudio</h2>
     <p style="opacity:.8;font-size:9.5pt">${esc(met.nombre || '')} &middot; ${met.fase_recoleccion?.total_registros || 0} registros procesados</p>
   </div>
+  <div class="metod-tags" style="margin:14px 0 8px">
+    <span class="mtag mtag-purple">&#128202; Metodolog&iacute;a Mixta</span>
+    <span class="mtag mtag-blue">&#128203; TF-IDF &mdash; Vectorizaci&oacute;n de Texto</span>
+    <span class="mtag mtag-green">&#129504; NLP &mdash; Procesamiento de Lenguaje Natural</span>
+    <span class="mtag mtag-orange">&#9889; Pipeline de 5 Fases</span>
+    <span class="mtag mtag-slate">&#127759; Investigaci&oacute;n de Campo</span>
+  </div>
+  <div class="metod-box" style="margin-bottom:12px">
+    <strong>&#128220; Metodolog&iacute;a Global &mdash; Pipeline Mixto de IA + Estad&iacute;stica</strong>
+    El estudio sigue 5 fases secuenciales: <strong>1) Recopilaci&oacute;n</strong> (encuestas de campo) &rarr;
+    <strong>2) Vectorizaci&oacute;n</strong> (TF-IDF convierte texto en vectores num&eacute;ricos) &rarr;
+    <strong>3) Clasificaci&oacute;n</strong> (IA asigna etiqueta de sentimiento) &rarr;
+    <strong>4) An&aacute;lisis estad&iacute;stico</strong> (correlaciones, distribuciones, &iacute;ndices) &rarr;
+    <strong>5) Plan estrat&eacute;gico</strong> (s&iacute;ntesis con FODA + Marco L&oacute;gico).
+  </div>
 
   <div class="met-hdr">Descripci&oacute;n del Proceso Metodol&oacute;gico</div>
   <div class="met-grid2">
@@ -4792,6 +4816,20 @@ async function generateAnalisisPDF() {
     <div class="ia-pred-badge" style="background:${predColor}">
       Predicci&oacute;n global: ${esc(pred)}
     </div>
+  </div>
+  <div class="metod-tags" style="margin-top:14px">
+    <span class="mtag mtag-purple">&#129504; Machine Learning (ML)</span>
+    <span class="mtag mtag-blue">&#128202; Naive Bayes &mdash; Clasificador Probabil&iacute;stico</span>
+    <span class="mtag mtag-green">&#127795; Random Forest &mdash; Ensemble Learning</span>
+    <span class="mtag mtag-orange">&#9889; Red Neuronal MLP</span>
+    <span class="mtag mtag-slate">&#128203; Aprendizaje Supervisado</span>
+  </div>
+  <div class="metod-box" style="margin-bottom:4px">
+    <strong>&#128220; Metodolog&iacute;a &mdash; Inteligencia Artificial y Aprendizaje Autom&aacute;tico</strong>
+    <strong>Naive Bayes:</strong> Clasifica cada encuesta como Aceptaci&oacute;n / Neutral / Rechazo con base en probabilidades condicionales. &nbsp;|&nbsp;
+    <strong>Random Forest:</strong> Ensemble de &aacute;rboles de decisi&oacute;n para medir importancia de factores y robustez del modelo. &nbsp;|&nbsp;
+    <strong>Red Neuronal MLP:</strong> Capas densas que aprenden patrones no lineales de percepci&oacute;n comunitaria. &nbsp;|&nbsp;
+    <strong>Aprendizaje Supervisado:</strong> El modelo es entrenado con etiquetas reales de las encuestas del territorio.
   </div>
 
   <div class="ia-kpi3">
@@ -5287,6 +5325,22 @@ h1,h2,h3,h4{font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif}
     padding-bottom:6px;border-bottom:2px solid #0e4eb0;}
 .sd{font-size:9.5pt;color:#64748b;font-style:italic;margin-bottom:16px}
 
+/* Etiquetas de metodologia */
+.metod-tags{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 16px}
+.mtag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:7.5pt;
+      font-weight:700;letter-spacing:.3px;text-transform:uppercase}
+.mtag-blue{background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd}
+.mtag-green{background:#dcfce7;color:#166534;border:1px solid #86efac}
+.mtag-purple{background:#f3e8ff;color:#6b21a8;border:1px solid #c4b5fd}
+.mtag-orange{background:#ffedd5;color:#9a3412;border:1px solid #fdba74}
+.mtag-yellow{background:#fefce8;color:#854d0e;border:1px solid #fde047}
+.mtag-slate{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
+.mtag-red{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+.metod-box{background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #0e4eb0;
+           border-radius:0 8px 8px 0;padding:12px 16px;margin:12px 0 18px;font-size:9pt;
+           color:#334155;line-height:1.7}
+.metod-box strong{color:#0e4eb0;display:block;margin-bottom:4px;font-size:9.5pt}
+
 /* Pie */
 .pie{margin-top:28px;padding-top:12px;border-top:1px solid #e2e8f0;
      font-size:8.5pt;color:#94a3b8;display:flex;justify-content:space-between;}
@@ -5349,6 +5403,12 @@ h1,h2,h3,h4{font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif}
 <!-- PAG 1: RESUMEN EJECUTIVO -->
 <div class="page">
   <div class="ph"><h2>1. Resumen Ejecutivo</h2><p>Indicadores globales del an&aacute;lisis de sentimiento comunitario</p></div>
+  <div class="metod-tags">
+    <span class="mtag mtag-blue">&#128200; Investigaci&oacute;n Cuantitativa</span>
+    <span class="mtag mtag-green">&#128202; Estad&iacute;stica Descriptiva</span>
+    <span class="mtag mtag-purple">&#129504; NLP &mdash; Procesamiento de Lenguaje Natural</span>
+    <span class="mtag mtag-orange">&#9889; &Iacute;ndice Neto de Sentimiento</span>
+  </div>
   <div class="krow4">
     <div class="kc" style="background:#0e4eb0"><span class="v">${n(r.total_encuestas)}</span><span class="l">Total de Encuestas</span></div>
     <div class="kc" style="background:${nvlColor}"><span class="v">${sgn(indice)} pts</span><span class="l">&Iacute;ndice Neto Global</span></div>
@@ -5370,12 +5430,11 @@ h1,h2,h3,h4{font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif}
         <td><strong style="color:#c43d45">${p(sg.negativo_pct)}</strong></td>
         <td>Respuestas de rechazo, insatisfacci&oacute;n o cr&iacute;tica</td></tr>
   </table>
-  <div class="metod">
-    <strong>Marco Metodol&oacute;gico &mdash;</strong> El an&aacute;lisis aplica estad&iacute;stica descriptiva y procesamiento
-    de lenguaje natural (NLP) sobre las encuestas de la parroquia San Bartolom&eacute;. El
-    <strong>&Iacute;ndice Neto de Sentimiento</strong> se calcula como: <em>% Positivo &minus; % Negativo</em>
-    (escala &minus;100 a +100 puntos). Valores &ge; +15 se clasifican como <em>Favorable</em>,
-    entre &minus;15 y +15 como <em>Ambivalente</em>, y &le; &minus;15 como <em>Cr&iacute;tico</em>.
+  <div class="metod-box">
+    <strong>&#128220; Marco Metodol&oacute;gico &mdash; Investigaci&oacute;n Cuantitativa + NLP</strong>
+    An&aacute;lisis basado en <em>estad&iacute;stica descriptiva</em> y <em>procesamiento autom&aacute;tico de texto</em> aplicados sobre las respuestas de la encuesta comunitaria.
+    El <strong>&Iacute;ndice Neto de Sentimiento</strong> se calcula como <em>% Positivo &minus; % Negativo</em> (escala &minus;100 a +100 pts).
+    Valores &ge; +15 = Favorable &middot; entre &minus;15 y +15 = Ambivalente &middot; &le; &minus;15 = Cr&iacute;tico.
   </div>
   <div class="pie"><span>Reporte T&eacute;cnico-Cient&iacute;fico &middot; Encuestas Parroquiales San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
 </div>
@@ -5383,24 +5442,48 @@ h1,h2,h3,h4{font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif}
 <!-- PAG 2: GRAFICAS -->
 <div class="page">
   <div class="ph"><h2>2. An&aacute;lisis Gr&aacute;fico de Sentimiento</h2><p>Visualizaciones capturadas en tiempo real del sistema de an&aacute;lisis</p></div>
+  <div class="metod-tags">
+    <span class="mtag mtag-blue">&#128200; Visualizaci&oacute;n de Datos</span>
+    <span class="mtag mtag-green">&#9679; M&eacute;todo Mixto (Cuantitativo + Cualitativo)</span>
+    <span class="mtag mtag-purple">&#128258; Gr&aacute;fica Donut &mdash; Distribuci&oacute;n Porcentual</span>
+    <span class="mtag mtag-orange">&#128303; Vista Radar &mdash; Comparativa Multidimensional</span>
+    <span class="mtag mtag-slate">&#128202; An&aacute;lisis de Tendencia Temporal</span>
+  </div>
   ${imgDonut ? `
   <div class="st">2.1 Distribuci&oacute;n de Sentimiento Comunitario</div>
-  <div class="sd">Proporci&oacute;n de encuestas clasificadas como Positivo, Neutro y Negativo sobre el total analizado.</div>
-  <div class="chart-wrap"><img src="${imgDonut}"></div>` : '<p style="color:#888;font-size:10pt;padding:20px 0;">Gr&aacute;fica de sentimiento no disponible (abrir el tab An&aacute;lisis IA antes de exportar).</p>'}
+  <div class="sd">Proporci&oacute;n de encuestas clasificadas como Positivo, Neutro y Negativo sobre el total analizado. <em>Metodolog&iacute;a: Estad&iacute;stica Descriptiva &mdash; Distribuci&oacute;n de Frecuencias.</em></div>
+  <div class="chart-wrap"><img src="${imgDonut}" style="max-width:340px;max-height:340px;border-radius:12px;"></div>` : '<p style="color:#888;font-size:10pt;padding:20px 0;">Gr&aacute;fica de sentimiento no disponible (abrir el tab An&aacute;lisis IA antes de exportar).</p>'}
   ${imgRadar ? `
-  <div class="st">2.2 Fortaleza de Dimensiones por &Aacute;rea</div>
-  <div class="sd">Puntaje neto obtenido en cada dimensi&oacute;n analizada (escala &minus;100 a +100 puntos). Verde = favorable, rojo = cr&iacute;tico.</div>
-  <div class="chart-wrap"><img src="${imgRadar}" style="max-height:380px"></div>` : '<p style="color:#888;font-size:10pt;padding:20px 0;">Gr&aacute;fica radar no disponible.</p>'}
+  <div class="st">2.2 Vista Radar &mdash; Comparativa por Dimensi&oacute;n</div>
+  <div class="sd">Cada eje eval&uacute;a el sentimiento mediante un &Iacute;ndice Neto (escala &minus;100 a +100 puntos), calculado como: % Positivo menos % Negativo. Verde = favorable, rojo = cr&iacute;tico. <em>Metodolog&iacute;a: An&aacute;lisis Multidimensional &mdash; Gr&aacute;fico de Radar.</em></div>
+  <div class="chart-wrap"><img src="${imgRadar}" style="max-width:520px;max-height:420px;border-radius:12px;"></div>` : '<p style="color:#888;font-size:10pt;padding:20px 0;">Gr&aacute;fica radar no disponible.</p>'}
   ${imgTendencia ? `
   <div class="st">2.3 Tendencia Temporal de Encuestas</div>
-  <div class="sd">Volumen de encuestas por d&iacute;a y evoluci&oacute;n del &iacute;ndice de apertura a la inversi&oacute;n.</div>
+  <div class="sd">Volumen de encuestas por d&iacute;a y evoluci&oacute;n del &iacute;ndice de apertura a la inversi&oacute;n. <em>Metodolog&iacute;a: An&aacute;lisis de Series Temporales.</em></div>
   <div class="chart-wrap"><img src="${imgTendencia}" style="max-height:220px"></div>` : ''}
+  <div class="metod-box">
+    <strong>&#128220; Metodolog&iacute;as de Visualizaci&oacute;n Aplicadas</strong>
+    <strong>Gr&aacute;fico Donut:</strong> Representa la distribuci&oacute;n porcentual de sentimientos (positivo, neutro, negativo) sobre el total de encuestas. &nbsp;|&nbsp;
+    <strong>Radar Chart:</strong> Compara el &Iacute;ndice Neto de cada dimensi&oacute;n en un solo plano visual, permitiendo detectar fortalezas y &aacute;reas cr&iacute;ticas simult&aacute;neamente. &nbsp;|&nbsp;
+    <strong>Serie Temporal:</strong> Muestra la evoluci&oacute;n del levantamiento en los &uacute;ltimos 14 d&iacute;as.
+  </div>
   <div class="pie"><span>Reporte T&eacute;cnico-Cient&iacute;fico &middot; Encuestas Parroquiales San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
 </div>
 
 <!-- PAG 3: DETALLE DE DIMENSIONES -->
 <div class="page">
   <div class="ph"><h2>3. Sentimiento Detallado por Dimensi&oacute;n</h2><p>An&aacute;lisis del &Iacute;ndice Neto y respuestas porcentuales por &aacute;rea de inter&eacute;s</p></div>
+  <div class="metod-tags">
+    <span class="mtag mtag-blue">&#128200; An&aacute;lisis Multidimensional</span>
+    <span class="mtag mtag-green">&#9432; Estad&iacute;stica Descriptiva por Dimensi&oacute;n</span>
+    <span class="mtag mtag-purple">&#129504; Clasificaci&oacute;n NLP por &Aacute;rea Tem&aacute;tica</span>
+    <span class="mtag mtag-orange">&#128202; &Iacute;ndice Neto = % Positivo &minus; % Negativo</span>
+  </div>
+  <div class="metod-box" style="margin-bottom:16px">
+    <strong>&#128220; Metodolog&iacute;a &mdash; An&aacute;lisis Cuantitativo por Dimensi&oacute;n</strong>
+    Cada dimensi&oacute;n agrupa preguntas relacionadas con un &aacute;rea tem&aacute;tica (seguridad, servicios, medio ambiente, etc.). El modelo de NLP clasifica cada respuesta y calcula el <em>&Iacute;ndice Neto</em> por dimensi&oacute;n.
+    Las barras muestran la distribuci&oacute;n de respuestas capturadas en el campo.
+  </div>
   ${dimsHtml || '<p style="color:#888;font-size:10pt;padding:20px 0;">Carga el tab An&aacute;lisis IA para ver el detalle por dimensi&oacute;n.</p>'}
   <div class="pie"><span>Reporte T&eacute;cnico-Cient&iacute;fico &middot; Encuestas Parroquiales San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
 </div>
@@ -5409,6 +5492,17 @@ h1,h2,h3,h4{font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif}
 ${pregHtml ? `
 <div class="page">
   <div class="ph"><h2>4. Respuestas Detalladas a Preguntas Clave</h2><p>Distribuci&oacute;n de opciones seleccionadas en el formulario de encuesta</p></div>
+  <div class="metod-tags">
+    <span class="mtag mtag-blue">&#128203; Encuesta (Survey Research)</span>
+    <span class="mtag mtag-green">&#128200; Investigaci&oacute;n Cuantitativa</span>
+    <span class="mtag mtag-orange">&#128202; Distribuci&oacute;n de Frecuencias</span>
+    <span class="mtag mtag-slate">&#127358; Escala Nominal / Ordinal</span>
+  </div>
+  <div class="metod-box" style="margin-bottom:16px">
+    <strong>&#128220; Metodolog&iacute;a &mdash; Investigaci&oacute;n por Encuesta (Survey Research)</strong>
+    Las preguntas utilizan escalas nominales y ordinales (Likert) para medir percepciones. Los gr&aacute;ficos de barras horizontales y donut muestran la distribuci&oacute;n de frecuencias absolutas de cada respuesta.
+    Esta metodolog&iacute;a es propia de la <em>investigaci&oacute;n cuantitativa descriptiva</em>.
+  </div>
   ${pregHtml}
   <div class="pie"><span>Reporte T&eacute;cnico-Cient&iacute;fico &middot; Encuestas Parroquiales San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
 </div>` : ''}
@@ -5416,6 +5510,18 @@ ${pregHtml ? `
 <!-- PAG 5: PERCEPCIONES MINERAS -->
 <div class="page">
   <div class="ph"><h2>5. Percepciones e Impacto de la Actividad Minera</h2><p>Evaluaci&oacute;n comunitaria de riesgos, beneficios y conocimiento minero</p></div>
+  <div class="metod-tags">
+    <span class="mtag mtag-blue">&#128483; Investigaci&oacute;n Cualitativa</span>
+    <span class="mtag mtag-orange">&#128269; An&aacute;lisis de Percepci&oacute;n Comunitaria</span>
+    <span class="mtag mtag-green">&#128994; Sem&aacute;foro de Conocimiento</span>
+    <span class="mtag mtag-red">&#9888; Evaluaci&oacute;n de Riesgo Percibido</span>
+    <span class="mtag mtag-purple">&#128202; M&eacute;todo Mixto</span>
+  </div>
+  <div class="metod-box" style="margin-bottom:16px">
+    <strong>&#128220; Metodolog&iacute;a &mdash; An&aacute;lisis de Percepci&oacute;n (M&eacute;todo Mixto)</strong>
+    <strong>Cualitativo:</strong> Identifica temas emergentes (beneficios y riesgos) desde las respuestas abiertas y opini&oacute;n ciudadana. &nbsp;|&nbsp;
+    <strong>Cuantitativo:</strong> Mide el porcentaje de ciudadanos que reconocen cada factor y el nivel de conocimiento mediante indicadores de sem&aacute;foro (&ge;60% = Alto, 30&ndash;59% = Medio, &lt;30% = Bajo).
+  </div>
   <div class="mine-grid">
     <div class="mine-card no-break">
       <h4 style="color:#0f9f6e;border-color:#0f9f6e">Beneficios Percibidos</h4>
@@ -5427,7 +5533,7 @@ ${pregHtml ? `
     </div>
   </div>
   <div class="st">5.3 Nivel de Conocimiento sobre Miner&iacute;a</div>
-  <div class="sd">Sem&aacute;foro: &#128994; &ge; 60% &mdash; conocimiento adecuado &nbsp;&middot;&nbsp; &#128993; 30&ndash;59% &mdash; conocimiento parcial &nbsp;&middot;&nbsp; &#128308; &lt; 30% &mdash; socializaci&oacute;n urgente</div>
+  <div class="sd">Sem&aacute;foro: &#128994; &ge; 60% &mdash; conocimiento adecuado &nbsp;&middot;&nbsp; &#128993; 30&ndash;59% &mdash; conocimiento parcial &nbsp;&middot;&nbsp; &#128308; &lt; 30% &mdash; socializaci&oacute;n urgente. <em>Metodolog&iacute;a: Indicador de Conocimiento &mdash; Estad&iacute;stica Descriptiva.</em></div>
   ${conocHtml || '<p style="color:#888;font-size:9pt">Sin datos registrados</p>'}
   <div class="pie"><span>Reporte T&eacute;cnico-Cient&iacute;fico &middot; Encuestas Parroquiales San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
 </div>
@@ -5435,6 +5541,19 @@ ${pregHtml ? `
 <!-- PAG 6: CORRELACIONES Y TENDENCIA -->
 <div class="page">
   <div class="ph"><h2>6. Correlaciones, Tendencia Temporal y Distribuci&oacute;n Geogr&aacute;fica</h2><p>Cruces estrat&eacute;gicos, evoluci&oacute;n del levantamiento y cobertura por sector</p></div>
+  <div class="metod-tags">
+    <span class="mtag mtag-blue">&#128200; Estad&iacute;stica Inferencial</span>
+    <span class="mtag mtag-green">&#128257; An&aacute;lisis de Correlaci&oacute;n Bivariada</span>
+    <span class="mtag mtag-orange">&#128202; An&aacute;lisis de Series Temporales</span>
+    <span class="mtag mtag-purple">&#127760; Distribuci&oacute;n Geogr&aacute;fica (SIG)</span>
+    <span class="mtag mtag-slate">&#128203; Cruces Estrat&eacute;gicos</span>
+  </div>
+  <div class="metod-box" style="margin-bottom:16px">
+    <strong>&#128220; Metodolog&iacute;a &mdash; Estad&iacute;stica Inferencial y Correlacional</strong>
+    <strong>Correlaci&oacute;n:</strong> Compara grupos (g&eacute;nero, edad, educaci&oacute;n) midiendo la diferencia en puntos porcentuales (pp) sobre la variable de percepci&oacute;n. &nbsp;|&nbsp;
+    <strong>Serie temporal:</strong> Detecta patrones de participaci&oacute;n y tendencia del sentimiento en el tiempo. &nbsp;|&nbsp;
+    <strong>Distribuci&oacute;n geogr&aacute;fica:</strong> Mapea la cobertura del levantamiento por sector parroquial.
+  </div>
   <div class="st">6.1 Correlaciones y Cruces Estrat&eacute;gicos</div>
   <div class="sd">Diferencia expresada en puntos porcentuales (pp) entre grupos comparados.</div>
   ${corrHtml || '<p style="color:#888;font-size:9pt">Sin correlaciones disponibles</p>'}
@@ -5451,6 +5570,22 @@ ${pregHtml ? `
 <!-- PAG 7: CONCLUSIONES -->
 <div class="page">
   <div class="ph"><h2>7. Conclusiones y Recomendaciones</h2><p>S&iacute;ntesis anal&iacute;tica y l&iacute;neas de acci&oacute;n basadas en los datos del territorio</p></div>
+  <div class="metod-tags">
+    <span class="mtag mtag-yellow">&#9878; An&aacute;lisis FODA</span>
+    <span class="mtag mtag-blue">&#127959; Marco L&oacute;gico</span>
+    <span class="mtag mtag-green">&#128200; Balanced Scorecard (KPIs)</span>
+    <span class="mtag mtag-purple">&#128161; Design Thinking</span>
+    <span class="mtag mtag-orange">&#128203; Planificaci&oacute;n Estrat&eacute;gica</span>
+    <span class="mtag mtag-slate">&#128269; S&iacute;ntesis Anal&iacute;tica Mixta</span>
+  </div>
+  <div class="metod-box" style="margin-bottom:16px">
+    <strong>&#128220; Metodolog&iacute;a &mdash; Planificaci&oacute;n Estrat&eacute;gica Integrada</strong>
+    Las conclusiones combinan cuatro marcos metodol&oacute;gicos:
+    <strong>FODA</strong> (identificaci&oacute;n de fortalezas, debilidades, oportunidades y amenazas desde los datos) &middot;
+    <strong>Marco L&oacute;gico</strong> (vinculaci&oacute;n causa-efecto entre problem&aacute;ticas y l&iacute;neas de acci&oacute;n) &middot;
+    <strong>Balanced Scorecard</strong> (m&eacute;tricas clave para seguimiento de intervenciones) &middot;
+    <strong>Design Thinking</strong> (soluciones centradas en la ciudadan&iacute;a a partir de sus necesidades reales).
+  </div>
   <div class="concl-box">${concl}</div>
   <div class="cierre">
     <strong>Documento generado autom&aacute;ticamente</strong> por el Sistema de An&aacute;lisis Comunitario de San Bartolom&eacute;.<br>
@@ -5508,10 +5643,25 @@ ${chartsCode}
 
         const iframe = document.createElement('iframe');
         iframe.id = 'pdf-print-frame';
-        // Tamaño real A4 (~96dpi) fuera de pantalla para que las gráficas se render
+        iframe.style.cssText = 'position:fixed;right:-9999px;top:0;width:794px;height:1123px;border:none;';
+        document.body.appendChild(iframe);
 
-        // Respaldo         // Respaldo si onload no dispara (document.write a veces no lo lanza)
-        setTimeout(doPrint, 2000);
+        let _printed = false;
+        const doPrint = () => {
+            if (_printed) return;
+            _printed = true;
+            try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch(e) {}
+            setTimeout(() => { const f = document.getElementById('pdf-print-frame'); if (f) f.remove(); }, 30000);
+        };
+
+        iframe.onload = () => setTimeout(doPrint, 3500);
+        setTimeout(doPrint, 7000);  // fallback si onload no dispara
+
+        // Usar Blob URL con charset explícito — garantiza UTF-8 correcto (evita Ã©/Ã­ con document.write)
+        const blob = new Blob([cleanHtml], { type: 'text/html;charset=utf-8' });
+        const blobUrl = URL.createObjectURL(blob);
+        iframe.src = blobUrl;
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
 
     } catch (err) {
         console.error('Error generando PDF:', err);
@@ -5560,18 +5710,50 @@ async function generateLLMNvidiaPDF() {
             return `<div class="br"><span class="bl">${esc(label)}</span><div class="bt"><div class="bf" style="width:${w}%;background:${color}"></div></div><span class="bp" style="color:${color}">${w.toFixed(1)}%</span></div>`;
         };
 
-        // Capturar graficas del tab LLM
-        const cap = async id => {
+        // Capturar graficas del tab LLM — los canvas de Chart.js se leen con toDataURL() directamente
+        const capCanvas = id => {
             const el = document.getElementById(id);
             if (!el) return null;
             try {
-                const c = await html2canvas(el, { backgroundColor: '#1e2235', scale: 2, useCORS: true, logging: false });
-                return c.toDataURL('image/png');
+                // Si es un <canvas>, leerlo directamente (html2canvas no captura bien canvas Chart.js)
+                if (el.tagName === 'CANVAS') return el.toDataURL('image/png');
+                // Si es un contenedor, buscar el canvas dentro
+                const cv = el.querySelector('canvas');
+                if (cv) return cv.toDataURL('image/png');
+                return null;
             } catch { return null; }
         };
-        const [imgDonut, imgFactores, imgZonas] = await Promise.all([
-            cap('llm-donut-stats'), cap('llm-factores-chart'), cap('llm-zonas'),
-        ]);
+        // capRadar eliminado: el radar se renderiza directamente en el PDF como Chart.js nativo (fondo blanco)
+        const imgDonut    = capCanvas('llm-donut-stats');
+        const imgFactores = capCanvas('llm-factores-chart');
+        const imgZonas    = capCanvas('llm-zonas-chart');
+        // Radar: extraer datos del payload y renderizar limpio en el PDF (no capturar screenshot oscuro)
+        const radarDims   = data.dimensiones || [];
+        const radarLabels = radarDims.map(d => d.titulo || '');
+        const radarVals   = radarDims.map(d => Number(d.sentimiento?.indice ?? 0));
+        const radarPtClr  = radarVals.map(v => v >= 10 ? '#0f9f6e' : v <= -10 ? '#c43d45' : '#d97706');
+
+        // Capturar canvas de dimensiones ya renderizados en la UI
+        const imgsDimGauge = [];
+        const imgsDimBar   = [];
+        for (let i = 0; i < radarDims.length; i++) {
+            imgsDimGauge.push(capCanvas('gauge-llm-dim-' + i));
+            imgsDimBar.push(capCanvas('bar-llm-dim-' + i));
+        }
+        // Capturar gauges por zona ya renderizados en la UI
+        const imgsZonaGauge = [];
+        const nZonasUI = (data.analisis_por_zona || []).length;
+        for (let i = 0; i < nZonasUI; i++) {
+            imgsZonaGauge.push(capCanvas('zona-gauge-' + i));
+        }
+
+        // Fetch preguntas (mismo endpoint que Análisis IA)
+        const sVal = sEl?.value || 'general';
+        let pregData = null;
+        try {
+            const pp = await requestJson('preguntas', { params: { sector: sVal } });
+            if (pp?.preguntas?.total > 0) pregData = pp.preguntas;
+        } catch { /* sin preguntas */ }
 
         const probs  = data.probabilidades_globales || {};
         const pa     = nv(probs.Aceptacion);
@@ -5637,7 +5819,14 @@ body{font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif;font-size:10.5pt;
 .pie{margin-top:28px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:8.5pt;color:#94a3b8;display:flex;justify-content:space-between}
 .no-break{page-break-inside:avoid;break-inside:avoid}
 .cierre{text-align:center;padding:28px;background:#f1f5f9;border-radius:10px;margin-top:32px;font-size:10pt;color:#475569;line-height:1.9}
-@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}@page{size:A4;margin:0}body{font-size:10pt;margin:0;padding:0}.portada{height:297mm;min-height:297mm;box-sizing:border-box}.page{padding:20mm 15mm;min-height:297mm;box-sizing:border-box;width:100%;max-width:100%;overflow:hidden}.dim-card,.mine-card,.no-break{break-inside:avoid!important;page-break-inside:avoid!important}.bl{width:155px}.kc .v{font-size:16pt}}`;
+.pg-grupo{margin-bottom:30px}
+.pg-gtit{background:#1e293b;color:#f8fafc;padding:10px 18px;border-radius:8px;font-size:12pt;font-weight:700;margin-bottom:16px;break-after:avoid;page-break-after:avoid}
+.pg-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.pg-card{border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px;background:#fff;break-inside:avoid;page-break-inside:avoid;overflow:hidden;min-width:0}
+.pg-card canvas{max-width:100%!important;width:100%!important}
+.pg-q{font-weight:700;font-size:10.5pt;color:#0f172a;margin-bottom:6px;line-height:1.5}
+.pg-n{font-size:8.5pt;color:#64748b;margin-bottom:12px;font-weight:500}
+@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}@page{size:A4;margin:0}body{font-size:10pt;margin:0;padding:0}.portada{height:297mm;min-height:297mm;box-sizing:border-box}.page{padding:20mm 15mm;min-height:297mm;box-sizing:border-box;width:100%;max-width:100%;overflow:hidden}.dim-card,.mine-card,.no-break,.pg-card{break-inside:avoid!important;page-break-inside:avoid!important}.pg-card canvas{max-width:100%!important;width:100%!important}.pg-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.bl{width:155px}.kc .v{font-size:16pt}}`;
 
         // PAG 1: RESUMEN EJECUTIVO
         const p1 = `<div class="page">
@@ -5662,26 +5851,150 @@ body{font-family:'Inter','Segoe UI',Helvetica,Arial,sans-serif;font-size:10.5pt;
 
         // PAG 2: GRAFICAS
         let p2 = `<div class="page"><div class="ph"><h2>2. Visualizaciones del An&aacute;lisis IA</h2><p>Gr&aacute;ficas generadas por el modelo NVIDIA</p></div>`;
-        if (imgDonut)   p2 += `<div class="st">2.1 Distribuci&oacute;n de Sentimiento</div><div class="chart-wrap"><img src="${imgDonut}" style="max-height:260px"></div>`;
-        if (imgFactores) p2 += `<div class="st">2.2 Importancia de Factores (Random Forest + MLP)</div><div class="chart-wrap"><img src="${imgFactores}" style="max-height:220px"></div>`;
-        if (imgZonas)   p2 += `<div class="st">2.3 Aceptaci&oacute;n por Zona Geogr&aacute;fica</div><div class="chart-wrap"><img src="${imgZonas}" style="max-height:220px"></div>`;
+        if (imgDonut)    p2 += `<div class="st">2.1 Distribuci&oacute;n de Sentimiento</div><div class="chart-wrap"><img src="${imgDonut}" style="max-height:250px"></div>`;
+        if (imgFactores) p2 += `<div class="st">2.2 Importancia de Factores (Random Forest + MLP)</div><div class="chart-wrap"><img src="${imgFactores}" style="max-height:200px"></div>`;
+        if (imgZonas)    p2 += `<div class="st">2.3 Aceptaci&oacute;n por Zona Geogr&aacute;fica</div><div class="chart-wrap"><img src="${imgZonas}" style="max-height:200px"></div>`;
         if (!imgDonut && !imgFactores && !imgZonas) p2 += `<p style="color:#888;padding:20px 0">Gr&aacute;ficas no disponibles. Aseg&uacute;rate de que el tab LLM est&eacute; visible antes de exportar.</p>`;
         p2 += `<div class="pie"><span>Reporte LLM NVIDIA &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div></div>`;
 
-        // PAG 3: DIMENSIONES
+        // PAG 2B: RADAR — Comparativa por Dimensión (canvas nativo con fondo blanco)
+        let p2b = '';
+        if (radarDims.length > 0) {
+            p2b = `<div class="page"><div class="ph"><h2>2B. Vista Radar &mdash; Comparativa por Dimensi&oacute;n</h2><p>&Iacute;ndice Neto de Aceptaci&oacute;n por dimensi&oacute;n (escala -100 a +100 pts) &middot; Verde = favorable &middot; Rojo = cr&iacute;tico</p></div>
+<div style="position:relative;width:100%;max-width:560px;height:420px;margin:0 auto 20px;"><canvas id="pdf-radar-main"></canvas></div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px">
+${radarDims.map(dim=>{const ds=dim.sentimiento||{};const col=sentColor(ds.indice);const lbl=sentLabel(ds.indice);return `<div style="border-radius:7px;padding:8px 12px;background:#f8fafc;border-left:4px solid ${col}"><div style="font-size:8.5pt;font-weight:700;color:#334155;margin-bottom:2px">${esc(dim.titulo||'')}</div><div style="font-size:9pt;font-weight:800;color:${col}">${sgn(ds.indice)} pts &mdash; ${lbl}</div></div>`;}).join('')}
+</div>
+<div class="pie"><span>Reporte LLM NVIDIA &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div></div>`;
+        }
+
+        // PAG 2C: PREGUNTAS CON GRAFICAS
+        let pregHtml = '';
+        let chartsCode = '';
+        let cIdx = 0;
+        // Radar PDF: Chart.js con fondo blanco (se renderiza en el iframe junto a los demas charts)
+        if (radarDims.length > 0) {
+            chartsCode += 'var _rv=' + JSON.stringify(radarVals) + ';'
+                + 'var _rc=document.getElementById("pdf-radar-main");'
+                + 'if(_rc){new Chart(_rc,{type:"radar",data:{labels:' + JSON.stringify(radarLabels)
+                + ',datasets:[{label:"Indice Neto de Sentimiento",data:_rv,'
+                + 'backgroundColor:"rgba(14,78,176,0.10)",borderColor:"#0e4eb0",borderWidth:2.5,'
+                + 'pointBackgroundColor:' + JSON.stringify(radarPtClr) + ','
+                + 'pointBorderColor:"#fff",pointBorderWidth:2,pointRadius:7,pointHoverRadius:9}]},'
+                + 'options:{responsive:true,maintainAspectRatio:false,'
+                + 'scales:{r:{min:-100,max:100,'
+                + 'ticks:{stepSize:25,font:{size:11,weight:"600"},color:"#64748b",'
+                + 'backdropColor:"rgba(255,255,255,0.92)",'
+                + 'callback:function(v){return(v>0?"+":"")+v}},'
+                + 'pointLabels:{font:{size:11,weight:"bold"},'
+                + 'color:function(c){var v=_rv[c.index]||0;return v>=10?"#0f9f6e":v<=-10?"#c43d45":"#d97706"},'
+                + 'padding:10},'
+                + 'grid:{color:"rgba(0,0,0,0.07)",circular:true},'
+                + 'angleLines:{color:"rgba(0,0,0,0.10)"}}},'
+                + 'plugins:{legend:{display:false}}}})}';
+        }
+        if (pregData) {
+            (pregData.grupos || []).forEach(g => {
+                if (!g.preguntas?.length) return;
+                pregHtml += `<div class="pg-grupo"><h3 class="pg-gtit">${esc(g.titulo)}</h3><div class="pg-grid">`;
+                g.preguntas.forEach(preg => {
+                    if (!preg.distribucion?.length) return;
+                    const cid  = 'llmc' + (cIdx++);
+                    const isDo = preg.tipo === 'donut';
+                    const clab = preg.distribucion.map(d => d.label);
+                    const cdat = preg.distribucion.map(d => d.count);
+                    const barH = Math.max(140, (clab.length * 34) + 40);
+                    const wrapH = isDo ? 200 : barH;
+                    const cardMinH = isDo ? 220 : (barH + 70);
+                    pregHtml += `<div class="pg-card no-break" style="min-height:${cardMinH}px;"><p class="pg-q">${esc(preg.pregunta)}</p><p class="pg-n">n = ${nv(preg.respondentes)} respuestas</p><div style="position:relative;width:100%;max-width:100%;overflow:hidden;height:${wrapH}px;"><canvas id="${cid}"></canvas></div></div>`;
+                    const safeLab = clab.map(l => { const s = String(l); return s.length > 28 ? s.slice(0, 27) + '…' : s; });
+                    const legendCfg = isDo ? '{display:true,position:"bottom"}' : '{display:false}';
+                    const optsCommon = 'responsive:true,maintainAspectRatio:false,layout:{padding:4},plugins:{legend:' + legendCfg + '}';
+                    if (isDo) {
+                        chartsCode += 'new Chart(document.getElementById("' + cid + '"),{type:"doughnut",data:{labels:' + JSON.stringify(safeLab) + ',datasets:[{data:' + JSON.stringify(cdat) + ',backgroundColor:["#0e4eb0","#0f9f6e","#c43d45","#d97706","#7c3aed","#ec4899","#f59e0b","#14b8a6"]}]},options:{' + optsCommon + '}});';
+                    } else {
+                        chartsCode += 'new Chart(document.getElementById("' + cid + '"),{type:"bar",data:{labels:' + JSON.stringify(safeLab) + ',datasets:[{data:' + JSON.stringify(cdat) + ',backgroundColor:["#0e4eb0","#0f9f6e","#c43d45","#d97706","#7c3aed","#ec4899","#f59e0b","#14b8a6"]}]},options:{' + optsCommon + ',indexAxis:"y",scales:{x:{beginAtZero:true,ticks:{font:{size:9}}},y:{ticks:{font:{size:9},autoSkip:false}}}}});';
+                    }
+                });
+                pregHtml += '</div></div>';
+            });
+        }
+        const pPreg = pregHtml ? `<div class="page">
+<div class="ph"><h2>2C. Respuestas Detalladas a Preguntas Clave</h2><p>Distribuci&oacute;n de opciones seleccionadas en el formulario de encuesta</p></div>
+${pregHtml}
+<div class="pie"><span>Reporte LLM NVIDIA &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div>
+</div>` : '';
+
+        // PAG 3: DIMENSIONES — tarjetas visuales con canvas capturado de la UI
         let dimsHtml = '';
-        (data.dimensiones || []).forEach(dim => {
-            const ds  = dim.sentimiento || {};
-            const col = sentColor(ds.indice);
-            const lbl = sentLabel(ds.indice);
-            const bars = (dim.distribucion?.items || []).slice(0, 8).map(it => barRow(it.label, it.pct, col)).join('');
-            dimsHtml += `<div class="dim-card no-break">
-<div class="dim-h" style="background:${col}"><span class="dim-name">${esc(dim.titulo||'')}</span><span class="dim-badge">${lbl} &nbsp; ${sgn(ds.indice)} pts</span></div>
-<div class="dim-stats"><span style="color:#0f9f6e">&#9650; Aceptaci&oacute;n: ${pct(ds.positivo_pct)}</span><span style="color:#d97706">&#9679; Neutro: ${pct(ds.neutro_pct)}</span><span style="color:#c43d45">&#9660; Rechazo: ${pct(ds.negativo_pct)}</span></div>
-<div style="padding:14px 18px">${bars}${dim.interpretacion ? `<div style="margin-top:10px;font-size:9.5pt;color:#475569;background:#f8fafc;padding:10px 14px;border-radius:6px;border-left:3px solid ${col};line-height:1.6">${esc(dim.interpretacion)}</div>` : ''}</div>
+        radarDims.forEach((dim, dIdx) => {
+            const ds   = dim.sentimiento || {};
+            const idxV = nv(ds.indice);
+            const col  = sentColor(idxV);
+            const lbl  = sentLabel(idxV);
+            const imgG = imgsDimGauge[dIdx];  // gauge capturado de la UI
+            const imgB = imgsDimBar[dIdx];    // barra distribución capturada de la UI
+
+            dimsHtml += `<div style="border:1px solid #e2e8f0;border-top:3px solid ${col};border-radius:10px;padding:14px;background:#fff;break-inside:avoid;page-break-inside:avoid;">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+  <span style="font-size:10pt;font-weight:800;color:#1e293b;line-height:1.3;">${esc(dim.titulo||'')}</span>
+  <span style="font-size:7.5pt;padding:3px 9px;border-radius:20px;background:${col};color:#fff;font-weight:700;white-space:nowrap;margin-left:8px;">${lbl} (${sgn(idxV)} pts)</span>
+</div>
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+  <div style="position:relative;width:90px;height:90px;flex-shrink:0;text-align:center;">
+    ${imgG ? `<img src="${imgG}" style="width:90px;height:90px;object-fit:contain;">` : `<div style="width:90px;height:90px;border-radius:50%;border:4px solid ${col};display:flex;align-items:center;justify-content:center;font-size:14pt;font-weight:900;color:${col};">${sgn(idxV)}</div>`}
+  </div>
+  <div style="flex:1;">
+    <div style="margin-bottom:5px;"><div style="display:flex;justify-content:space-between;font-size:7.5pt;font-weight:600;margin-bottom:2px;"><span style="color:#0f9f6e;">&#9679; Positivo</span><span style="color:#0f9f6e;">${pct(ds.positivo_pct)}</span></div><div style="background:#e2e8f0;border-radius:3px;height:5px;overflow:hidden;"><div style="width:${Math.min(100,nv(ds.positivo_pct))}%;height:100%;background:#0f9f6e;border-radius:3px;"></div></div></div>
+    <div style="margin-bottom:5px;"><div style="display:flex;justify-content:space-between;font-size:7.5pt;font-weight:600;margin-bottom:2px;"><span style="color:#d97706;">&#9679; Neutro</span><span style="color:#d97706;">${pct(ds.neutro_pct)}</span></div><div style="background:#e2e8f0;border-radius:3px;height:5px;overflow:hidden;"><div style="width:${Math.min(100,nv(ds.neutro_pct))}%;height:100%;background:#d97706;border-radius:3px;"></div></div></div>
+    <div><div style="display:flex;justify-content:space-between;font-size:7.5pt;font-weight:600;margin-bottom:2px;"><span style="color:#c43d45;">&#9679; Negativo</span><span style="color:#c43d45;">${pct(ds.negativo_pct)}</span></div><div style="background:#e2e8f0;border-radius:3px;height:5px;overflow:hidden;"><div style="width:${Math.min(100,nv(ds.negativo_pct))}%;height:100%;background:#c43d45;border-radius:3px;"></div></div></div>
+  </div>
+</div>
+${imgB ? `<div style="margin-bottom:8px;"><p style="font-size:6.5pt;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px;">Distribuci&oacute;n de respuestas</p><img src="${imgB}" style="width:100%;max-height:130px;object-fit:contain;"></div>` : ''}
+${dim.interpretacion ? `<div style="background:#f8fafc;border-left:3px solid ${col};border-radius:0 6px 6px 0;padding:7px 10px;"><p style="font-size:8pt;color:#475569;margin:0;line-height:1.5;font-style:italic;">${esc(dim.interpretacion)}</p></div>` : ''}
 </div>`;
         });
-        const p3 = `<div class="page"><div class="ph"><h2>3. Sentimiento por Dimensi&oacute;n</h2><p>9 dimensiones analizadas por el modelo IA</p></div>${dimsHtml || '<p style="color:#888">Carga el tab LLM primero.</p>'}<div class="pie"><span>Reporte LLM NVIDIA &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div></div>`;
+        const p3 = `<div class="page"><div class="ph"><h2>3. Sentimiento por Dimensi&oacute;n</h2><p>An&aacute;lisis de sentimiento por cada eje tem&aacute;tico &mdash; procesado por IA</p></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+${dimsHtml || '<p style="color:#888">Sin datos de dimensiones. Aseg&uacute;rate de que el tab LLM est&eacute; visible antes de exportar.</p>'}
+</div>
+<div class="pie"><span>Reporte LLM NVIDIA &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div></div>`;
+
+        // PAG 3B: EVALUACIÓN ZONAL (NVIDIA) — gauges capturados de la UI
+        const zonasPdf = data.analisis_por_zona || [];
+        let zonalHtml = '';
+        zonasPdf.forEach((z, zi) => {
+            const pred  = z.prediccion || (z.aceptacion_pct >= z.rechazo_pct ? 'Aceptacion' : 'Rechazo');
+            const zcol  = predColor(pred);
+            const icon  = pred === 'Aceptacion' || pred === 'Aceptación' ? '&#10004;' : pred === 'Rechazo' ? '&#10008;' : '&#9888;';
+            const acept = nv(z.aceptacion_pct);
+            const neutr = nv(z.neutral_pct);
+            const rech  = nv(z.rechazo_pct);
+            const imgZG = imgsZonaGauge[zi];
+            zonalHtml += `<div style="border:1px solid #e2e8f0;border-top:3px solid ${zcol};border-radius:10px;padding:14px;background:#fff;break-inside:avoid;page-break-inside:avoid;text-align:center;">
+<h4 style="font-size:10pt;font-weight:800;color:#1e293b;margin:0 0 4px;">${icon} ${esc(z.zona||z.sector||'')}</h4>
+<p style="font-size:7.5pt;color:#94a3b8;margin:0 0 10px;">${nv(z.n)} encuestas evaluadas</p>
+${imgZG ? `<img src="${imgZG}" style="width:100%;max-height:110px;object-fit:contain;margin-bottom:8px;">` : ''}
+<div style="font-size:9pt;font-weight:900;color:${zcol};margin-bottom:6px;">${acept}% Aceptaci&oacute;n</div>
+<div style="display:flex;justify-content:center;gap:10px;font-size:8pt;margin-bottom:10px;">
+  <span style="color:#0f9f6e;">&#9679; ${acept}%</span>
+  <span style="color:#d97706;">&#9679; ${neutr}%</span>
+  <span style="color:#c43d45;">&#9679; ${rech}%</span>
+</div>
+<div style="display:flex;gap:4px;height:6px;border-radius:3px;overflow:hidden;margin-bottom:${z.hallazgo_clave ? '10px' : '0'}">
+  <div style="width:${acept}%;background:#0f9f6e;"></div>
+  <div style="width:${neutr}%;background:#d97706;"></div>
+  <div style="width:${rech}%;background:#c43d45;"></div>
+</div>
+${z.hallazgo_clave ? `<p style="font-size:7.5pt;color:#475569;margin:0;line-height:1.5;text-align:left;border-top:1px solid #e2e8f0;padding-top:8px;font-style:italic;">${esc(z.hallazgo_clave)}</p>` : ''}
+</div>`;
+        });
+        const p3b = zonasPdf.length ? `<div class="page"><div class="ph"><h2>3B. Evaluaci&oacute;n Zonal (NVIDIA)</h2><p>Predicci&oacute;n de sentimiento y distribuci&oacute;n por sector parroquial</p></div>
+${imgZonas ? `<div class="chart-wrap" style="margin-bottom:20px;"><img src="${imgZonas}" style="max-height:200px;border-radius:8px;"></div>` : ''}
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+${zonalHtml}
+</div>
+<div class="pie"><span>Reporte LLM NVIDIA &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div></div>` : '';
 
         // PAG 4: ZONAS
         const zonas = data.analisis_por_zona || [];
@@ -5761,96 +6074,101 @@ ${indH ? `<div class="st">7.2 Indicadores de &Eacute;xito</div><table class="stb
 ${rfH  ? `<div class="st">7.3 Recomendaciones Finales</div><ul style="padding-left:20px;color:#334155;margin-bottom:16px">${rfH}</ul>` : ''}
 <div class="pie"><span>Reporte LLM NVIDIA &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div></div>`;
 
-        // PAG 8: EJES ESTRATEGICOS
+
+        // PAG 8: EJES
         const ejes = data.ejes_estrategicos || [];
-        let p8 = '';
-        if (ejes.length) {
-            const ejH = ejes.map(e => `<div style="border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;margin-bottom:12px;background:#fff;page-break-inside:avoid">
-<strong style="color:#0e4eb0;font-size:10.5pt;display:block;margin-bottom:4px">${esc(e.titulo||e.eje||'')}</strong>
-<p style="font-size:9.5pt;color:#475569;margin:0 0 8px;line-height:1.45">${esc(e.descripcion||'')}</p>
-<ul style="padding-left:16px;margin:0 0 8px;font-size:9pt;color:#334155">${(e.acciones||[]).map(a=>`<li style="margin-bottom:3px">${esc(a)}</li>`).join('')}</ul>
-${e.normativa ? `<div style="font-size:8.5pt;color:#64748b;background:#f8fafc;padding:5px 10px;border-radius:5px">Normativa: ${esc(e.normativa)}</div>` : ''}
-</div>`).join('');
-            p8 = `<div class="page"><div class="ph"><h2>8. Ejes Estrat&eacute;gicos de Intervenci&oacute;n</h2><p>Dimensiones prioritarias de acci&oacute;n seg&uacute;n el modelo IA</p></div>${ejH}<div class="pie"><span>Reporte LLM NVIDIA &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div></div>`;
-        }
+        const p8 = ejes.length ? '<div class="page"><div class="ph"><h2>8. Ejes Estrategicos de Intervencion</h2><p>Dimensiones prioritarias de accion segun el modelo IA</p></div>' +
+            ejes.map(e => '<div style="border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;margin-bottom:12px;background:#fff;page-break-inside:avoid">' +
+                '<strong style="color:#0e4eb0;font-size:10.5pt;display:block;margin-bottom:4px">' + esc(e.titulo||e.eje||'') + '</strong>' +
+                '<p style="font-size:9.5pt;color:#475569;margin:0 0 8px;line-height:1.45">' + esc(e.descripcion||'') + '</p>' +
+                '<ul style="padding-left:16px;margin:0 0 8px;font-size:9pt;color:#334155">' + (e.acciones||[]).map(a => '<li style="margin-bottom:3px">' + esc(a) + '</li>').join('') + '</ul>' +
+                (e.normativa ? '<div style="font-size:8.5pt;color:#64748b;background:#f8fafc;padding:5px 10px;border-radius:5px">Normativa: ' + esc(e.normativa) + '</div>' : '') +
+                '</div>').join('') +
+            '<div class="pie"><span>Reporte LLM NVIDIA - San Bartolome</span><span>Zona: ' + esc(sector) + ' - ' + fecha + '</span></div></div>' : '';
 
         // PAG 9: MEJORES PRACTICAS
         const mp = data.mejores_practicas || {};
-        let p9 = '';
-        const mpList = items => (items||[]).map(item => {
-            if (typeof item === 'string') return `<li style="margin-bottom:6px;font-size:9.5pt">${esc(item)}</li>`;
-            const pr  = item.practica || item.nombre || '';
-            const ref = item.referencia || item.fuente || '';
-            const apl = item.aplicabilidad || item.descripcion || '';
-            return `<div style="margin-bottom:10px;padding:10px 12px;background:#f8fafc;border-left:4px solid #0e4eb0;border-radius:0 6px 6px 0">
-<strong style="font-size:9.5pt;color:#0e4eb0">${esc(pr)}</strong>
-${ref ? `<em style="font-size:8.5pt;color:#64748b;display:block;margin-top:2px">Referencia: ${esc(ref)}</em>` : ''}
-${apl ? `<p style="font-size:9pt;color:#475569;margin:4px 0 0;line-height:1.5">${esc(apl)}</p>` : ''}
-</div>`;
-        }).join('');
-        if ((mp.internacionales||[]).length || (mp.locales||[]).length) {
-            p9 = `<div class="page"><div class="ph"><h2>9. Mejores Pr&aacute;cticas de Sostenibilidad</h2><p>Referencias aplicables al contexto de San Bartolom&eacute;</p></div>
-${(mp.internacionales||[]).length ? `<div class="st">9.1 Internacionales</div><div>${mpList(mp.internacionales)}</div>` : ''}
-${(mp.locales||[]).length ? `<div class="st">9.2 Nacionales / Locales</div><div>${mpList(mp.locales)}</div>` : ''}
-<div class="pie"><span>Reporte LLM NVIDIA &middot; San Bartolom&eacute;</span><span>Zona: ${esc(sector)} &middot; ${fecha}</span></div></div>`;
-        }
+        const mpItem = item => {
+            if (typeof item === 'string') return '<li style="margin-bottom:6px;font-size:9.5pt">' + esc(item) + '</li>';
+            const pr = item.practica||item.nombre||'', ref = item.referencia||item.fuente||'', apl = item.aplicabilidad||item.descripcion||'';
+            return '<div style="margin-bottom:10px;padding:10px 12px;background:#f8fafc;border-left:4px solid #0e4eb0;border-radius:0 6px 6px 0">' +
+                '<strong style="font-size:9.5pt;color:#0e4eb0">' + esc(pr) + '</strong>' +
+                (ref ? '<em style="font-size:8.5pt;color:#64748b;display:block;margin-top:2px">Referencia: ' + esc(ref) + '</em>' : '') +
+                (apl ? '<p style="font-size:9pt;color:#475569;margin:4px 0 0;line-height:1.5">' + esc(apl) + '</p>' : '') +
+                '</div>';
+        };
+        const p9 = ((mp.internacionales||[]).length || (mp.locales||[]).length) ?
+            '<div class="page"><div class="ph"><h2>9. Mejores Practicas de Sostenibilidad</h2><p>Referencias aplicables al contexto de San Bartolome</p></div>' +
+            ((mp.internacionales||[]).length ? '<div class="st">9.1 Internacionales</div><div>' + (mp.internacionales||[]).map(mpItem).join('') + '</div>' : '') +
+            ((mp.locales||[]).length ? '<div class="st">9.2 Nacionales / Locales</div><div>' + (mp.locales||[]).map(mpItem).join('') + '</div>' : '') +
+            '<div class="pie"><span>Reporte LLM NVIDIA - San Bartolome</span><span>Zona: ' + esc(sector) + ' - ' + fecha + '</span></div></div>' : '';
 
         // PAG 10: CONCLUSION
-        const rIaH = (data.recomendaciones_ia||[]).map((r,i) => `<li style="margin-bottom:10px;font-size:10.5pt;line-height:1.7"><strong>R${i+1}:</strong> ${esc(r)}</li>`).join('');
-        const p10 = `<div class="page"><div class="ph"><h2>10. Conclusi&oacute;n General</h2><p>S&iacute;ntesis del modelo NVIDIA LLM sobre la viabilidad social minera</p></div>
-<div class="concl-box">${esc(data.conclusion||'')}</div>
-${rIaH ? `<div class="st" style="margin-top:24px">Recomendaciones del Modelo IA</div><ul class="recomend">${rIaH}</ul>` : ''}
-<div class="cierre" style="margin-top:24px"><strong>Documento generado autom&aacute;ticamente</strong> &middot; Motor: ${esc(motor)} &middot; ${total} encuestas &middot; ${fecha}</div>
-<div class="pie"><span>Reporte LLM NVIDIA &middot; San Bartolom&eacute;</span><span>${fecha}</span></div></div>`;
+        const rIaH = (data.recomendaciones_ia||[]).map((r,i) =>
+            '<li style="margin-bottom:10px;font-size:10.5pt;line-height:1.7"><strong>R' + (i+1) + ':</strong> ' + esc(r) + '</li>').join('');
+        const p10 = '<div class="page"><div class="ph"><h2>10. Conclusion General</h2><p>Sintesis del modelo NVIDIA LLM sobre la viabilidad social minera</p></div>' +
+            '<div class="concl-box">' + esc(data.conclusion||'') + '</div>' +
+            (rIaH ? '<div class="st" style="margin-top:24px">Recomendaciones del Modelo IA</div><ul class="recomend">' + rIaH + '</ul>' : '') +
+            '<div class="cierre" style="margin-top:24px">Documento generado automaticamente - Motor: ' + esc(motor) + ' - ' + total + ' encuestas - ' + fecha + '</div>' +
+            '<div class="pie"><span>Reporte LLM NVIDIA - San Bartolome</span><span>' + fecha + '</span></div></div>';
 
         // HTML FINAL
-        const cleanHtml = (`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-<title>Reporte LLM NVIDIA - San Bartolome</title>
-<style>${CSS}</style></head><body>
-<div class="portada">
-  <div>
-    <div class="portada-insignia">NVIDIA LLM - Sistema de Analisis Comunitario - GAD Parroquial San Bartolome - Ecuador</div>
-    <div class="portada-titulo">Reporte Tecnico LLM - Analisis NVIDIA de Sentimiento Minero</div>
-    <div class="portada-sub">Prediccion de Aceptacion Social &amp; Plan de Viabilidad Estrategica</div>
-    <table class="portada-tabla">
-      <tr><td>Zona analizada</td><td>${esc(sector)}</td></tr>
-      <tr><td>Fecha de emision</td><td>${fecha}</td></tr>
-      <tr><td>Total encuestas</td><td>${total} encuestas procesadas</td></tr>
-      <tr><td>Motor IA</td><td>${esc(motor)}</td></tr>
-    </table>
-    <div class="nivel-pill" style="background:${pColor}">Prediccion Global: ${esc(pred)} | Aceptacion: ${pct(pa)} Rechazo: ${pct(prv)}</div>
-  </div>
-  <div class="portada-foot">Documento generado automaticamente - ${fecha}</div>
-</div>
-${p1}${p2}${p3}${p4}${p5}${p6}${p7}${p8}${p9}${p10}
-<div class="page" style="page-break-after:auto"><div class="cierre"><strong>Fin del Reporte LLM NVIDIA</strong><br>GAD Parroquial San Bartolome - Cuenca, Ecuador - ${fecha}</div></div>
-</body></html>`)
+        const portada = '<div class="portada"><div>' +
+            '<div class="portada-insignia">NVIDIA LLM - Sistema de Analisis Comunitario - GAD Parroquial San Bartolome - Ecuador</div>' +
+            '<div class="portada-titulo">Reporte Tecnico LLM - Analisis NVIDIA de Sentimiento Minero</div>' +
+            '<div class="portada-sub">Prediccion de Aceptacion Social y Plan de Viabilidad Estrategica</div>' +
+            '<table class="portada-tabla">' +
+            '<tr><td>Zona analizada</td><td>' + esc(sector) + '</td></tr>' +
+            '<tr><td>Fecha de emision</td><td>' + fecha + '</td></tr>' +
+            '<tr><td>Total encuestas</td><td>' + total + ' encuestas procesadas</td></tr>' +
+            '<tr><td>Motor IA</td><td>' + esc(motor) + '</td></tr>' +
+            '</table>' +
+            '<div class="nivel-pill" style="background:' + pColor + '">Prediccion Global: ' + esc(pred) + ' | Aceptacion: ' + pct(pa) + ' Rechazo: ' + pct(prv) + '</div>' +
+            '</div><div class="portada-foot">Documento generado automaticamente - ' + fecha + '</div></div>';
+
+        const cierre = '<div class="page" style="page-break-after:auto"><div class="cierre">Fin del Reporte LLM NVIDIA - GAD Parroquial San Bartolome - Cuenca, Ecuador - ' + fecha + '</div></div>';
+
+        const rawHtml = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Reporte LLM NVIDIA - San Bartolome</title><style>' + CSS + '</style></head><body>' +
+            portada + p1 + p2 + p2b + pPreg + p3 + p3b + p4 + p5 + p6 + p7 + p8 + p9 + p10 + cierre +
+            '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.js"><\/script>' +
+            '<script>window.addEventListener("load",function(){' + chartsCode + '});<\/script></body></html>';
+
+        const cleanHtml = rawHtml
             .replace(/á/g,'&aacute;').replace(/é/g,'&eacute;').replace(/í/g,'&iacute;')
             .replace(/ó/g,'&oacute;').replace(/ú/g,'&uacute;').replace(/ñ/g,'&ntilde;')
             .replace(/Á/g,'&Aacute;').replace(/É/g,'&Eacute;').replace(/Í/g,'&Iacute;')
             .replace(/Ó/g,'&Oacute;').replace(/Ú/g,'&Uacute;').replace(/Ñ/g,'&Ntilde;')
             .replace(/—/g,'&mdash;').replace(/–/g,'&ndash;');
 
+        // doc.write() mantiene el origen de la página padre → CDN Chart.js carga sin bloqueo CORS
         const oldFrame = document.getElementById('pdf-print-frame');
         if (oldFrame) oldFrame.remove();
         const iframe = document.createElement('iframe');
         iframe.id = 'pdf-print-frame';
         iframe.style.cssText = 'position:fixed;right:-9999px;top:0;width:794px;height:1123px;border:none;';
         document.body.appendChild(iframe);
-        const doc = iframe.contentDocument || iframe.contentWindow.document;
-        doc.open(); doc.write(cleanHtml); doc.close();
-        const doPrint = () => {
-            try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch(e) {}
-            setTimeout(() => { const f = document.getElementById('pdf-print-frame'); if (f) f.remove(); }, 3000);
-        };
-        iframe.onload = doPrint;
-        setTimeout(doPrint, 2500);
 
-    } catch (err) {
+        let _printed = false;
+        const doPrint = () => {
+            if (_printed) return;
+            _printed = true;
+            try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch(e) {}
+            // Esperar 30s antes de limpiar — Opera GX necesita tiempo para terminar de escribir el PDF
+            setTimeout(() => { const f = document.getElementById('pdf-print-frame'); if (f) f.remove(); }, 30000);
+        };
+
+        // Esperar que Chart.js CDN cargue y renderice antes de imprimir
+        iframe.onload = () => setTimeout(doPrint, 3500);
+        setTimeout(doPrint, 7000);  // fallback si onload no dispara
+
+        const idoc = iframe.contentDocument || iframe.contentWindow.document;
+        idoc.open(); idoc.write(cleanHtml); idoc.close();
+
+    } catch(err) {
         console.error('Error generando PDF LLM:', err);
         alert('Error al generar el reporte LLM: ' + err.message);
     } finally {
         const btn = document.getElementById('llm-pdf-btn');
-        if (btn) { btn.disabled = false; btn.textContent = '📄 Reporte PDF'; }
+        if (btn) { btn.disabled = false; btn.textContent = '\u{1F4C4} Reporte PDF'; }
     }
 }
