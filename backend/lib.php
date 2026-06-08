@@ -1351,7 +1351,8 @@ function get_dashboard(string $sector = 'general'): array
             has_sewer,
             political_climate,
             authority_trust,
-            investment_acceptance
+            investment_acceptance,
+            mine_reopening_perception
         FROM surveys
         $where
     ";
@@ -1367,14 +1368,45 @@ function get_dashboard(string $sector = 'general'): array
     $conflictSector = [];
     $lowTrustSector = [];
 
+    // Misma lógica que get_clase() en ia_minera.py:
+    // 1. mine_reopening_perception, 2. investment_acceptance, 3. inferencia parcial, 4. Neutral
+    $strategicClaseMap = [
+        'Beneficiaria mucho' => 'Aceptacion',
+        'Beneficiaria algo'  => 'Aceptacion',
+        'Beneficio dudoso'   => 'Neutral',
+        'No beneficiaria'    => 'Rechazo',
+    ];
+    $strategicClaseMapInv = [
+        'Aceptacion amplia'       => 'Aceptacion',
+        'Aceptación amplia'       => 'Aceptacion',
+        'Aceptacion condicionada' => 'Neutral',
+        'Aceptación condicionada' => 'Neutral',
+        'Rechazo'                 => 'Rechazo',
+        'No acepta'               => 'Rechazo',
+    ];
+    $resolveClase = function(array $row) use ($strategicClaseMap, $strategicClaseMapInv): string {
+        $c = $strategicClaseMap[trim($row['mine_reopening_perception'] ?? '')] ?? '';
+        if ($c !== '') return $c;
+        $inv = trim($row['investment_acceptance'] ?? '');
+        $c = $strategicClaseMapInv[$inv] ?? '';
+        if ($c !== '') return $c;
+        $invLow = mb_strtolower($inv, 'UTF-8');
+        if (str_contains($invLow, 'amplia'))    return 'Aceptacion';
+        if (str_contains($invLow, 'condicion')) return 'Neutral';
+        if (str_contains($invLow, 'rechazo'))   return 'Rechazo';
+        if (str_contains($invLow, 'no acepta')) return 'Rechazo';
+        return 'Neutral';
+    };
+
     foreach ($strategicRows as $row) {
         $sectorKey = normalize_sector_label((string) $row['sector']);
-        $acceptance = (string) $row['investment_acceptance'];
+        $clase = $resolveClase($row);
+        $acceptance = (string) $row['investment_acceptance']; // solo para checks de presión/servicios
 
-        if ($acceptance === 'Aceptacion amplia') {
+        if ($clase === 'Aceptacion') {
             $stanceCounts['favorable']++;
             $sectorFavor[$sectorKey] = ($sectorFavor[$sectorKey] ?? 0) + 1;
-        } elseif ($acceptance === 'Aceptacion condicionada') {
+        } elseif ($clase === 'Neutral') {
             $stanceCounts['condicionada']++;
         } else {
             $stanceCounts['contraria']++;
@@ -1383,7 +1415,7 @@ function get_dashboard(string $sector = 'general'): array
 
         if (in_array((string) $row['household_income'], ['No cubre la canasta', 'Cubre apenas'], true)) {
             $unemploymentOpen['pressure_total']++;
-            if ($acceptance !== 'Rechazo preventivo') {
+            if ($clase !== 'Rechazo') {
                 $unemploymentOpen['pressure_open']++;
             }
         }
@@ -1394,7 +1426,7 @@ function get_dashboard(string $sector = 'general'): array
             || str_contains((string) $row['water_source'], 'vertiente');
         if ($hasServiceRisk) {
             $servicesOpen['services_risk_total']++;
-            if ($acceptance !== 'Rechazo preventivo') {
+            if ($clase !== 'Rechazo') {
                 $servicesOpen['services_risk_open']++;
             }
         }

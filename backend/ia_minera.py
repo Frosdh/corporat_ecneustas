@@ -31,6 +31,7 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import cross_val_score, StratifiedKFold
 
 # ============================================================
 #  CONSTANTES
@@ -670,7 +671,23 @@ def train_and_analyze():
         validation_fraction=0.1 if use_early_stopping else 0.0,
     )
     mlp.fit(X, y)
-    mlp_acc = float(mlp.score(X, y))
+
+    # Precisión real: cross-validation (no sobre datos de entrenamiento)
+    # Con pocos datos usamos menos folds para evitar errores
+    n_folds = min(5, n_train // max(len(set(y_raw)), 1))
+    if n_folds >= 2:
+        cv = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=42)
+        cv_scores = cross_val_score(
+            MLPClassifier(hidden_layer_sizes=(64, 32, 16, 8), max_iter=1000,
+                          random_state=42, alpha=0.01, learning_rate='adaptive'),
+            X, y, cv=cv, scoring='accuracy'
+        )
+        mlp_acc = float(cv_scores.mean())
+        mlp_acc_std = float(cv_scores.std())
+    else:
+        # Con muy pocas encuestas no se puede hacer CV; se usa in-sample con advertencia
+        mlp_acc = float(mlp.score(X, y))
+        mlp_acc_std = 0.0
 
     # 5. Random Forest para importancia de factores
     rf = RandomForestClassifier(n_estimators=150, random_state=42, class_weight='balanced')
@@ -686,33 +703,52 @@ def train_and_analyze():
         for i in range(len(FEATURE_COLS_EXT))
     ], key=lambda x: x['score'], reverse=True)
 
-    # 6. Predicción por sector (sectores ya normalizados en el bucle anterior)
+    # 6. Predicciones individuales del MLP sobre todas las encuestas
+    y_pred = mlp.predict(X)                          # predicciones del modelo
+    y_pred_labels = le_y.inverse_transform(y_pred)   # convertir índices → etiquetas
+
+    # Probabilidades por clase del MLP (softmax output)
+    y_pred_proba = mlp.predict_proba(X)              # shape: (n, 3)
+    label_order  = list(le_y.classes_)               # orden de clases del LabelEncoder
+
+    # Predicción por sector usando las predicciones del modelo (no los labels originales)
     sector_results = []
     for sec in list(set(sectors)):
         idx_sec = [i for i, s in enumerate(sectors) if s == sec]
-        sy = [y_raw[i] for i in idx_sec]
-        t = len(sy)
+        sy_pred = [y_pred_labels[i] for i in idx_sec]
+        t = len(sy_pred)
         if t == 0:
             continue
-        sc = {c: sy.count(c) for c in ['Aceptacion', 'Neutral', 'Rechazo']}
+        sc = {c: sy_pred.count(c) for c in ['Aceptacion', 'Neutral', 'Rechazo']}
+        # Confianza media del modelo para las encuestas de este sector
+        proba_sec = y_pred_proba[idx_sec]
+        conf_media = round(float(proba_sec.max(axis=1).mean()) * 100, 1)
         sector_results.append({
-            "sector": sec, "n": t,
+            "sector":    sec,
+            "n":         t,
             "Aceptacion": round(sc['Aceptacion'] / t * 100, 1),
             "Neutral":    round(sc['Neutral']    / t * 100, 1),
             "Rechazo":    round(sc['Rechazo']    / t * 100, 1),
+            "confianza_modelo_pct": conf_media,
         })
 
-    # 7. Estadísticas globales
-    total_acc = class_counts['Aceptacion']
-    total_rej = class_counts['Rechazo']
-    total_neu = class_counts['Neutral']
-    prob_acept = round(total_acc / n_train * 100, 1)
-    prob_rech  = round(total_rej / n_train * 100, 1)
-    prob_neu   = round(total_neu / n_train * 100, 1)
+    # 7. Estadísticas globales derivadas de las PREDICCIONES del modelo (no de conteos)
+    pred_counts = {c: list(y_pred_labels).count(c) for c in ['Aceptacion', 'Neutral', 'Rechazo']}
+    prob_acept = round(pred_counts['Aceptacion'] / n_train * 100, 1)
+    prob_rech  = round(pred_counts['Rechazo']    / n_train * 100, 1)
+    prob_neu   = round(pred_counts['Neutral']    / n_train * 100, 1)
 
-    prediccion_global = 'Aceptacion' if total_acc >= total_rej else 'Rechazo'
-    if total_neu > max(total_acc, total_rej):
-        prediccion_global = 'Neutral'
+    # Predicción global: clase más frecuente según el modelo
+    prediccion_global = max(pred_counts, key=pred_counts.get)
+
+    # Confianza promedio del modelo (probabilidad máxima promedio)
+    confianza_global = round(float(y_pred_proba.max(axis=1).mean()) * 100, 1)
+
+    # Distribución original de etiquetas (para comparar con lo que predijo el modelo)
+    orig_counts = class_counts  # ya calculado en el bucle anterior
+    orig_acept  = round(orig_counts['Aceptacion'] / n_train * 100, 1)
+    orig_rech   = round(orig_counts['Rechazo']    / n_train * 100, 1)
+    orig_neu    = round(orig_counts['Neutral']    / n_train * 100, 1)
 
     # 8. Perfiles
     perfil_aceptacion, perfil_rechazo = [], []
@@ -778,9 +814,12 @@ def train_and_analyze():
 
     diagnostico = (
         f"Red Neuronal MLP (64-32-16-8 neuronas) + Random Forest (150 árboles) entrenada con "
-        f"{n_train} encuestas reales de San Bartolomé. Precisión: {round(mlp_acc * 100, 1)}%. "
-        f"Predicción global: '{prediccion_global}' (Aceptación: {prob_acept}%, "
-        f"Rechazo: {prob_rech}%, Neutral: {prob_neu}%). "
+        f"{n_train} encuestas reales de San Bartolomé. "
+        f"Precisión CV ({n_folds if n_folds >= 2 else 'in-sample'}-fold): {round(mlp_acc * 100, 1)}%"
+        + (f" ± {round(mlp_acc_std * 100, 1)}%" if n_folds >= 2 else " (advertencia: muestra insuficiente para CV)") + ". "
+        f"Predicción del modelo: '{prediccion_global}' con {confianza_global}% de confianza promedio "
+        f"(MLP predice — Aceptación: {prob_acept}%, Rechazo: {prob_rech}%, Neutral: {prob_neu}%). "
+        f"Distribución real en encuestas: Aceptación {orig_acept}%, Rechazo {orig_rech}%, Neutral {orig_neu}%. "
         f"Factor crítico: '{importancia_factores[0]['factor']}' "
         f"(RF importancia: {importancia_factores[0]['score_pct']}%).{temas_txt}{know_txt}"
         f"{nota_gem_str} {knowledge_base.get('hallazgos_clave', '')}"
@@ -889,8 +928,9 @@ def train_and_analyze():
         "articulos_cientificos_referencia": articulos_para_plan,
         "conclusion": (
             f"Con {n_rows} encuestas analizadas mediante Red Neuronal MLP + Random Forest, "
-            f"vectorización TF-IDF y análisis demográfico completo, la IA predice '{prediccion_global}' "
-            f"({prob_acept}% aceptación, {prob_rech}% rechazo). "
+            f"vectorización TF-IDF y análisis demográfico completo, el modelo predice '{prediccion_global}' "
+            f"({prob_acept}% aceptación, {prob_rech}% rechazo según predicciones MLP individuales; "
+            f"precisión del modelo: {round(mlp_acc * 100, 1)}% en validación cruzada). "
             "La viabilidad minera en San Bartolomé depende de tres pilares fundamentales: "
             "(1) garantías ambientales verificables e independientes; "
             "(2) campaña de conocimiento/socialización que eleve el índice minero comunitario; "
@@ -919,15 +959,22 @@ def train_and_analyze():
                 {
                     "nombre": "Red Neuronal MLP",
                     "arquitectura": "64-32-16-8 neuronas, activación ReLU, regularización L2",
-                    "precision": round(mlp_acc * 100, 1),
-                    "uso": "Predicción global de aceptación/neutral/rechazo",
+                    "precision_cv": round(mlp_acc * 100, 1),
+                    "precision_cv_std": round(mlp_acc_std * 100, 1),
+                    "metodo_evaluacion": f"StratifiedKFold {n_folds}-fold cross-validation" if n_folds >= 2 else "in-sample (datos insuficientes para CV)",
+                    "uso": "Predicción individual por encuesta → porcentajes globales y por sector",
                 },
                 {
                     "nombre": "Random Forest",
                     "arquitectura": "150 árboles, balanceo de clases automático",
-                    "uso": "Cálculo de importancia relativa de factores",
+                    "uso": "Cálculo de importancia relativa de factores (feature importance)",
                 },
             ],
+            "nota_metodologica": (
+                "Los porcentajes de Aceptacion/Neutral/Rechazo se derivan de las predicciones "
+                "individuales del MLP (mlp.predict), no de un conteo directo de etiquetas. "
+                "La precisión se mide con validación cruzada estratificada, no sobre datos de entrenamiento."
+            ),
             "variable_objetivo": "mine_reopening_perception → Aceptacion / Neutral / Rechazo",
             "n_entrenamiento": n_train,
         },
@@ -961,12 +1008,20 @@ def train_and_analyze():
     # 19. Output
     output = {
         "ok":                      True,
-        "modelo":                  f"Red Neuronal MLP (64-32-16-8) + Random Forest — Precisión: {round(mlp_acc * 100, 1)}%",
+        "modelo": (
+            f"Red Neuronal MLP (64-32-16-8) + Random Forest — "
+            f"Precisión CV: {round(mlp_acc * 100, 1)}%"
+            + (f" ± {round(mlp_acc_std * 100, 1)}%" if n_folds >= 2 else " (in-sample)")
+        ),
         "encuestas_entrenadas":    n_train,
         "total_encuestas":         n_rows,
         "cobertura_datos":         round(n_train / n_rows * 100, 1) if n_rows > 0 else 0,
         "prediccion_global":       prediccion_global,
+        "confianza_modelo_pct":    confianza_global,
+        # Porcentajes derivados de predicciones MLP (no de conteos de etiquetas)
         "probabilidades_globales": {"Aceptacion": prob_acept, "Neutral": prob_neu, "Rechazo": prob_rech},
+        # Distribución real de respuestas (para transparencia comparativa)
+        "distribucion_real":       {"Aceptacion": orig_acept, "Neutral": orig_neu, "Rechazo": orig_rech},
         "importancia_factores":    importancia_factores,
         "perfil_aceptacion":       perfil_aceptacion,
         "perfil_rechazo":          perfil_rechazo,
